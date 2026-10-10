@@ -44,6 +44,16 @@ mkdir -p data/raw/cp_anemic data/raw/eyes_defy data/raw/dhs/{zimbabwe,malawi,zam
 - **Children 6 to 59 months:** anemic if hemoglobin is below **11.0 g/dL** (`anemia_cutoff_g_dl.child_6_59_months` in the config). This is the cutoff for CP-AnemiC.
 - **Adults:** WHO cutoffs by sex and pregnancy status. These are set when the Eyes-Defy-Anemia and DHS stages are built, and stated here when they are.
 
+## CP-AnemiC data notes
+
+From `python -m src.eyelid.audit`:
+
+- **Labels agree.** Hb < 11.0 g/dL matches both the `REMARK` column and the image's folder on all 710 rows: 424 anemic, 286 not. 9 rows sit at exactly 11.0 and count as not anemic.
+- **Duplicate images.** The 710 rows hold only **498 unique image files**. 91 groups of byte-identical images appear under different IDs (212 extra copies), and the copies usually carry a different Hb, hospital, age and sex. One group disagrees on the anemia label (`Image_188` / `Image_310`). `data/processed/cp_anemic_labels.csv` has an `image_group` column; every split keeps a group in one fold, so a model is never tested on an image it trained on. The full list is in `data/processed/cp_anemic_duplicates.csv`.
+- **No patient ID.** We assume one child per unique image.
+- **Age.** Ages run 6 to 60 months, mostly in whole years. 90 rows are 60 months, outside the 6 to 59 month definition; they are kept for now.
+- **Images** are RGBA with a transparent background, so the conjunctiva appears to be cut out already.
+
 ## Layout
 
 ```
