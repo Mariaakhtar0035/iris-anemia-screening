@@ -62,6 +62,8 @@ From `python -m src.eyelid.audit`:
 |---|---|
 | 3. Color-feature baseline | [reports/stage3_color.md](reports/stage3_color.md) |
 | 4. Frozen DINOv2 probe vs color baseline | [reports/stage4_probe.md](reports/stage4_probe.md) |
+| Replication of the CP-AnemiC paper (joint ResNet50) | [reports/replicate_cnn.md](reports/replicate_cnn.md) |
+| Summary of everything | [reports/summary.md](reports/summary.md) |
 
 ## Layout
 
