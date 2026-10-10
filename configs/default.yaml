@@ -1,0 +1,9 @@
+seed: 42
+
+bootstrap:
+  n_resamples: 2000
+  ci: 0.95
+
+# g/dL. Adult WHO cutoffs get added at the Eyes-Defy stage, once we know whether sex is recorded.
+anemia_cutoff_g_dl:
+  child_6_59_months: 11.0

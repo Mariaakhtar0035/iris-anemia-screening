@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project: raw data, outputs and model weights never get committed.
+# DHS terms forbid sharing survey data; CP-AnemiC is academic use only.
+data/
+results/
+graphify-out/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
