@@ -49,10 +49,18 @@ mkdir -p data/raw/cp_anemic data/raw/eyes_defy data/raw/dhs/{zimbabwe,malawi,zam
 From `python -m src.eyelid.audit`:
 
 - **Labels agree.** Hb < 11.0 g/dL matches both the `REMARK` column and the image's folder on all 710 rows: 424 anemic, 286 not. 9 rows sit at exactly 11.0 and count as not anemic.
-- **Duplicate images.** The 710 rows hold only **498 unique image files**. 91 groups of byte-identical images appear under different IDs (212 extra copies), and the copies usually carry a different Hb, hospital, age and sex. One group disagrees on the anemia label (`Image_188` / `Image_310`). `data/processed/cp_anemic_labels.csv` has an `image_group` column; every split keeps a group in one fold, so a model is never tested on an image it trained on. The full list is in `data/processed/cp_anemic_duplicates.csv`.
-- **No patient ID.** We assume one child per unique image.
+- **Duplicate images.** The 710 rows hold only **498 byte-distinct image files**: 91 groups of byte-identical images appear under different IDs (212 extra copies). The copies usually carry a different Hb, hospital, age and sex. On top of that, 29 links join images that are the **same photo re-saved or slightly re-cropped** (difference hash within 20 of 256 bits and size within 5%, checked by eye; see `configs/default.yaml`). That leaves **477 distinct photos**. One photo's copies disagree on the anemia label (`Image_188` / `Image_310`).
+  - `data/processed/cp_anemic_labels.csv` has `image_group` (byte-identical) and `photo_group` (same photo). Every split keeps a `photo_group` in one fold.
+  - Metadata on any photo with copies is unreliable (e.g. one photo is recorded as both Hb 10.2 and Hb 5.8), so hospital-level analysis uses only the **388 photos with no copy**.
+- **No patient ID.** We assume one child per distinct photo.
 - **Age.** Ages run 6 to 60 months, mostly in whole years. 90 rows are 60 months, outside the 6 to 59 month definition; they are kept for now.
 - **Images** are RGBA with a transparent background, so the conjunctiva appears to be cut out already.
+
+## Results so far
+
+| Stage | Report |
+|---|---|
+| 3. Color-feature baseline | [reports/stage3_color.md](reports/stage3_color.md) |
 
 ## Layout
 

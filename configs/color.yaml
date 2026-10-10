@@ -1,0 +1,17 @@
+# Stage 3: color-feature baseline on CP-AnemiC. Seed and bootstrap settings come from default.yaml.
+# Anemia label: Hb < 11.0 g/dL (default.yaml, children 6-59 months).
+roi:
+  alpha_threshold: 255   # fully opaque pixels only
+
+cv:
+  n_splits: 5
+  n_repeats: 5
+
+gray_world: [false, true]
+
+models:
+  logistic_regression: {C: 1.0, max_iter: 5000}
+  random_forest: {n_estimators: 500, min_samples_leaf: 5, max_features: sqrt}
+
+# Simple rule baseline: no training, paler (lower a*, i.e. less red) means more likely anemic.
+rule_feature: a_mean
