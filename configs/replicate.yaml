@@ -1,0 +1,17 @@
+# Replication of the CP-AnemiC paper's benchmark (Appiahene et al. 2023, Medicine in Novel Technology and
+# Devices 18:100244, Sec. 4): ResNet50 backbone with a joint anemia-classification + Hb-regression head,
+# loss = cross-entropy + MSE with equal weight, Adam lr 1e-4, batch 32, flip/rotation/shift/scale
+# augmentation, 5-fold CV. Anemia label: Hb < 11.0 g/dL (same as the paper and default.yaml).
+#
+# Deviations, all for compute on a laptop GPU: ImageNet-pretrained weights instead of random init, and
+# fewer epochs than the paper's 150. The comparison that matters (paper-style split vs split by photo)
+# uses identical settings, so the deviations apply to both arms.
+backbone: resnet50
+pretrained: true
+epochs: 30
+batch_size: 32
+lr: 0.0001
+image_size: 224
+augment: {hflip: 0.5, degrees: 15, translate: 0.1, scale: [0.9, 1.1]}
+n_splits: 5
+splits: [paper_random_rows, grouped_by_photo]

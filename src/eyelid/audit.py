@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 
-from src.common.io import ROOT, load_config
+from src.common.io import ROOT, load_config, save_results
 
 RAW = ROOT / "data" / "raw" / "cp_anemic"
 OUT = ROOT / "data" / "processed" / "cp_anemic_labels.csv"
@@ -157,6 +157,26 @@ def main():
     # A transparent background would mean the conjunctiva is already cut out, which matters for the Stage 3 region of interest.
     alpha_min = df.path.map(lambda p: Image.open(p).convert("RGBA").getchannel("A").getextrema()[0])
     print(f"images with some transparent pixels: {int((alpha_min < 255).sum())} of {len(df)}")
+
+    per_photo = df.groupby("photo_group").size()
+    facts = {
+        "rows": len(df),
+        "byte_distinct_images": int(df.image_group.nunique()),
+        "byte_identical_groups": int(len(groups)),
+        "extra_byte_identical_copies": int(groups.sum() - len(groups)),
+        "near_duplicate_links": int(len(links)),
+        "distinct_photos": int(photos),
+        "photos_with_no_copy": int((per_photo == 1).sum()),
+        "photos_with_conflicting_labels": int(label_mixed.sum()),
+        "anemic_rows": n_anemic,
+        "anemic_share_rows": round(n_anemic / len(df), 4),
+        "hb_label_disagrees_with_remark_or_folder": int(len(disagree)),
+        "rows_over_59_months": int((df["Age(Months)"] > 59).sum()),
+        "hospitals": int(df.HOSPITAL.nunique()),
+        "anemic_pct_by_hospital": (100 * df.groupby("HOSPITAL").anemic.mean()).round(1).to_dict(),
+        "anemia_cutoff_g_dl": cutoff,
+    }
+    save_results("stage2_audit", facts, {"default": load_config()})
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     labels = pd.DataFrame({
