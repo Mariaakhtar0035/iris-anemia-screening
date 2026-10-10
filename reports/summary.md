@@ -1,6 +1,6 @@
 # Summary: anemia screening baselines
 
-Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 2079b99, `stage3_color` bb9a083, `stage4_probe` 945b76d.
+Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65.
 
 ## Status
 
@@ -10,7 +10,7 @@ Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL 
 | 2. CP-AnemiC audit | done |
 | 3. Color-feature baseline | done |
 | 4. Frozen DINOv2 probe | done |
-| Replication of the CP-AnemiC paper's CNN | not run |
+| Replication of the CP-AnemiC paper's CNN | done |
 | 5. Cross-dataset test with Eyes-Defy-Anemia | **blocked**: needs an IEEE DataPort subscription to download |
 | 6-8. DHS survey model and transfer | **blocked**: needs DHS registration and approval |
 
@@ -68,10 +68,26 @@ All 710 rows. The only difference between each pair of rows is whether copies of
 | Stage 3 | grouped by photo (no leak) | negative_control_rf_no_color | 0.681 [0.620, 0.738] | 0.753 [0.688, 0.816] | 0.304 [0.219, 0.431] |
 | Stage 4 | random rows (copies can leak) | dinov2_probe[cls_and_patch_mean] | 0.857 [0.820, 0.888] | 0.901 [0.854, 0.932] | 0.677 [0.558, 0.750] |
 | Stage 4 | grouped by photo (no leak) | dinov2_probe[cls_and_patch_mean] | 0.769 [0.715, 0.815] | 0.843 [0.784, 0.888] | 0.502 [0.409, 0.596] |
+| Replication | paper_random_rows | joint_resnet50 | 0.921 [0.896, 0.944] | 0.946 [0.922, 0.965] | 0.726 [0.649, 0.854] |
+| Replication | grouped_by_photo | joint_resnet50 | 0.852 [0.809, 0.889] | 0.870 [0.824, 0.910] | 0.571 [0.419, 0.697] |
 
 - A random forest that never sees color reaches AUROC 0.827 [0.780, 0.864] under the random split, from duplicates alone.
 - Stage 3 `random_forest`: AUROC 0.937 with copies leaking vs 0.885 grouped by photo (+0.052).
 - Stage 4 `dinov2_probe[cls_and_patch_mean]`: AUROC 0.857 with copies leaking vs 0.769 grouped by photo (+0.088).
+- Replication `joint_resnet50`: AUROC 0.921 with copies leaking vs 0.852 grouped by photo (+0.069).
+
+## 5. Replicating the CP-AnemiC paper's benchmark
+
+Joint ResNet50 (anemia classification + Hb regression) with the paper's loss, optimizer, learning rate, batch size, augmentation and 5-fold CV; ImageNet-pretrained and 30 epochs instead of random init and 150 (see `configs/replicate.yaml`). Paper, for reference (Appiahene et al. 2023, Tables 3-4): ResNet50 AUC 0.835, accuracy 84.79%, Hb MAE 1.54.
+
+| split | AUROC | accuracy at 0.5 | Hb MAE (g/dL) |
+|---|---|---|---|
+| paper-style random rows | 0.921 [0.896, 0.944] | 85.1% | 1.46 |
+| grouped by photo | 0.852 [0.809, 0.889] | 77.5% | 1.61 |
+
+- Under the paper's split, accuracy (85.1%) and Hb MAE (1.46) land close to the paper's ResNet50 (84.79%, 1.54), so the protocol reproduces.
+- The paper's AUC sits within about 0.01 of its accuracy for all five of its models (Table 3), which is what an AUC computed from hard 0/1 predictions gives. Ours comes from probabilities, so compare on accuracy and Hb error rather than AUC.
+- Keeping each photo's copies in one fold drops accuracy to 77.5% (AUROC 0.921 to 0.852) and raises Hb MAE to 1.61, with every other setting identical.
 
 ## Limitations
 
@@ -88,4 +104,4 @@ All 710 rows. The only difference between each pair of rows is whether copies of
 
 1. **Run the cross-dataset test (Stage 5)** once Eyes-Defy-Anemia is downloaded: train on CP-AnemiC photos with no copy, test on Eyes-Defy, and the reverse.
 2. **Build the DHS survey model (Stages 6-8)** once DHS access is approved.
-3. **Ask the CP-AnemiC authors about the duplicates** and, with their answer, rerun the replication with their full 150-epoch random-init settings under both splits, to see whether the published numbers hold.
+3. **Ask the CP-AnemiC authors about the duplicates** and replicate the 2025 ViT paper's 98.47% on Eyes-Defy-Anemia (script ready in `src/eyelid/replicate_vit.py`), which augments before splitting.
