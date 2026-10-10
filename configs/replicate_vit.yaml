@@ -1,0 +1,20 @@
+# Replication of the Scientific Reports 2025 ViT paper (doi 10.1038/s41598-025-32343-w), the "98.47% accuracy"
+# result: Eyes-Defy-Anemia only, Italian + Indian photos combined.
+#
+# Anemia labels use THE PAPER'S cutoffs, not ours: India women Hb < 12, men < 14 g/dL; Italy < 10.5 g/dL for
+# everyone (the Italian cohort has no sex column). One photo with no Hb is dropped. Labels come from
+# data/processed/eyes_defy_labels.csv (column anemic_paper), written by src/eyelid/audit_eyes_defy.py.
+model_id: google/vit-base-patch16-224-in21k
+revision: b4569560a39a0f1af58e3ddaf17facf20ab919b0
+image_size: 224          # full eye photo, plain resize to 224x224 as in the paper
+batch_size: 8
+epochs: 30
+lr: 0.00001
+weight_decay: 0.0001     # NAdam
+test_size: 0.2           # single random 80/20 split, as in the paper
+seeds: [0]               # the paper reported one run; more seeds via --seeds
+
+# paper:    h-flip and v-flip every photo (217 -> 651 images), THEN split 80/20 at random
+# by_photo: split the 217 photos 80/20 first, then flip; all three versions of a test photo stay in test,
+#           so the test set has the same make-up and the only change is that no photo crosses the split
+protocols: [paper, by_photo]
