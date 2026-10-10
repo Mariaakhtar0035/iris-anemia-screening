@@ -61,6 +61,7 @@ From `python -m src.eyelid.audit`:
 | Stage | Report |
 |---|---|
 | 3. Color-feature baseline | [reports/stage3_color.md](reports/stage3_color.md) |
+| 4. Frozen DINOv2 probe vs color baseline | [reports/stage4_probe.md](reports/stage4_probe.md) |
 
 ## Layout
 

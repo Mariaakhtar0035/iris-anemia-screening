@@ -1,0 +1,15 @@
+# Stage 4: frozen DINOv2 features + logistic regression probe on CP-AnemiC.
+# Same data subsets, folds, seed and bootstrap as Stage 3 (configs/color.yaml, configs/default.yaml).
+# Anemia label: Hb < 11.0 g/dL (children 6-59 months).
+model_id: facebook/dinov2-small
+revision: ed25f3a31f01632728cabb09d1542f84ab7b0056
+image_size: 224          # pad to square on the ImageNet mean color, then resize; no center crop (strips are ~2.6:1)
+batch_size: 32
+
+# Embeddings: CLS token, mean of patch tokens, and the two concatenated (the main probe).
+feature_sets: [cls, patch_mean, cls_and_patch_mean]
+
+probe:
+  Cs: [0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+  inner_folds: 5
+  max_iter: 5000
