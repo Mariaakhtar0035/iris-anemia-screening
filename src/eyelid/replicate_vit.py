@@ -5,6 +5,7 @@ Run from the repo root:
   python -m src.eyelid.replicate_vit --seeds 1 2 3 4  # more seeds, each saved to its own results file
   python -m src.eyelid.replicate_vit --report         # rebuild reports/replicate_vit.md from every seed run
   python -m src.eyelid.replicate_vit --epochs 1 --timing
+  python -m src.eyelid.replicate_vit --seeds 0 1 2 3 4 --track-epochs  # also score the test set after every epoch
 """
 import argparse
 import json
@@ -52,7 +53,18 @@ def make_split(protocol, n_photos, seed, test_size):
     return train, test
 
 
-def run(protocol, seed, images, y, cfg, device):
+def predict(model, images, test, device):
+    model.eval()
+    probs = []
+    with torch.no_grad():
+        for start in range(0, len(test), 32):
+            b = test[start:start + 32]
+            probs.append(torch.softmax(model(pixel_values=images[b[:, 0], b[:, 1]].to(device)).logits, -1)[:, 1].cpu().numpy())
+    model.train()
+    return np.concatenate(probs)
+
+
+def run(protocol, seed, images, y, cfg, device, track_epochs=False):
     train, test = make_split(protocol, len(y), seed, cfg["test_size"])
     shared = len(set(train[:, 0]) & set(test[:, 0]))
     torch.manual_seed(seed)
@@ -60,6 +72,7 @@ def run(protocol, seed, images, y, cfg, device):
     opt = torch.optim.NAdam(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
     loss_fn = nn.CrossEntropyLoss()
     rng = np.random.default_rng(seed)
+    by_epoch = []
     t0 = time.time()
     model.train()
     for _ in range(cfg["epochs"]):
@@ -71,13 +84,10 @@ def run(protocol, seed, images, y, cfg, device):
             opt.zero_grad()
             loss.backward()
             opt.step()
-    model.eval()
-    probs = []
-    with torch.no_grad():
-        for start in range(0, len(test), 32):
-            b = test[start:start + 32]
-            probs.append(torch.softmax(model(pixel_values=images[b[:, 0], b[:, 1]].to(device)).logits, -1)[:, 1].cpu().numpy())
-    prob = np.concatenate(probs)
+        # The paper's only held-out set is its test set, so any epoch it "monitored" was chosen on test.
+        if track_epochs:
+            by_epoch.append(float(((predict(model, images, test, device) >= 0.5) == y[test[:, 0]]).mean()))
+    prob = predict(model, images, test, device)
     y_test, pred = y[test[:, 0]], (prob >= 0.5).astype(int)
     report = classification_report(y_test, pred, labels=[0, 1], target_names=["no_anemia", "anemia"],
                                    output_dict=True, zero_division=0)
@@ -87,6 +97,7 @@ def run(protocol, seed, images, y, cfg, device):
         "accuracy": report["accuracy"], "per_class": {k: report[k] for k in ("no_anemia", "anemia")},
         "test_photo_ids": sorted(set(test[:, 0].tolist())),
         "y_test": y_test.tolist(), "prob": prob.tolist(), "test_photo_index": test[:, 0].tolist(),
+        "test_accuracy_by_epoch": by_epoch,
     }
 
 
@@ -169,6 +180,7 @@ def main():
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--timing", action="store_true", help="one protocol, nothing saved")
     parser.add_argument("--report", action="store_true")
+    parser.add_argument("--track-epochs", action="store_true", help="score test after every epoch; own results files")
     args = parser.parse_args()
     base, cfg = load_config("default"), load_config("replicate_vit")
     if args.report:
@@ -187,12 +199,16 @@ def main():
     for seed in args.seeds or cfg["seeds"]:
         runs = []
         for protocol in cfg["protocols"][:1] if args.timing else cfg["protocols"]:
-            r = run(protocol, seed, images, y, cfg, device)
+            r = run(protocol, seed, images, y, cfg, device, args.track_epochs)
             print(f"seed {seed} {protocol}: accuracy {r['accuracy']:.2%}, {r['test_photos_also_in_train']} test photos "
                   f"also in train, {r['train_seconds']}s", flush=True)
+            if args.track_epochs:
+                best = int(np.argmax(r["test_accuracy_by_epoch"]))
+                print(f"  best epoch on test: {best + 1}, accuracy {r['test_accuracy_by_epoch'][best]:.2%}", flush=True)
             runs.append(r)
         if not args.timing:
-            save_results(f"replicate_vit_seed{seed}", {"device": device, "photo_ids": labels.id.tolist(), "runs": runs},
+            name = f"replicate_vit_{'epochs_' if args.track_epochs else ''}seed{seed}"
+            save_results(name, {"device": device, "photo_ids": labels.id.tolist(), "runs": runs},
                          {"default": base, "replicate_vit": cfg})
     if not args.timing:
         build_report(base)
