@@ -194,8 +194,16 @@ def main():
             f"level with the country rule ({v['by_photo'][rule]['accuracy']:.1%}). India is mostly anemic and Italy "
             "mostly not, so where a photo was taken already predicts most labels. The ViT still ranks better "
             f"(AUROC {v['by_photo'][vt]['auroc']:.3f} vs {v['by_photo'][rule]['auroc']:.3f}), so it learns something "
-            "beyond country, but how much of that is pallor is not shown.",
+            "beyond country.",
         ]
+        wi = v["by_photo"].get("within_country")
+        if wi:
+            ind, ita = wi["India"], wi["Italy"]
+            lines.append(
+                f"- Within one country, split by photo (all seeds pooled): India AUROC {fmt(ind['auroc'])}, chance level "
+                f"({ind['anemic_photos']} of {ind['n_photos']} test photos anemic); Italy {fmt(ita['auroc'])}, but only "
+                f"{ita['anemic_photos']} anemic test photos, and Italy's cutoff (Hb <= 10.5) picks out more severe "
+                "anemia. Inside India, where most of the anemia is, the ViT does not separate anemic from not.")
     lines += [
         "",
         "## Limitations",

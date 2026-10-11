@@ -95,7 +95,8 @@ def build_report(base):
     for path in sorted(RESULTS.glob("replicate_vit_seed*.json")):
         d = json.loads(path.read_text())
         india = np.array([i.startswith("India_") for i in d["results"]["photo_ids"]], dtype=float)
-        runs += [{**r, "india": india, "commit": d["git"]["commit"][:7] + ("+dirty" if d["git"]["dirty"] else "")}
+        ids = np.array(d["results"]["photo_ids"])
+        runs += [{**r, "india": india, "ids": ids, "commit": d["git"]["commit"][:7] + ("+dirty" if d["git"]["dirty"] else "")}
                  for r in d["results"]["runs"]]
     if not runs:
         raise SystemExit("no replicate_vit_seed*.json results yet")
@@ -118,6 +119,20 @@ def build_report(base):
              f"{r['per_class']['anemia']['recall']:.3f} | {r['per_class']['no_anemia']['recall']:.3f} | "
              f"{r['test_photos_also_in_train']} | {r['commit']} |" for r in rows]
     acc = pd.DataFrame(rows).groupby("protocol").accuracy.agg(["mean", "min", "max", "count"])
+    # Within one country the country rule is useless, so this shows what the ViT adds. Test sets of all seeds are
+    # pooled (few anemic Italians per seed); the bootstrap resamples photo IDs, so a photo tested in two seeds stays together.
+    within = {}
+    for pr in acc.index:
+        rs = [r for r in runs if r["protocol"] == pr]
+        ids = np.concatenate([r["ids"][r["test_photo_index"]] for r in rs])
+        y = np.concatenate([r["y_test"] for r in rs])
+        p = np.concatenate([r["prob"] for r in rs])
+        for c in ("India", "Italy"):
+            m = np.char.startswith(ids.astype(str), c + "_")
+            out = summarize(y[m], p[m], boot["n_resamples"], boot["ci"], base["seed"], groups=ids[m])
+            within[(pr, c)] = {"n_images": int(m.sum()), "n_photos": int(len(set(ids[m]))),
+                               "anemic_photos": int(len(set(ids[m][y[m] == 1]))), **out}
+    within_rows = [{"split": pr, "country": c, "n": w["n_images"], **w} for (pr, c), w in within.items()]
     acc_lines = [f"| {p} | {a['mean']:.2%} | {a['min']:.2%} | {a['max']:.2%} | {int(a['count'])} |" for p, a in acc.iterrows()]
     text = (
         "# Replication: the 2025 ViT paper (98.47% on Eyes-Defy-Anemia)\n\n"
@@ -133,12 +148,18 @@ def build_report(base):
         + "| protocol | mean | min | max | seeds |\n|---|---|---|---|---|\n" + "\n".join(acc_lines)
         + "\n\nBaselines on the same test images, averaged over seeds. India is 79/95 anemic and Italy 12/122, so the "
         "country a photo comes from already predicts most labels:\n\n"
-        "| protocol | model | mean accuracy | mean AUROC |\n|---|---|---|---|\n" + "\n".join(base_lines) + "\n"
+        "| protocol | model | mean accuracy | mean AUROC |\n|---|---|---|---|\n" + "\n".join(base_lines)
+        + "\n\nWithin one country, where the country rule cannot help. Test images of all seeds pooled; n counts "
+        "images, and a photo tested in several seeds counts each time:\n\n"
+        + markdown_table(within_rows, ["split", "country", "n"]) + "\n\n"
+        + "\n".join(f"- {pr}, {c}: {w['n_photos']} distinct test photos, {w['anemic_photos']} of them anemic."
+                    for (pr, c), w in within.items()) + "\n"
     )
     (ROOT / "reports" / "replicate_vit.md").write_text(text)
     print(text)
     summary = {pr: {"seeds": int(acc.loc[pr, "count"]), "accuracy_min": acc.loc[pr, "min"], "accuracy_max": acc.loc[pr, "max"],
-                    **{mo: bt.loc[(pr, mo)].to_dict() for mo in bt.loc[pr].index}} for pr in acc.index}
+                    **{mo: bt.loc[(pr, mo)].to_dict() for mo in bt.loc[pr].index},
+                    "within_country": {c: within[(pr, c)] for c in ("India", "Italy")}} for pr in acc.index}
     save_results("replicate_vit", summary, {"default": base, "replicate_vit": load_config("replicate_vit")})
 
 

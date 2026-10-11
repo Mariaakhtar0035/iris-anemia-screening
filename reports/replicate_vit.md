@@ -50,3 +50,17 @@ Baselines on the same test images, averaged over seeds. India is 79/95 anemic an
 | by_photo | ViT-B/16 in21k | 88.48% | 0.932 |
 | by_photo | country rule (India = anemic) | 88.64% | 0.885 |
 | by_photo | dummy (always no anemia) | 58.64% | 0.500 |
+
+Within one country, where the country rule cannot help. Test images of all seeds pooled; n counts images, and a photo tested in several seeds counts each time:
+
+| split | country | n | AUROC | PR-AUC | Sens @ 90% spec |
+|---|---|---|---|---|---|
+| by_photo | India | 282 | 0.530 [0.293, 0.799] | 0.841 [0.708, 0.970] | 0.029 [0.008, 0.436] |
+| by_photo | Italy | 378 | 0.934 [0.857, 0.983] | 0.472 [0.182, 0.879] | 0.909 [0.518, 1.000] |
+| paper | India | 289 | 0.981 [0.961, 0.995] | 0.996 [0.991, 0.999] | 0.926 [0.862, 0.983] |
+| paper | Italy | 366 | 0.955 [0.875, 1.000] | 0.913 [0.791, 1.000] | 0.925 [0.786, 1.000] |
+
+- by_photo, India: 64 distinct test photos, 53 of them anemic.
+- by_photo, Italy: 86 distinct test photos, 7 of them anemic.
+- paper, India: 92 distinct test photos, 77 of them anemic.
+- paper, Italy: 119 distinct test photos, 11 of them anemic.
