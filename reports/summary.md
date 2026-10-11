@@ -1,6 +1,6 @@
 # Summary: anemia screening baselines
 
-Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65, `stage_eyes_defy_audit` 2239613, `replicate_vit` 4125217.
+Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65, `stage_eyes_defy_audit` 2239613, `replicate_vit` 9b4d9f7.
 
 ## Status
 
