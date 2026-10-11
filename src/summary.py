@@ -22,6 +22,7 @@ def pick(rows, **match):
 
 def main():
     audit, color, probe, rep = (load(n) for n in ("stage2_audit", "stage3_color", "stage4_probe", "replicate_cnn"))
+    ed, vit = load("stage_eyes_defy_audit"), load("replicate_vit")
     a = audit["results"]
     c3, c4 = color["results"], probe["results"]
     head = "cv_5x5_no_copies"
@@ -71,7 +72,8 @@ def main():
         "Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, "
         "CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: "
         + ", ".join(f"`{n}` {d['git']['commit'][:7]}" for n, d in
-                    (("stage2_audit", audit), ("stage3_color", color), ("stage4_probe", probe), ("replicate_cnn", rep)) if d)
+                    (("stage2_audit", audit), ("stage3_color", color), ("stage4_probe", probe), ("replicate_cnn", rep),
+                     ("stage_eyes_defy_audit", ed), ("replicate_vit", vit)) if d)
         + ".",
         "",
         "## Status",
@@ -83,7 +85,8 @@ def main():
         "| 3. Color-feature baseline | done |",
         "| 4. Frozen DINOv2 probe | done |",
         "| Replication of the CP-AnemiC paper's CNN | " + ("done" if rep else "not run") + " |",
-        "| 5. Cross-dataset test with Eyes-Defy-Anemia | **blocked**: needs an IEEE DataPort subscription to download |",
+        "| Replication of the 2025 ViT paper on Eyes-Defy-Anemia | " + ("done" if vit else "not run") + " |",
+        "| 5. Cross-dataset test with Eyes-Defy-Anemia | not started (data in hand; parked until replication is done) |",
         "| 6-8. DHS survey model and transfer | **blocked**: needs DHS registration and approval |",
         "",
         "## 1. The CP-AnemiC data has far fewer distinct photos than rows",
@@ -159,6 +162,40 @@ def main():
             f"(AUROC {r_paper['auroc']['estimate']:.3f} to {r_group['auroc']['estimate']:.3f}) and raises Hb MAE to "
             f"{r_group['hb_mae']:.2f}, with every other setting identical.",
         ]
+    if ed and vit:
+        e, v = ed["results"], vit["results"]
+        vt, rule, dummy = "ViT-B/16 in21k", "country rule (India = anemic)", "dummy (always no anemia)"
+        lines += [
+            "",
+            "## 6. Replicating the 2025 ViT paper's 98.47% on Eyes-Defy-Anemia",
+            "",
+            f"From `results/stage_eyes_defy_audit.json`: {e['photos']} photos ({e['photos_by_country']}), "
+            f"{e['labelled_photos']} with Hb, labelled with the paper's cutoffs (India women < 12, men < 14 g/dL; Italy "
+            f"<= 10.5 g/dL): {e['no_anemia']} no anemia / {e['anemia']} anemia, "
+            + ("matching the paper." if e["matches_paper"] else f"vs the paper's {e['paper_counts']}.")
+            + f" The paper writes Italy \"< 10.5\", but its counts need <= 10.5 ({', '.join(e['italy_at_cutoff'])} sits "
+            f"exactly on 10.5). No duplicate photos ({e['near_duplicate_links']} near-duplicate links).",
+            "",
+            "ViT-B/16 (ImageNet-21k), the paper's optimizer, learning rate, batch size and 30 epochs, one random 80/20 "
+            f"split per seed, {v['paper']['seeds']} seeds. `paper` flips every photo and then splits the 3x images, so "
+            "flipped copies of a test photo sit in training; `by_photo` splits photos first. Baselines use the same "
+            "test images.",
+            "",
+            "| split | model | mean accuracy | mean AUROC |",
+            "|---|---|---|---|",
+            *[f"| {pr} | {mo} | {v[pr][mo]['accuracy']:.1%} | {v[pr][mo]['auroc']:.3f} |"
+              for pr in ("paper", "by_photo") for mo in (vt, rule, dummy)],
+            "",
+            f"- Under the paper's protocol, accuracy is {v['paper'][vt]['accuracy']:.1%} "
+            f"({v['paper']['accuracy_min']:.1%}-{v['paper']['accuracy_max']:.1%} across seeds) against the paper's "
+            "single run of 98.47%. The protocol roughly reproduces; with a 131-image test set, one lucky split can add "
+            "a few points.",
+            f"- Keeping all versions of a photo on one side drops accuracy to {v['by_photo'][vt]['accuracy']:.1%}, "
+            f"level with the country rule ({v['by_photo'][rule]['accuracy']:.1%}). India is mostly anemic and Italy "
+            "mostly not, so where a photo was taken already predicts most labels. The ViT still ranks better "
+            f"(AUROC {v['by_photo'][vt]['auroc']:.3f} vs {v['by_photo'][rule]['auroc']:.3f}), so it learns something "
+            "beyond country, but how much of that is pallor is not shown.",
+        ]
     lines += [
         "",
         "## Limitations",
@@ -183,11 +220,10 @@ def main():
         "",
         "## Next three steps with two more weeks",
         "",
-        "1. **Run the cross-dataset test (Stage 5)** once Eyes-Defy-Anemia is downloaded: train on CP-AnemiC photos "
-        "with no copy, test on Eyes-Defy, and the reverse.",
+        "1. **Run the cross-dataset test (Stage 5)**: train on CP-AnemiC photos with no copy, test on Eyes-Defy, and "
+        "the reverse. Also test Eyes-Defy within each country, to separate pallor from country.",
         "2. **Build the DHS survey model (Stages 6-8)** once DHS access is approved.",
-        "3. **Ask the CP-AnemiC authors about the duplicates** and replicate the 2025 ViT paper's 98.47% on "
-        "Eyes-Defy-Anemia (script ready in `src/eyelid/replicate_vit.py`), which augments before splitting.",
+        "3. **Ask the CP-AnemiC authors about the duplicates.**",
     ]
     text = "\n".join(lines) + "\n"
     (RESULTS / "summary.md").write_text(text)

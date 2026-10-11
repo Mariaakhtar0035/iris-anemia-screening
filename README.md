@@ -28,7 +28,7 @@ Raw data is **never committed**. `data/` and `results/` are gitignored. DHS term
 | Dataset | Folder | Source |
 |---|---|---|
 | CP-AnemiC | `data/raw/cp_anemic/` | Mendeley Data |
-| Eyes-Defy-Anemia | `data/raw/eyes_defy/` | dataset release, including the conjunctiva masks |
+| Eyes-Defy-Anemia | `data/raw/eyes_defy/` (the `India/`, `Italy/` folders and the description `.docx`) | IEEE DataPort, or the Kaggle mirror `harshwardhanfartale/eyes-defy-anemia` |
 | DHS Individual Recode, Zimbabwe | `data/raw/dhs/zimbabwe/` | DHS Program (registration and approval required) |
 | DHS Individual Recode, Malawi | `data/raw/dhs/malawi/` | same |
 | DHS Individual Recode, Zambia | `data/raw/dhs/zambia/` | same |
@@ -42,7 +42,8 @@ mkdir -p data/raw/cp_anemic data/raw/eyes_defy data/raw/dhs/{zimbabwe,malawi,zam
 ## Anemia cutoff
 
 - **Children 6 to 59 months:** anemic if hemoglobin is below **11.0 g/dL** (`anemia_cutoff_g_dl.child_6_59_months` in the config). This is the cutoff for CP-AnemiC.
-- **Adults:** WHO cutoffs by sex and pregnancy status. These are set when the Eyes-Defy-Anemia and DHS stages are built, and stated here when they are.
+- **Eyes-Defy-Anemia, ViT paper replication only:** the paper's cutoffs, not WHO's: India women < 12, men < 14 g/dL; Italy <= 10.5 g/dL for everyone (`paper_cutoffs_g_dl` in `configs/replicate_vit.yaml`). The paper writes "< 10.5" for Italy, but its 126/91 counts need <= 10.5.
+- **Adults otherwise:** WHO cutoffs by sex and pregnancy status, set when the cross-dataset and DHS stages are built.
 
 ## CP-AnemiC data notes
 
@@ -56,6 +57,15 @@ From `python -m src.eyelid.audit`:
 - **Age.** Ages run 6 to 60 months, mostly in whole years. 90 rows are 60 months, outside the 6 to 59 month definition; they are kept for now.
 - **Images** are RGBA with a transparent background, so the conjunctiva appears to be cut out already.
 
+## Eyes-Defy-Anemia data notes
+
+From `python -m src.eyelid.audit_eyes_defy`:
+
+- 218 eye photos (Italy 123, India 95), one folder per patient with the full eye `.jpg` and hand-segmented conjunctiva masks. Italy patient 93 has no Hb, leaving 217 labelled photos.
+- Both spreadsheets have `Number`, `Hgb`, `Gender`, `Age`, `Note`. Italy writes 15 Hb values with a decimal comma.
+- No duplicate photos.
+- Country nearly decides the label under the paper's cutoffs: India 79/95 anemic, Italy 12/122.
+
 ## Results so far
 
 | Stage | Report |
@@ -63,6 +73,7 @@ From `python -m src.eyelid.audit`:
 | 3. Color-feature baseline | [reports/stage3_color.md](reports/stage3_color.md) |
 | 4. Frozen DINOv2 probe vs color baseline | [reports/stage4_probe.md](reports/stage4_probe.md) |
 | Replication of the CP-AnemiC paper (joint ResNet50) | [reports/replicate_cnn.md](reports/replicate_cnn.md) |
+| Replication of the 2025 ViT paper on Eyes-Defy-Anemia | [reports/replicate_vit.md](reports/replicate_vit.md) |
 | Summary of everything | [reports/summary.md](reports/summary.md) |
 
 ## Layout

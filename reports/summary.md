@@ -1,6 +1,6 @@
 # Summary: anemia screening baselines
 
-Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65.
+Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65, `stage_eyes_defy_audit` 2239613, `replicate_vit` 2239613.
 
 ## Status
 
@@ -11,7 +11,8 @@ Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL 
 | 3. Color-feature baseline | done |
 | 4. Frozen DINOv2 probe | done |
 | Replication of the CP-AnemiC paper's CNN | done |
-| 5. Cross-dataset test with Eyes-Defy-Anemia | **blocked**: needs an IEEE DataPort subscription to download |
+| Replication of the 2025 ViT paper on Eyes-Defy-Anemia | done |
+| 5. Cross-dataset test with Eyes-Defy-Anemia | not started (data in hand; parked until replication is done) |
 | 6-8. DHS survey model and transfer | **blocked**: needs DHS registration and approval |
 
 ## 1. The CP-AnemiC data has far fewer distinct photos than rows
@@ -89,6 +90,24 @@ Joint ResNet50 (anemia classification + Hb regression) with the paper's loss, op
 - The paper's AUC sits within about 0.01 of its accuracy for all five of its models (Table 3), which is what an AUC computed from hard 0/1 predictions gives. Ours comes from probabilities, so compare on accuracy and Hb error rather than AUC.
 - Keeping each photo's copies in one fold drops accuracy to 77.5% (AUROC 0.921 to 0.852) and raises Hb MAE to 1.61, with every other setting identical.
 
+## 6. Replicating the 2025 ViT paper's 98.47% on Eyes-Defy-Anemia
+
+From `results/stage_eyes_defy_audit.json`: 218 photos ({'India': 95, 'Italy': 123}), 217 with Hb, labelled with the paper's cutoffs (India women < 12, men < 14 g/dL; Italy <= 10.5 g/dL): 126 no anemia / 91 anemia, matching the paper. The paper writes Italy "< 10.5", but its counts need <= 10.5 (Italy_13 sits exactly on 10.5). No duplicate photos (0 near-duplicate links).
+
+ViT-B/16 (ImageNet-21k), the paper's optimizer, learning rate, batch size and 30 epochs, one random 80/20 split per seed, 5 seeds. `paper` flips every photo and then splits the 3x images, so flipped copies of a test photo sit in training; `by_photo` splits photos first. Baselines use the same test images.
+
+| split | model | mean accuracy | mean AUROC |
+|---|---|---|---|
+| paper | ViT-B/16 in21k | 95.6% | 0.991 |
+| paper | country rule (India = anemic) | 86.7% | 0.866 |
+| paper | dummy (always no anemia) | 56.9% | 0.500 |
+| by_photo | ViT-B/16 in21k | 88.5% | 0.932 |
+| by_photo | country rule (India = anemic) | 88.6% | 0.885 |
+| by_photo | dummy (always no anemia) | 58.6% | 0.500 |
+
+- Under the paper's protocol, accuracy is 95.6% (93.9%-96.9% across seeds) against the paper's single run of 98.47%. The protocol roughly reproduces; with a 131-image test set, one lucky split can add a few points.
+- Keeping all versions of a photo on one side drops accuracy to 88.5%, level with the country rule (88.6%). India is mostly anemic and Italy mostly not, so where a photo was taken already predicts most labels. The ViT still ranks better (AUROC 0.932 vs 0.885), so it learns something beyond country, but how much of that is pallor is not shown.
+
 ## Limitations
 
 - **Different populations.** The eyelid images are children under five; the planned survey model is for women 15-49. The two models are not about the same people, and the survey model is not built yet.
@@ -102,6 +121,6 @@ Joint ResNet50 (anemia classification + Hb regression) with the paper's loss, op
 
 ## Next three steps with two more weeks
 
-1. **Run the cross-dataset test (Stage 5)** once Eyes-Defy-Anemia is downloaded: train on CP-AnemiC photos with no copy, test on Eyes-Defy, and the reverse.
+1. **Run the cross-dataset test (Stage 5)**: train on CP-AnemiC photos with no copy, test on Eyes-Defy, and the reverse. Also test Eyes-Defy within each country, to separate pallor from country.
 2. **Build the DHS survey model (Stages 6-8)** once DHS access is approved.
-3. **Ask the CP-AnemiC authors about the duplicates** and replicate the 2025 ViT paper's 98.47% on Eyes-Defy-Anemia (script ready in `src/eyelid/replicate_vit.py`), which augments before splitting.
+3. **Ask the CP-AnemiC authors about the duplicates.**
