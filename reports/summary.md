@@ -1,6 +1,6 @@
 # Summary: anemia screening baselines
 
-Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65, `stage_eyes_defy_audit` 2239613, `replicate_vit` 9b4d9f7.
+Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65, `stage_eyes_defy_audit` 2239613, `replicate_vit` 234ad65.
 
 ## Status
 
@@ -12,7 +12,7 @@ Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL 
 | 4. Frozen DINOv2 probe | done |
 | Replication of the CP-AnemiC paper's CNN | done |
 | Replication of the 2025 ViT paper on Eyes-Defy-Anemia | done |
-| 5. Cross-dataset test with Eyes-Defy-Anemia | not started (data in hand; parked until replication is done) |
+| 5. Cross-dataset test with Eyes-Defy-Anemia | not started (data in hand) |
 | 6-8. DHS survey model and transfer | **blocked**: needs DHS registration and approval |
 
 ## 1. The CP-AnemiC data has far fewer distinct photos than rows
@@ -107,6 +107,7 @@ ViT-B/16 (ImageNet-21k), the paper's optimizer, learning rate, batch size and 30
 
 - Under the paper's protocol, accuracy is 95.6% (93.9%-96.9% across seeds) against the paper's single run of 98.47%. The protocol roughly reproduces; with a 131-image test set, one lucky split can add a few points.
 - Keeping all versions of a photo on one side drops accuracy to 88.5%, level with the country rule (88.6%). India is mostly anemic and Italy mostly not, so where a photo was taken already predicts most labels. The ViT still ranks better (AUROC 0.932 vs 0.885), so it learns something beyond country.
+- Choosing the best epoch on the test set, which the paper may have done, lifts the paper protocol from 95.6% to 96.5% (best single run 96.9%); 0 of 5 runs reach 98.47%. That does not explain the gap; the paper's particular split or an unreported detail remains the likeliest cause.
 - Within one country, split by photo (all seeds pooled): India AUROC 0.530 [0.293, 0.799], chance level (53 of 64 test photos anemic); Italy 0.934 [0.857, 0.983], but only 7 anemic test photos, and Italy's cutoff (Hb <= 10.5) picks out more severe anemia. Inside India, where most of the anemia is, the ViT does not separate anemic from not.
 
 ## Limitations

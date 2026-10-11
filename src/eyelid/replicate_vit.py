@@ -168,9 +168,32 @@ def build_report(base):
     )
     (ROOT / "reports" / "replicate_vit.md").write_text(text)
     print(text)
+    # Best-epoch check: test accuracy after every epoch, from the --track-epochs runs (separate results files).
+    ep = [r for path in sorted(RESULTS.glob("replicate_vit_epochs_seed*.json"))
+          for r in json.loads(path.read_text())["results"]["runs"]]
+    best_epoch = {}
+    for pr in acc.index:
+        curves = [r["test_accuracy_by_epoch"] for r in ep if r["protocol"] == pr]
+        if curves:
+            best_epoch[pr] = {"seeds": len(curves), "final_mean": float(np.mean([c[-1] for c in curves])),
+                              "best_mean": float(np.mean([max(c) for c in curves])),
+                              "best_max": float(max(max(c) for c in curves)),
+                              "best_epochs": [int(np.argmax(c)) + 1 for c in curves],
+                              "runs_at_or_above_published": int(sum(max(c) >= 0.9847 for c in curves))}
+    if best_epoch:
+        text += ("\nBest-epoch check (`--track-epochs`): test accuracy after every epoch, then the best epoch per run, "
+                 "as if epochs were chosen on the test set (the paper's only held-out data):\n\n"
+                 "| protocol | final epoch, mean | best epoch, mean | best epoch, max | best epochs | runs >= 98.47% |\n"
+                 "|---|---|---|---|---|---|\n"
+                 + "\n".join(f"| {pr} | {b['final_mean']:.2%} | {b['best_mean']:.2%} | {b['best_max']:.2%} | "
+                             f"{b['best_epochs']} | {b['runs_at_or_above_published']} of {b['seeds']} |"
+                             for pr, b in best_epoch.items()) + "\n")
+        (ROOT / "reports" / "replicate_vit.md").write_text(text)
+        print(text[text.index("Best-epoch check"):])
     summary = {pr: {"seeds": int(acc.loc[pr, "count"]), "accuracy_min": acc.loc[pr, "min"], "accuracy_max": acc.loc[pr, "max"],
                     **{mo: bt.loc[(pr, mo)].to_dict() for mo in bt.loc[pr].index},
-                    "within_country": {c: within[(pr, c)] for c in ("India", "Italy")}} for pr in acc.index}
+                    "within_country": {c: within[(pr, c)] for c in ("India", "Italy")},
+                    "best_epoch": best_epoch.get(pr)} for pr in acc.index}
     save_results("replicate_vit", summary, {"default": base, "replicate_vit": load_config("replicate_vit")})
 
 

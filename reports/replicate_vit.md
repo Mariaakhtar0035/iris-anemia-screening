@@ -64,3 +64,10 @@ Within one country, where the country rule cannot help. Test images of all seeds
 - by_photo, Italy: 86 distinct test photos, 7 of them anemic.
 - paper, India: 92 distinct test photos, 77 of them anemic.
 - paper, Italy: 119 distinct test photos, 11 of them anemic.
+
+Best-epoch check (`--track-epochs`): test accuracy after every epoch, then the best epoch per run, as if epochs were chosen on the test set (the paper's only held-out data):
+
+| protocol | final epoch, mean | best epoch, mean | best epoch, max | best epochs | runs >= 98.47% |
+|---|---|---|---|---|---|
+| by_photo | 88.48% | 90.15% | 91.67% | [3, 1, 9, 1, 6] | 0 of 5 |
+| paper | 95.57% | 96.49% | 96.95% | [11, 14, 13, 6, 12] | 0 of 5 |

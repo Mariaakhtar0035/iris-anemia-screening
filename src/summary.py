@@ -86,7 +86,7 @@ def main():
         "| 4. Frozen DINOv2 probe | done |",
         "| Replication of the CP-AnemiC paper's CNN | " + ("done" if rep else "not run") + " |",
         "| Replication of the 2025 ViT paper on Eyes-Defy-Anemia | " + ("done" if vit else "not run") + " |",
-        "| 5. Cross-dataset test with Eyes-Defy-Anemia | not started (data in hand; parked until replication is done) |",
+        "| 5. Cross-dataset test with Eyes-Defy-Anemia | not started (data in hand) |",
         "| 6-8. DHS survey model and transfer | **blocked**: needs DHS registration and approval |",
         "",
         "## 1. The CP-AnemiC data has far fewer distinct photos than rows",
@@ -196,6 +196,13 @@ def main():
             f"(AUROC {v['by_photo'][vt]['auroc']:.3f} vs {v['by_photo'][rule]['auroc']:.3f}), so it learns something "
             "beyond country.",
         ]
+        be = v["paper"].get("best_epoch")
+        if be:
+            lines.append(
+                f"- Choosing the best epoch on the test set, which the paper may have done, lifts the paper protocol from "
+                f"{be['final_mean']:.1%} to {be['best_mean']:.1%} (best single run {be['best_max']:.1%}); "
+                f"{be['runs_at_or_above_published']} of {be['seeds']} runs reach 98.47%. That does not explain the gap; "
+                "the paper's particular split or an unreported detail remains the likeliest cause.")
         wi = v["by_photo"].get("within_country")
         if wi:
             ind, ita = wi["India"], wi["Italy"]
