@@ -229,3 +229,4 @@ graphify-out/
 *.ckpt
 *.safetensors
 *.onnx
+.DS_Store
