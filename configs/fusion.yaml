@@ -1,0 +1,12 @@
+# Fusion SIMULATION. No dataset has an eyelid photo and survey answers for the same woman, so nothing is trained jointly.
+# Each target-country woman keeps her real survey risk score (logistic regression fit on all of Zimbabwe, as in Stage 8)
+# and gets an eyelid score drawn at random from Eyes-Defy photos with her anemia status (WHO adult cutoffs by sex, as in
+# Stage 5). Scores are combined by adding the image log-odds slope to the survey logit, which assumes the two signals
+# are independent given anemia status.
+survey_model: logistic_regression
+targets: [malawi, zambia]
+image_signal: rule_low_redness   # untrained, the eyelid signal that held up best across datasets in Stage 5
+image_scenarios:                 # Eyes-Defy subset the image scores are drawn from
+  weak (India photos): India
+  strong (Italy photos): Italy
+n_draws: 20                      # repeat the random image draw; the table shows draw 0 with cluster bootstrap CIs
