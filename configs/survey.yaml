@@ -45,3 +45,9 @@ hist_gradient_boosting:
   min_samples_leaf: 50
 calibration_bins: 10        # quantile bins in the calibration plot
 budget_curve: [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00]
+
+# Stage 8: transfer, models fit on all of the training country (unweighted: weights changed nothing in Stage 7)
+transfer_models: [logistic_regression, hist_gradient_boosting]
+recalibration:
+  n_women: 200    # random target-country women used to fit Platt scaling
+  n_repeats: 20   # evaluated on all other target women each time

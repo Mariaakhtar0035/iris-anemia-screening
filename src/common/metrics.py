@@ -49,6 +49,25 @@ def brier(y, p):
     return float(brier_score_loss(y, p))
 
 
+def _recalibration_fit(y, p):
+    """Logistic regression of the outcome on logit(p): slope 1 and intercept 0 mean perfectly calibrated."""
+    from sklearn.linear_model import LogisticRegression
+    _check_both_classes(y)
+    p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+    fit = LogisticRegression(C=np.inf).fit(np.log(p / (1 - p))[:, None], y)
+    return float(fit.coef_[0, 0]), float(fit.intercept_[0])
+
+
+def calibration_slope(y, p):
+    """Below 1: predictions too spread out (overconfident); above 1: too timid."""
+    return _recalibration_fit(y, p)[0]
+
+
+def calibration_intercept(y, p):
+    """Intercept of the same fit; with the slope near 1, above 0 means risk is underestimated overall."""
+    return _recalibration_fit(y, p)[1]
+
+
 def bootstrap_ci(metric, y, s, n_resamples=2000, ci=0.95, groups=None, seed=42):
     """Percentile bootstrap interval for `metric(y, s)`.
 

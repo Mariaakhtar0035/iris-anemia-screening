@@ -8,6 +8,8 @@ from src.common.metrics import (
     bootstrap_ci,
     brier,
     pr_auc,
+    calibration_intercept,
+    calibration_slope,
     recall_at_top_fraction,
     sensitivity_at_specificity,
 )
@@ -120,3 +122,14 @@ def test_grouped_bootstrap_keeps_groups_together():
     assert (grouped["lo"], grouped["hi"]) == (2.0, 10.0)
     by_row = bootstrap_ci(n_rows, y, s, n_resamples=500)
     assert (by_row["lo"], by_row["hi"]) == (6.0, 6.0)
+
+
+def test_calibration_slope_and_intercept():
+    rng = np.random.default_rng(0)
+    p = rng.uniform(0.05, 0.95, 20000)
+    y = (rng.random(20000) < p).astype(int)  # outcomes drawn from p itself: perfectly calibrated
+    assert calibration_slope(y, p) == pytest.approx(1.0, abs=0.05)
+    assert calibration_intercept(y, p) == pytest.approx(0.0, abs=0.05)
+    logit = np.log(p / (1 - p))
+    overconfident = 1 / (1 + np.exp(-2 * logit))  # same ranking, twice as extreme
+    assert calibration_slope(y, overconfident) == pytest.approx(0.5, abs=0.05)
