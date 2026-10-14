@@ -1,0 +1,30 @@
+# DHS Individual Recode (women 15-49). Every variable below was checked against the variable labels and value labels
+# of all three files before use (Zimbabwe 2015 phase 7, Malawi and Zambia 2024 phase 8).
+countries:
+  zimbabwe: data/raw/dhs/zimbabwe/ZWIR72DT/ZWIR72FL.DTA   # 2015; the training country
+  malawi: data/raw/dhs/malawi/MWIR81DT/MWIR81FL.dta       # 2024
+  zambia: data/raw/dhs/zambia/ZMIR81DT/ZMIR81FL.dta       # 2024
+train_country: zimbabwe
+
+variables:
+  age: v012            # respondent's current age, years
+  pregnant: v213       # currently pregnant: 0 no or unsure, 1 yes
+  wealth: v190         # wealth index quintile 1 poorest .. 5 richest, relative to each country
+  contraception: v312  # current contraceptive method
+  residence: v025      # 1 urban, 2 rural
+  education: v106      # 0 none, 1 primary, 2 secondary, 3 higher
+  cluster: v001        # cluster number; identical to v021 (primary sampling unit) in all three files
+  weight: v005         # women's sample weight, 6 implied decimals
+  region: v024         # audit only: regions differ between countries, so never a model input
+  hb_adjusted: v456    # Hb adjusted for altitude and smoking, g/dL x 10
+  anemia_level: v457   # 1 severe, 2 moderate, 3 mild, 4 not anemic; missing = no Hb result
+
+# Anemia label: DHS's own v457, anemic at any severity (codes 1-3). It applies WHO cutoffs for women to the altitude- and
+# smoking-adjusted Hb: < 12.0 g/dL, or < 11.0 g/dL when pregnant.
+anemic_levels: [1, 2, 3]
+weight_divisor: 1000000
+
+features:
+  numeric: [age, pregnant]
+  ordinal: [wealth, education]
+  categorical: [contraception, residence]
