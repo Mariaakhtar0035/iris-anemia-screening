@@ -9,6 +9,7 @@ from transformers import AutoImageProcessor, AutoModel
 
 from src.common.io import ROOT, load_config
 from src.eyelid.dataset import load_cp_anemic
+from src.eyelid.roi import read_rgba
 
 CACHE = ROOT / "data" / "processed" / "embeddings" / "dinov2_small.npz"
 
@@ -21,9 +22,9 @@ def pick_device():
     return "cpu"
 
 
-def prepare(path, size, fill):
+def prepare(path, size, fill, crop=False):
     """Composite the cut-out conjunctiva on `fill`, pad to a square with it, resize to size x size."""
-    im = Image.open(path).convert("RGBA")
+    im = read_rgba(path, crop)
     flat = Image.alpha_composite(Image.new("RGBA", im.size, fill + (255,)), im).convert("RGB")
     side = max(flat.size)
     square = Image.new("RGB", (side, side), fill)
@@ -41,7 +42,7 @@ def load_embeddings(cfg):
     return compute(labels, cfg)
 
 
-def compute(labels, cfg):
+def compute(labels, cfg, cache=CACHE, crop=False):
     device = pick_device()
     processor = AutoImageProcessor.from_pretrained(cfg["model_id"], revision=cfg["revision"])
     model = AutoModel.from_pretrained(cfg["model_id"], revision=cfg["revision"]).to(device).eval()
@@ -52,7 +53,7 @@ def compute(labels, cfg):
     cls_rows, patch_rows = [], []
     paths = [ROOT / p for p in labels.image_path]
     for start in range(0, len(paths), cfg["batch_size"]):
-        batch = [prepare(p, cfg["image_size"], fill) for p in paths[start:start + cfg["batch_size"]]]
+        batch = [prepare(p, cfg["image_size"], fill, crop) for p in paths[start:start + cfg["batch_size"]]]
         x = (np.stack([np.asarray(im, dtype=np.float32) / 255.0 for im in batch]) - mean) / std
         with torch.no_grad():
             hidden = model(pixel_values=torch.from_numpy(x).permute(0, 3, 1, 2).to(device)).last_hidden_state
@@ -69,8 +70,8 @@ def compute(labels, cfg):
         "revision": np.array(cfg["revision"]),
         "device": np.array(device),
     }
-    CACHE.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(CACHE, **out)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(cache, **out)
     return out
 
 

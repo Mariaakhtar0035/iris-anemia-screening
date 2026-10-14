@@ -1,0 +1,14 @@
+# Stage 5: eyelid models trained on one image dataset and tested on the other, unchanged.
+# Same input on both sides: the hand-segmented palpebral conjunctiva on a transparent background
+# (CP-AnemiC's cut-outs; Eyes-Defy's *_palpebral.png masks, cropped to the conjunctiva's bounding box).
+#
+# Anemia cutoffs differ between the two datasets, by design (CLAUDE.md):
+#   CP-AnemiC, children 6-59 months: Hb < 11.0 g/dL (configs/default.yaml).
+#   Eyes-Defy, adults: WHO by sex, women < 12.0, men < 13.0 g/dL. Pregnancy is not recorded; we assume not pregnant.
+#   (This is NOT the ViT paper's labelling used in the replication; Italy has a Gender column, so WHO applies.)
+eyes_defy_cutoff_g_dl:
+  F: 12.0
+  M: 13.0
+cp_anemic_subset: singletons   # the 388 photos with no copy, as in Stages 3-4
+eyes_defy_mask_glob: "*bral.png"  # palpebral masks, forniceal ones excluded in code; names include typos: _papebral (India 7), _palplebral (Italy 95)
+within_cv: {n_splits: 5, n_repeats: 5}  # within-dataset reference on Eyes-Defy
