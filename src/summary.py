@@ -6,7 +6,7 @@ Run from the repo root: python -m src.summary
 import json
 
 from src.common.io import RESULTS, ROOT
-from src.eyelid.report import fmt, markdown_table
+from src.eyelid.report import IMAGE_COLUMNS, fmt, markdown_table
 
 
 def load(name):
@@ -23,6 +23,8 @@ def pick(rows, **match):
 def main():
     audit, color, probe, rep = (load(n) for n in ("stage2_audit", "stage3_color", "stage4_probe", "replicate_cnn"))
     ed, vit = load("stage_eyes_defy_audit"), load("replicate_vit")
+    xd, s6, s7, s8, fus = (load(n) for n in ("stage5_cross_dataset", "stage6_survey_audit", "stage7_survey_baselines",
+                                              "stage8_survey_transfer", "fusion_simulation"))
     a = audit["results"]
     c3, c4 = color["results"], probe["results"]
     head = "cv_5x5_no_copies"
@@ -73,7 +75,9 @@ def main():
         "CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: "
         + ", ".join(f"`{n}` {d['git']['commit'][:7]}" for n, d in
                     (("stage2_audit", audit), ("stage3_color", color), ("stage4_probe", probe), ("replicate_cnn", rep),
-                     ("stage_eyes_defy_audit", ed), ("replicate_vit", vit)) if d)
+                     ("stage_eyes_defy_audit", ed), ("replicate_vit", vit), ("stage5_cross_dataset", xd),
+                     ("stage6_survey_audit", s6), ("stage7_survey_baselines", s7), ("stage8_survey_transfer", s8),
+                     ("fusion_simulation", fus)) if d)
         + ".",
         "",
         "## Status",
@@ -86,8 +90,11 @@ def main():
         "| 4. Frozen DINOv2 probe | done |",
         "| Replication of the CP-AnemiC paper's CNN | " + ("done" if rep else "not run") + " |",
         "| Replication of the 2025 ViT paper on Eyes-Defy-Anemia | " + ("done" if vit else "not run") + " |",
-        "| 5. Cross-dataset test with Eyes-Defy-Anemia | not started (data in hand) |",
-        "| 6-8. DHS survey model and transfer | **blocked**: needs DHS registration and approval |",
+        "| 5. Cross-dataset test with Eyes-Defy-Anemia | " + ("done" if xd else "not run") + " |",
+        "| 6. DHS survey audit and datasets | " + ("done" if s6 else "not run") + " |",
+        "| 7. Survey baselines on Zimbabwe | " + ("done" if s7 else "not run") + " |",
+        "| 8. Survey transfer to Malawi and Zambia | " + ("done" if s8 else "not run") + " |",
+        "| Fusion simulation (survey + eyelid) | " + ("done" if fus else "not run") + " |",
         "",
         "## 1. The CP-AnemiC data has far fewer distinct photos than rows",
         "",
@@ -211,19 +218,113 @@ def main():
                 f"({ind['anemic_photos']} of {ind['n_photos']} test photos anemic); Italy {fmt(ita['auroc'])}, but only "
                 f"{ita['anemic_photos']} anemic test photos, and Italy's cutoff (Hb <= 10.5) picks out more severe "
                 "anemia. Inside India, where most of the anemia is, the ViT does not separate anemic from not.")
+    survey_cols = {**IMAGE_COLUMNS, "recall_top": "Recall, top 30% tested", "brier": "Brier"}
+    if xd:
+        x = xd["results"]["rows"]
+        def xa(direction, model, subset="all"):
+            return fmt(pick(x, **{"train -> test": direction, "model": model, "test set": subset})["auroc"])
+        lines += [
+            "",
+            "## 7. Eyelid models across datasets (Stage 5)",
+            "",
+            f"Train on one image dataset, test on the other unchanged. Input on both sides is the palpebral conjunctiva. "
+            f"CP-AnemiC: the {xd['results']['n_cp_anemic']} photos with no copy, Hb < 11.0 g/dL (children). Eyes-Defy: "
+            f"{xd['results']['n_eyes_defy']} photos, WHO adult cutoffs by sex (women < 12.0, men < 13.0 g/dL), not the "
+            "ViT paper's labels. Full table: `reports/stage5_cross_dataset.md`.",
+            "",
+            "| model | CP-AnemiC within (CV) | CP-AnemiC -> Eyes-Defy | -> India only | -> Italy only | Eyes-Defy -> CP-AnemiC |",
+            "|---|---|---|---|---|---|",
+            *[f"| {m} | {xa('cp_anemic (within, 5x5 CV)', m)} | {xa('cp_anemic -> eyes_defy', m)} | "
+              f"{xa('cp_anemic -> eyes_defy', m, 'India')} | {xa('cp_anemic -> eyes_defy', m, 'Italy')} | "
+              f"{xa('eyes_defy -> cp_anemic', m)} |"
+              for m in ("logistic_regression", "random_forest", "dinov2_probe", "rule_low_redness")],
+            "",
+            "- Learned models do not survive the change of dataset: the color logistic regression ranks Eyes-Defy "
+            "patients worse than chance, and the random forest and DINOv2 probe fall to near chance. They fit color "
+            "patterns tied to CP-AnemiC's camera and lighting.",
+            "- The untrained redness rule (less red = anemic) holds up best in both directions, so redness itself carries "
+            "across datasets even when learned color models do not.",
+        ]
+    if s6 and s7:
+        c6 = s6["results"]["countries"]
+        r7 = s7["results"]["rows"]
+        lines += [
+            "",
+            "## 8. Survey model on Zimbabwe (Stages 6-7)",
+            "",
+            "DHS Individual Recode, women 15-49 with an Hb result. Anemic = DHS `v457` at any severity (WHO for women: "
+            "Hb adjusted for altitude and smoking < 12.0 g/dL, < 11.0 if pregnant). Inputs: age, pregnancy, wealth "
+            "quintile, education, contraceptive method, urban/rural.",
+            "",
+            "| country | survey year | tested women | anemic | anemic if pregnant | clusters |",
+            "|---|---|---|---|---|---|",
+            *[f"| {c} | {'2015' if c == 'zimbabwe' else '2024'} | {d['tested']} | {d['anemic_share']:.1%} | "
+              f"{d['anemic_share_pregnant']:.1%} | {d['clusters']} |" for c, d in c6.items()],
+            "",
+            "Zimbabwe, StratifiedGroupKFold by cluster (5 folds x 5 seeds), bootstrap over clusters:",
+            "",
+            markdown_table([dict(r) for r in r7], ["model", "weights"], survey_cols),
+            "",
+            f"- The survey answers carry a weak signal: logistic regression AUROC "
+            f"{fmt(pick(r7, model='logistic_regression', weights='none')['auroc'])}; testing the top 30% by risk finds "
+            f"{pick(r7, model='logistic_regression', weights='none')['recall_top']['estimate']:.1%} of anemic women, vs "
+            f"{pick(r7, model='rule: random', weights='-')['recall_top']['estimate']:.1%} for random testing.",
+            "- Testing pregnant women first barely helps (they are about 6% of women). Survey weights change nothing.",
+        ]
+    if s8:
+        r8 = s8["results"]["rows"]
+        rc = s8["results"]["recalibration"]
+        lr = [r for r in r8 if r["model"] == "logistic_regression"]
+        lines += [
+            "",
+            "## 9. Survey model transferred to Malawi and Zambia (Stage 8)",
+            "",
+            "Fit on all of Zimbabwe 2015, applied unchanged to Malawi 2024 and Zambia 2024. The DHS wealth index is built "
+            "separately for each country and survey, so the same quintile does not mean the same wealth across the three.",
+            "",
+            markdown_table([dict(r) for r in lr], ["country", "n", "prevalence"],
+                           {**survey_cols, "cal_slope": "Cal. slope", "cal_intercept": "Cal. intercept"}),
+            "",
+            "- The logistic regression keeps most of its small signal in both countries; calibration stays near ideal, "
+            "with Malawi's risk overestimated by a few points.",
+            f"- Platt scaling on 200 local women brings the mean predicted risk to the local prevalence (Malawi "
+            f"{rc['logistic_regression/malawi']['mean_risk_before']['mean']:.1%} -> "
+            f"{rc['logistic_regression/malawi']['mean_risk_after']['mean']:.1%} vs {rc['logistic_regression/malawi']['prevalence']:.1%}), "
+            "but with so weak a signal its fitted slope is noisy and the Brier score does not improve. Gradient boosting "
+            "is overconfident everywhere and gains more from recalibration (see `reports/stage8_transfer.md`).",
+        ]
+    if fus:
+        rf = fus["results"]["rows"]
+        lines += [
+            "",
+            "## 10. Fusion SIMULATION: survey score plus an eyelid score",
+            "",
+            "No dataset has an eyelid photo and survey answers for the same woman. Each Malawi and Zambia woman keeps her "
+            "real survey score and gets an eyelid redness score drawn from Eyes-Defy photos with her anemia status, "
+            "assuming the two signals are independent given anemia. This shows what fusion could add if an eyelid score "
+            "worked as well on these women as on Eyes-Defy; it is not evidence that it does.",
+            "",
+            markdown_table([dict(r) for r in rf], ["country", "scores"],
+                           {k: v for k, v in survey_cols.items() if k != "brier"}),
+            "",
+            "- The eyelid score would carry most of the signal; the survey score adds about 0.01-0.02 AUROC on top of a "
+            "weak eyelid score and nothing on top of a strong one.",
+        ]
     lines += [
         "",
         "## Limitations",
         "",
-        "- **Different populations.** The eyelid images are children under five; the planned survey model is for "
-        "women 15-49. The two models are not about the same people, and the survey model is not built yet.",
+        "- **Different populations.** CP-AnemiC is children under five; Eyes-Defy is adults; the survey model is "
+        "women 15-49. No dataset links an eyelid photo to survey answers, so fusion is only simulated.",
         f"- **Not population prevalence.** {a['anemic_share_rows']:.1%} of CP-AnemiC rows are anemic. The sample "
         "leaned toward children suspected of anemia, so this share is not the prevalence in Ghana.",
-        "- **Cutoffs differ.** Children use Hb < 11.0 g/dL; adults (Eyes-Defy, DHS) will use WHO cutoffs by sex and "
-        "pregnancy. Results across datasets must say which cutoff each uses.",
-        "- **Lighting, camera and cropping differ between image datasets.** CP-AnemiC comes cut out on a transparent "
-        "background; Eyes-Defy ships separate masks. Cross-dataset numbers will mix these differences with real "
-        "transfer, and that test has not run yet.",
+        "- **Cutoffs differ.** CP-AnemiC uses Hb < 11.0 g/dL (children). Eyes-Defy uses WHO adult cutoffs by sex "
+        "(pregnancy not recorded, assumed not pregnant), except the ViT replication, which uses that paper's cutoffs. "
+        "DHS uses its own `v457` (WHO for women, adjusted for altitude and smoking).",
+        "- **Lighting, camera and cropping differ between image datasets.** Cross-dataset numbers mix these differences "
+        "with real transfer; the collapse of learned color models suggests the camera difference dominates.",
+        "- **Survey rounds differ.** Zimbabwe is 2015, Malawi and Zambia 2024, so transfer mixes country with time. "
+        "Malawi's wealth index is missing for 408 tested women, all in the Central region (imputed inside the model).",
         "- **Duplicates.** Near-duplicates are found by a perceptual hash with a threshold checked by eye; more "
         "aggressively re-cropped copies can slip through (the no-color control stays above chance on the 476-photo "
         "set). The headline uses only photos with no detected copy, which is the most conservative choice.",
@@ -235,10 +336,12 @@ def main():
         "",
         "## Next three steps with two more weeks",
         "",
-        "1. **Run the cross-dataset test (Stage 5)**: train on CP-AnemiC photos with no copy, test on Eyes-Defy, and "
-        "the reverse. Also test Eyes-Defy within each country, to separate pallor from country.",
-        "2. **Build the DHS survey model (Stages 6-8)** once DHS access is approved.",
-        "3. **Ask the CP-AnemiC authors about the duplicates.**",
+        "1. **Collect paired data**: an eyelid photo and the survey answers for the same women, to test fusion for "
+        "real instead of by simulation.",
+        "2. **Fix the camera gap before learning colors**: photograph a reference color card with each eyelid, or "
+        "normalize colors per device, then retest the cross-dataset models; the redness rule suggests the signal survives.",
+        "3. **Compare the survey baseline with Chemhaka et al.** once their numbers are in hand, and ask the CP-AnemiC "
+        "authors about the duplicate photos.",
     ]
     text = "\n".join(lines) + "\n"
     (RESULTS / "summary.md").write_text(text)
