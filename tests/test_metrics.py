@@ -58,9 +58,13 @@ def test_recall_at_top_fraction():
     assert recall_at_top_fraction(y, s, frac=1.0) == 1.0
 
 
-def test_recall_at_top_fraction_ties_follow_input_order():
+def test_recall_at_top_fraction_ties_count_their_expected_share():
     y = [1, 0, 0, 1, 0, 0, 0, 0, 1, 0]
-    assert recall_at_top_fraction(y, [0.5] * 10, frac=0.30) == pytest.approx(1 / 3)
+    assert recall_at_top_fraction(y, [0.5] * 10, frac=0.30) == pytest.approx(0.30)  # constant score: recall = budget
+    # top row is a sure positive; the other 2 slots come from 4 tied rows holding 1 positive -> 1 + 2 * 1/4 = 1.5 of 3
+    s = [0.9, 0.5, 0.5, 0.5, 0.5, 0.1, 0.1, 0.1, 0.1, 0.1]
+    y = [1, 1, 0, 0, 0, 0, 0, 0, 1, 0]
+    assert recall_at_top_fraction(y, s, frac=0.30) == pytest.approx(1.5 / 3)
 
 
 def test_undefined_metrics_raise():

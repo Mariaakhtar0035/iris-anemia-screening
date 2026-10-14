@@ -38,9 +38,11 @@ def recall_at_top_fraction(y, s, frac=0.30):
     if y.sum() == 0:
         raise ValueError("recall needs at least one positive")
     k = math.ceil(frac * len(s))
-    # shortcut: ties at the cut are broken by input order; switch to expected recall over tied scores if a model ties often (HistGB can).
-    top = np.argsort(-s, kind="stable")[:k]
-    return float(y[top].sum() / y.sum())
+    # Ties at the cut are shared out at random, so take their expected number of positives (a constant score gives frac).
+    cut = np.sort(s)[::-1][k - 1]
+    above, tied = s > cut, s == cut
+    expected = y[above].sum() + (k - above.sum()) * y[tied].mean()
+    return float(expected / y.sum())
 
 
 def brier(y, p):

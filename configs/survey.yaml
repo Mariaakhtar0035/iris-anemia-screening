@@ -28,3 +28,20 @@ features:
   numeric: [age, pregnant]
   ordinal: [wealth, education]
   categorical: [contraception, residence]
+
+# Stage 7: baselines on Zimbabwe
+cv:
+  n_splits: 5          # StratifiedGroupKFold by cluster
+  n_repeats: 5         # 5 seeds: default seed + 0..4
+top_fraction: 0.30     # recall when only the top 30% by risk score get tested
+onehot_min_frequency: 0.01  # contraception methods under 1% of training women, and any unseen one, share one column
+logistic_regression:
+  C: 1.0
+  max_iter: 2000
+hist_gradient_boosting:
+  max_iter: 200
+  learning_rate: 0.05
+  max_leaf_nodes: 15
+  min_samples_leaf: 50
+calibration_bins: 10        # quantile bins in the calibration plot
+budget_curve: [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00]
