@@ -53,3 +53,21 @@ def test_grouped_splits_never_split_a_group():
     groups = np.repeat(np.arange(20), 3)
     for _, train, test in repeated_stratified_grouped(y, groups, 5, 2, seed=0):
         assert not set(groups[train]) & set(groups[test])
+
+
+def test_training_rows_keep_copies_out_of_test():
+    from src.eyelid.ceiling import training_rows
+    groups = np.array(["a", "a", "b", "c", "c", "c"])
+    assert list(training_rows(groups, ["a", "c"], every_copy=True)) == [0, 1, 3, 4, 5]
+    assert list(training_rows(groups, ["a", "c"], every_copy=False)) == [0, 3]
+    assert "b" not in groups[training_rows(groups, ["a", "c"], every_copy=True)]
+
+
+def test_white_background_mask_becomes_transparent(tmp_path):
+    img = np.full((4, 4, 4), 255, dtype=np.uint8)  # fully opaque, pure white, like Eyes-Defy Italy 1-31 masks
+    img[0, :2, :3] = [200, 100, 110]                # two conjunctiva pixels
+    path = tmp_path / "white.png"
+    Image.fromarray(img, "RGBA").save(path)
+    rgb = roi_pixels(path)
+    assert rgb.shape == (2, 3)
+    assert np.allclose(rgb, np.array([200, 100, 110]) / 255)

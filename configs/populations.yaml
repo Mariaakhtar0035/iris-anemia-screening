@@ -1,0 +1,8 @@
+# Stage 10: why do the eyelid populations differ? Mentor advice M4 (docs/eyelid_followup.md).
+# Populations and anemia cutoffs as in Stage 9 (configs/ceiling.yaml): CP-AnemiC children Hb < 11.0 g/dL;
+# Eyes-Defy adults WHO by sex (women < 12.0, men < 13.0).
+measures: [L_mean, a_mean, b_mean, S_mean]   # color features (src/eyelid/color_features.py): lightness, red-green, blue-yellow, saturation
+cv: {n_splits: 5, n_repeats: 5}              # for the "which population is this photo from?" classifiers
+# Eyes-Defy Italy came in two batches: folders 1-31 (photos named N.jpg, masks on a white background) and folders
+# 32-123 (photos named T_*). Anemia is concentrated in the first: 21/31 vs 2/91 (WHO cutoffs).
+italy_early_batch_last_folder: 31

@@ -17,6 +17,13 @@ def read_rgba(path, crop=False):
         if bgra.dtype == np.uint16:  # some are 16 bits per channel; keep the top 8 bits, as PIL's RGBA conversion does
             bgra = (bgra >> 8).astype(np.uint8)
         im = Image.fromarray(cv2.cvtColor(bgra, cv2.COLOR_BGRA2RGBA))
+    rgba = np.asarray(im)
+    white = (rgba[..., :3] == 255).all(axis=-1)
+    if (rgba[..., 3] == 255).all() and white.mean() > 0.5:
+        # 31 Eyes-Defy masks (Italy folders 1-31) have no transparency: the cut-out sits on pure white. Make it transparent.
+        rgba = rgba.copy()
+        rgba[white, 3] = 0
+        im = Image.fromarray(rgba, "RGBA")
     return im.crop(im.getchannel("A").getbbox()) if crop else im
 
 

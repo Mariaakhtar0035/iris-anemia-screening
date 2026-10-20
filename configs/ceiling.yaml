@@ -1,0 +1,46 @@
+# Stage 9: how well can each population be fit on its own? Mentor advice M1-M3 (docs/eyelid_followup.md).
+# Seed and bootstrap from default.yaml; color models from color.yaml; DINOv2 probe from probe.yaml.
+#
+# Anemia cutoffs (they differ between datasets, by design):
+#   CP-AnemiC, children 6-59 months: Hb < 11.0 g/dL (default.yaml).
+#   Eyes-Defy, adults: WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml). Pregnancy not recorded.
+cp_anemic_subset: unique   # one row per distinct photo (476); the one photo whose copies disagree on the label is dropped
+cv: {n_splits: 5, n_repeats: 5}   # by photo; every population has one photo per patient
+
+hist_gradient_boosting:     # the most flexible color model; small leaves because India has only ~76 training photos
+  max_iter: 200
+  learning_rate: 0.05
+  max_leaf_nodes: 15
+  min_samples_leaf: 10
+
+learning_curve:
+  fractions: [0.25, 0.5, 0.75, 1.0]   # share of each training fold kept (stratified)
+  min_class_train: 8                  # skip a point when the rarer class has fewer training photos than this
+
+# Eyes-Defy has three hand-drawn masks per photo; some Italian photos lack the forniceal ones, so the region
+# comparison uses only photos that have all three. Palpebral names include typos (_papebral, _palplebral).
+regions:
+  palpebral: "*bral.png"                  # names containing "forniceal" are excluded in code
+  forniceal: "*_forniceal.png"
+  both: "*_forniceal_pal*bral.png"
+gray_world: [false, true]
+
+# Biggest rung: ViT-B/16 fine-tuned on the conjunctiva cut-outs (src/eyelid/finetune_vit.py).
+# Same weights and optimizer settings as the replication (replicate_vit.yaml). One seed, 5 folds (Jaineel, 2026-10-20).
+vit:
+  model_id: google/vit-base-patch16-224-in21k
+  revision: b4569560a39a0f1af58e3ddaf17facf20ab919b0
+  image_size: 224
+  batch_size: 8
+  epochs: 30
+  lr: 0.00001
+  weight_decay: 0.0001
+  n_splits: 5
+  # Training only: random h/v flips, plus brightness and contrast jitter. No hue or saturation jitter, which
+  # would change the redness the model needs.
+  jitter: {brightness: 0.3, contrast: 0.3}
+  runs:                     # population -> jitter on/off settings to run
+    cp_anemic: [true]
+    eyes_defy_india: [true]
+    eyes_defy_italy: [true]
+    eyes_defy_pooled: [true, false]
