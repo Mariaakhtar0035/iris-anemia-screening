@@ -34,3 +34,22 @@ Paraphrased from the meeting, without names.
 ### Step 0: record the suggestions (done)
 - **Why:** to keep a record of what was asked, so next week's answers can be checked against it.
 - **What:** this file.
+
+### Data problem found on the way: Italian masks and Italian batches (fixed / reported)
+While running Step 2 we found two problems in Eyes-Defy Italy. Neither was reported before.
+
+1. **31 mask files had no transparency.** In Italy folders 1-31, the conjunctiva cut-out sits on a pure-white
+   (255, 255, 255) background with no alpha channel, while all other masks use a transparent background. Our region of
+   interest is "the opaque pixels", so for these 31 photos we were measuring a mostly white frame.
+   - **Fix:** `src/eyelid/roi.py` `read_rgba` now makes pure white transparent when a mask has no transparency at all.
+     Test: `tests/test_eyelid.py::test_white_background_mask_becomes_transparent`.
+   - CP-AnemiC is not affected: every one of its 710 images has transparency.
+   - **Effect on earlier results:** we reran Stage 5, the fusion simulation and the Eyes-Defy DINOv2 cache. The
+     conclusions held. Redness rule CP-AnemiC -> Eyes-Defy: 0.808 -> 0.835 (Italy 0.935 -> 0.924, India unchanged
+     at 0.671). Learned models across datasets: 0.25-0.58 -> 0.32-0.62.
+2. **Italy is two batches, and almost all Italian anemia is in the first one.** Folders 1-31 (photos named `N.jpg`) are
+   21/31 anemic. Folders 32-123 (photos named `T_*`) are 2/91 anemic.
+   - Non-anemic people in the early batch already look paler (a* 32.9 vs 40.1). The batch alone predicts Italian
+     anemia with AUROC 0.91, and inside the early batch the redness rule drops to about 0.75 (n = 31).
+   - **Meaning:** the "redness rule works great in Italy (0.93)" result is mostly the batch, not pallor. From now on,
+     Italy is also reported on the early batch alone. Details: `reports/stage10_populations.md`.

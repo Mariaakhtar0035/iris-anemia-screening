@@ -1,0 +1,27 @@
+# Stage 11: can the India/Italy shortcut be taken out? Mentor advice M5-M8 (docs/eyelid_followup.md).
+# Eyes-Defy only (India 95, Italy 122 photos), labelled with WHO adult cutoffs by sex: women < 12.0, men < 13.0 g/dL
+# (cross_dataset.yaml). CP-AnemiC (photos with no copy, children, Hb < 11.0 g/dL) is only an outside test set.
+cv: {n_splits: 5, n_repeats: 5}   # stratified by country x anemia, by photo
+
+# Fairness metrics, fixed before running:
+#   AUROC within India, within Italy, and the worse of the two ("worst-country AUROC").
+#   Italy early batch only (folders 1-31): Italy's anemia sits almost entirely there (Stage 10), so this is the one
+#   Italy check that the batch can't explain.
+#   Score parity: mean percentile rank of India minus Italy, separately among non-anemic and anemic people
+#   (0 = the model ranks the two countries alike once anemia status is fixed; an equalized-odds view of the scores).
+#   TPR and FPR gaps (India minus Italy) at one shared threshold: the score that catches this share of anemic people overall.
+referral_sensitivity: 0.90
+italy_early_batch_last_folder: 31
+
+# M6, images made more alike (color features recomputed from the conjunctiva pixels):
+brightness_target: 0.5            # "brightness": every image's RGB scaled so its mean is this value
+jitter:                           # training-only augmentation of the color models
+  copies: 5                       # jittered copies of every training photo
+  brightness: 0.3                 # RGB multiplied by U(0.7, 1.3)
+  contrast: 0.3                   # distance from the image mean scaled by U(0.7, 1.3)
+
+# M5, fairness regularization: logistic regression whose loss also has lambda * sum over labels of the squared gap in
+# mean predicted risk between India and Italy. lambda = 0 is plain logistic regression with the same C.
+fair_lr:
+  C: 1.0
+  lambdas: [1.0, 10.0, 100.0]

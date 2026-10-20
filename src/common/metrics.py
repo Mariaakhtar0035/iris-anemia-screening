@@ -45,6 +45,26 @@ def recall_at_top_fraction(y, s, frac=0.30):
     return float(expected / y.sum())
 
 
+def _referral_at_sensitivity(y, s, sens):
+    """At the highest threshold that catches at least `sens` of positives: (share of everyone referred, precision)."""
+    _check_both_classes(y)
+    y = np.asarray(y)
+    fpr, tpr, _ = roc_curve(y, s)
+    tp, fp = tpr * y.sum(), fpr * (len(y) - y.sum())
+    i = np.flatnonzero(tpr >= sens - 1e-12)[0]  # tied scores are referred together, so this can overshoot `sens`
+    return float((tp[i] + fp[i]) / len(y)), float(tp[i] / (tp[i] + fp[i]))
+
+
+def share_tested_at_sensitivity(y, s, sens=0.90):
+    """Share of all people sent for a blood test (highest scores first) to catch `sens` of the anemic ones."""
+    return _referral_at_sensitivity(y, s, sens)[0]
+
+
+def precision_at_sensitivity(y, s, sens=0.90):
+    """Share of the people sent for a blood test who are anemic, at that same threshold."""
+    return _referral_at_sensitivity(y, s, sens)[1]
+
+
 def brier(y, p):
     return float(brier_score_loss(y, p))
 

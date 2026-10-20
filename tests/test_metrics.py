@@ -133,3 +133,11 @@ def test_calibration_slope_and_intercept():
     logit = np.log(p / (1 - p))
     overconfident = 1 / (1 + np.exp(-2 * logit))  # same ranking, twice as extreme
     assert calibration_slope(y, overconfident) == pytest.approx(0.5, abs=0.05)
+
+
+def test_share_tested_and_precision_at_sensitivity():
+    from src.common.metrics import precision_at_sensitivity, share_tested_at_sensitivity
+    y, s = np.array([1, 1, 0, 0]), np.array([0.9, 0.8, 0.7, 0.1])
+    assert share_tested_at_sensitivity(y, s, 1.0) == 0.5 and precision_at_sensitivity(y, s, 1.0) == 1.0
+    assert share_tested_at_sensitivity(y, np.zeros(4), 0.9) == 1.0  # no ranking: everyone must be tested
+    assert precision_at_sensitivity(y, np.zeros(4), 0.9) == 0.5     # precision then equals prevalence

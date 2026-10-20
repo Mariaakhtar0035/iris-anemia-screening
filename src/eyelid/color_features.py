@@ -47,11 +47,11 @@ def feature_table(image_paths, ids, normalize=False, alpha_threshold=255, min_pi
 def image_properties(image_paths, ids):
     """Size and cut-out shape only, no color. A negative control: a model on these should sit near chance
     unless it can match up duplicate images."""
-    from PIL import Image
+    from src.eyelid.roi import read_rgba
 
     rows = []
     for path in image_paths:
-        im = Image.open(path).convert("RGBA")
+        im = read_rgba(path)  # reads the Eyes-Defy masks PIL rejects, and the white-background ones
         alpha = np.asarray(im)[..., 3]
         w, h = im.size
         rows.append({

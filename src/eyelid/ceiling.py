@@ -23,7 +23,7 @@ from src.common.evaluate import summarize
 from src.common.io import RESULTS, ROOT, load_config, save_results
 from src.common.metrics import auroc
 from src.common.splits import repeated_stratified
-from src.eyelid.color_features import feature_table
+from src.eyelid.color_features import feature_table, image_properties
 from src.eyelid.cross_dataset import eyes_defy_embeddings, inputs, load_eyes_defy
 from src.eyelid.dataset import load_cp_anemic
 from src.eyelid.embed import load_embeddings
@@ -134,6 +134,12 @@ def main():
         info = {"population": name, "n": len(y), "anemic": f"{y.mean():.1%}"}
         ladder.append({**info, "model": "rule_low_redness (no training)", "train": "-", "gap": "-",
                        **summarize(y, x["rule"], boot["n_resamples"], boot["ci"], seed)})
+        # Negative control: image size and cut-out shape only, no color. Near 0.5 unless photos leak or batches differ.
+        props = image_properties([ROOT / p for p in df.image_path], df.id).to_numpy()
+        held_out, train_auroc = fit_and_score(models["random_forest"][1], props, y, folds)
+        m = summarize(y, held_out, boot["n_resamples"], boot["ci"], seed)
+        ladder.append({**info, "model": "negative_control_rf_no_color", "train": train_text(train_auroc),
+                       "gap": f"{np.nanmean(train_auroc) - m['auroc']['estimate']:+.3f}", **m})
         for model, (kind, make) in models.items():
             for frac in cfg["learning_curve"]["fractions"]:
                 n_train = int(round(len(y) * (n_splits - 1) / n_splits * frac))
@@ -186,7 +192,10 @@ def main():
     everything = load_cp_anemic("all")
     everything = everything[everything.groupby("photo_group").anemic.transform("nunique") == 1].reset_index(drop=True)
     first = np.flatnonzero(~everything.photo_group.duplicated().to_numpy())
-    assert list(everything.id[first]) == list(pops["cp_anemic"][0].id), "first copies should be the `unique` subset"
+    assert list(everything.id[first]) == list(load_cp_anemic("unique").id), "first copies should be the `unique` subset"
+    # Folds run over all distinct photos (so photos with copies can be trained on), but scores are only judged on
+    # photos with no copy: the `unique` subset still holds near-duplicates the audit missed (see configs/ceiling.yaml).
+    single = (everything.groupby("photo_group").id.transform("size") == 1).to_numpy()[first]
     emb = load_embeddings(probe_cfg)
     pos = {i: k for k, i in enumerate(emb["ids"])}
     x_all = {"color": feature_table([ROOT / p for p in everything.image_path], everything.id, False,
@@ -205,8 +214,8 @@ def main():
                 n_rows.append(len(rows))
                 held_out[r, test] = make().fit(x_all[kind][rows], y_all[rows]).predict_proba(x_all[kind][first[test]])[:, 1]
             copy_rows.append({"model": model, "training rows": "every copy" if every_copy else "one per photo",
-                              "mean training rows": round(float(np.mean(n_rows))), "n": len(y),
-                              **summarize(y, held_out, boot["n_resamples"], boot["ci"], seed)})
+                              "mean training rows": round(float(np.mean(n_rows))), "n": int(single.sum()),
+                              **summarize(y[single], held_out[:, single], boot["n_resamples"], boot["ci"], seed)})
         print(f"copies: {model} done", flush=True)
 
     # Learning-curve figure: held-out AUROC (solid) and training AUROC (dotted) against training photos.
@@ -249,9 +258,10 @@ def main():
         + curve_table + "\n\n![Learning curves](figures/stage9_learning_curves.png)\n\n"
         "## Eyes-Defy: mask region and gray-world\n\nOnly photos with all three masks. Color models and the rule, "
         "within one country at a time.\n\n" + region_table
-        + "\n\n## CP-AnemiC: duplicate copies as training augmentation\n\nSame folds and the same held-out photos (one "
-        "per distinct photo); the training side either keeps every copy of its photos or only one. Copies of a test "
-        "photo never enter training.\n\n" + copy_table + "\n"
+        + "\n\n## CP-AnemiC: duplicate copies as training augmentation\n\nFolds over all 476 distinct photos; the "
+        "training side either keeps every copy of its photos or only one, and copies of a test photo never enter "
+        "training. Scored only on the held-out photos that have no copy (n below), the subset where the no-color "
+        "control sits near chance.\n\n" + copy_table + "\n"
     )
     (ROOT / "reports" / "stage9_ceiling.md").write_text(text)
     print(text)

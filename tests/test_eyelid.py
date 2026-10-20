@@ -71,3 +71,41 @@ def test_white_background_mask_becomes_transparent(tmp_path):
     rgb = roi_pixels(path)
     assert rgb.shape == (2, 3)
     assert np.allclose(rgb, np.array([200, 100, 110]) / 255)
+
+
+def test_reweighing_makes_group_and_label_independent():
+    from src.eyelid.debias import reweigh
+    rng = np.random.default_rng(0)
+    g = rng.choice(["India", "Italy"], 300)
+    y = (rng.random(300) < np.where(g == "India", 0.7, 0.2)).astype(int)
+    w = reweigh(y, g)
+    for grp in ("India", "Italy"):
+        m = g == grp
+        assert np.isclose((w[m] * y[m]).sum() / w[m].sum(), (w * y).sum() / w.sum())
+
+
+def test_fair_lr_without_penalty_matches_sklearn():
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    from src.eyelid.debias import FairLogisticRegression
+    rng = np.random.default_rng(1)
+    X = rng.normal(size=(200, 4))
+    y = (X[:, 0] + rng.normal(size=200) > 0).astype(int)
+    g = rng.choice(["a", "b"], 200)
+    ours = FairLogisticRegression(0.0, C=1.0).fit(X, y, g).predict_proba(X)[:, 1]
+    ref = make_pipeline(StandardScaler(), LogisticRegression(C=1.0)).fit(X, y).predict_proba(X)[:, 1]
+    assert np.allclose(ours, ref, atol=1e-3)  # same objective; the optimizers stop at slightly different points
+
+
+def test_fair_lr_penalty_shrinks_the_group_gap():
+    from src.eyelid.debias import FairLogisticRegression
+    rng = np.random.default_rng(2)
+    X = rng.normal(size=(400, 3))
+    g = np.where(X[:, 1] > 0, "a", "b")              # feature 1 reveals the group
+    y = (X[:, 0] + X[:, 1] + rng.normal(size=400) > 0).astype(int)
+
+    def gap(lam):
+        p = FairLogisticRegression(lam).fit(X, y, g).predict_proba(X)[:, 1]
+        return sum((p[(y == k) & (g == "a")].mean() - p[(y == k) & (g == "b")].mean()) ** 2 for k in (0, 1))
+    assert gap(100.0) < 0.25 * gap(0.0)

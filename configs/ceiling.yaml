@@ -4,7 +4,9 @@
 # Anemia cutoffs (they differ between datasets, by design):
 #   CP-AnemiC, children 6-59 months: Hb < 11.0 g/dL (default.yaml).
 #   Eyes-Defy, adults: WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml). Pregnancy not recorded.
-cp_anemic_subset: unique   # one row per distinct photo (476); the one photo whose copies disagree on the label is dropped
+# The 388 photos with no copy. Not `unique` (476 distinct photos): there a model that sees no color still scores AUROC
+# 0.60 (Stage 3), so near-duplicates our rule missed still leak. The no-color control is reported for every population.
+cp_anemic_subset: singletons
 cv: {n_splits: 5, n_repeats: 5}   # by photo; every population has one photo per patient
 
 hist_gradient_boosting:     # the most flexible color model; small leaves because India has only ~76 training photos
