@@ -23,11 +23,20 @@
 > | Same survey model, unchanged, in Malawi and Zambia | keeps its small signal (**0.57**, 0.57), calibration stays close |
 > | Survey + eyelid score together (**simulation**, no paired data exists) | the eyelid score would do most of the work; the survey adds about 0.01-0.02 |
 >
+> **Part III: following up the mentors' eyelid advice**
+>
+> | Question | Answer |
+> |---|---|
+> | How far can each eyelid dataset be pushed on its own? | Ghana children: gradient boosting on 29 color numbers reaches **0.85**, still rising with more photos; a fine-tuned ViT fits training perfectly but scores 0.72. India: nothing beats the untrained rule (0.67) |
+> | Why do populations differ? | the dataset is obvious from the pixels (AUROC 0.99-1.00); Italy's anemic photos sit almost all in one early batch, which alone predicts anemia at 0.91 |
+> | Does debiasing help? | it closes the country gaps (rank gap 0.39 -> 0.10) but doesn't raise AUROC inside any country |
+> | What would it save a clinic? | to catch 90% of anemic children, test 64% instead of 90%; to catch all, test 98% |
+>
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
 
 ## Abstract
 
-Anemia can be screened without a blood test by looking at how pale the inside of the lower eyelid (the conjunctiva) is, or by asking a few routine questions. Our goal is a tool that tells health workers who to test first, and an honest test of whether it works outside the place it was built. **Part I** re-implements the two published eyelid-photo results our proposal starts from: a ResNet50 on CP-AnemiC (Ghanaian children, 84.79% accuracy) and a Vision Transformer on Eyes-Defy-Anemia (Italian and Indian adults, 98.47%). We reproduce both protocols (85.1%, and 95.6% over 5 splits), but both let the same photo appear in training and test; with a clean split accuracy falls to 77.5% and 88.5%, and on Eyes-Defy 88.5% equals predicting "anemic" for every Indian photo. **Part II** tests transfer. Eyelid models trained on one dataset collapse on the other (AUROC 0.32-0.62), while the untrained rule "less red = anemic" holds up best (0.84 on Eyes-Defy, 0.67 within India). A survey model trained on Zimbabwe DHS data carries a weak but real signal (AUROC 0.58) and keeps it, with close calibration, in Malawi and Zambia (0.57). A clearly labelled simulation suggests that if an eyelid score worked on these women as it does on Eyes-Defy, it would add far more than the survey. The headline numbers in this field overstate what a model does on new people; leakage, site confounding and camera differences matter more than model choice.
+Anemia can be screened without a blood test by looking at how pale the inside of the lower eyelid (the conjunctiva) is, or by asking a few routine questions. Our goal is a tool that tells health workers who to test first, and an honest test of whether it works outside the place it was built. **Part I** re-implements the two published eyelid-photo results our proposal starts from: a ResNet50 on CP-AnemiC (Ghanaian children, 84.79% accuracy) and a Vision Transformer on Eyes-Defy-Anemia (Italian and Indian adults, 98.47%). We reproduce both protocols (85.1%, and 95.6% over 5 splits), but both let the same photo appear in training and test; with a clean split accuracy falls to 77.5% and 88.5%, and on Eyes-Defy 88.5% equals predicting "anemic" for every Indian photo. **Part II** tests transfer. Eyelid models trained on one dataset collapse on the other (AUROC 0.32-0.62), while the untrained rule "less red = anemic" holds up best (0.84 on Eyes-Defy, 0.67 within India). A survey model trained on Zimbabwe DHS data carries a weak but real signal (AUROC 0.58) and keeps it, with close calibration, in Malawi and Zambia (0.57). A clearly labelled simulation suggests that if an eyelid score worked on these women as it does on Eyes-Defy, it would add far more than the survey. **Part III** follows the mentors' eyelid advice. On Ghana children, gradient boosting on color statistics reaches AUROC 0.85 and is still improving with more photos, while a fine-tuned ViT scores 0.72; inside India nothing beats the untrained rule. Italy's anemic patients were almost all photographed in one early batch, so Italy's high scores are mostly a batch effect. Debiasing closes the gaps between countries without improving accuracy inside any country, and to catch 90% of anemic children the best model still sends 64% of children for a blood test. The headline numbers in this field overstate what a model does on new people; leakage, site confounding and camera differences matter more than model choice.
 
 ## 1. Introduction
 
@@ -47,6 +56,7 @@ We ask, in order:
 2. **Does an eyelid model trained on one dataset work on the other?** (Part II, Section 5.1)
 3. **How well do survey answers predict anemia, and does a Zimbabwe model work unchanged in Malawi and Zambia?** (Sections 5.2-5.3)
 4. **What could combining both signals add?** (Section 5.4, simulation)
+5. **After the mentor meeting: how far can each eyelid dataset be pushed, why do the populations differ, does debiasing help, and what would a model save a clinic?** (Part III, Section 6)
 
 ### How the pipeline fits together
 
@@ -229,11 +239,117 @@ The model keeps most of its small signal across countries and 9 years, and stays
 
 The "strong" scenario borrows Italy's redness scores, which Part III shows are mostly a photo-batch effect, so treat it as an upper bound on what an eyelid score could add. If an eyelid score worked on these women as well as the redness rule does on Eyes-Defy, it would carry most of the signal; the survey adds about 0.01-0.02 AUROC on top of a weak eyelid score and nothing on top of a strong one. Whether an eyelid score works on African women photographed in the field is exactly what Section 5.1 leaves open, so this is a reason to collect paired data, not evidence that fusion works.
 
-## 6. Discussion
+## 6. Results, Part III: following up the mentors' eyelid advice
+
+After the mentor meeting we followed up the advice for the eyelid side. Survey advice is left to the survey work. The
+suggestions and a log of every step are in [`docs/eyelid_followup.md`](docs/eyelid_followup.md), and the answers we
+are bringing back to the mentors are in [`reports/mentor_followup_eyelid.md`](reports/mentor_followup_eyelid.md).
+
+**Setup.**
+- Anemia cutoffs as in Part II:
+  - CP-AnemiC: Hb < 11.0, using the 388 photos that have no copy.
+  - Eyes-Defy: WHO by sex, women < 12.0 and men < 13.0.
+- Scores: 5-fold CV repeated 5 times, split by photo.
+- Every population gets a **no-color control**: a random forest on image size and cut-out shape only. If it scores
+  well above 0.5, the photos carry a shortcut.
+
+### 6.1 How far can each population be fit on its own?
+
+| Population | Redness rule | Best color model | DINOv2 probe | Fine-tuned ViT-B/16 | No-color control |
+|---|---|---|---|---|---|
+| CP-AnemiC (Ghana children, 388) | 0.650 [0.597, 0.705] | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 [0.616, 0.723] | 0.715 [0.661, 0.765] | 0.537 [0.474, 0.595] |
+| India (95) | **0.671 [0.552, 0.787]** | random forest 0.673 [0.542, 0.791] | 0.658 [0.543, 0.778] | 0.654 [0.522, 0.783] | 0.548 [0.410, 0.677] |
+| Italy (122) | 0.924 [0.856, 0.977] | logistic regression 0.920 [0.822, 0.983] | 0.879 [0.765, 0.963] | 0.919 [0.830, 0.980] | **0.751 [0.646, 0.837]** |
+
+- **The models are big enough.** Gradient boosting and the ViT fit every training set perfectly (training AUROC 1.00).
+- **Ghana children carry a real color signal.** Gradient boosting climbs from 0.72 to 0.85 as its training photos go
+  from 78 to 310, so more photos would likely help. The ViT does worse than 29 color numbers.
+- **India is at the level of the untrained rule.** The deeper fold of the eyelid (the forniceal mask) does better than
+  the palpebral one we used: rule 0.755 vs 0.671, logistic regression 0.739 vs 0.612.
+- **Italy's score is mostly a shortcut**, since the no-color control alone reaches 0.75 (Section 6.2).
+- Keeping CP-AnemiC's duplicate copies in training changes nothing (random forest 0.824 -> 0.831), as long as no copy
+  of a test photo is in training.
+
+Report: [`reports/stage9_ceiling.md`](reports/stage9_ceiling.md).
+
+### 6.2 Why the populations differ, and a batch effect in Italy
+
+- **The dataset is obvious from the pixels.** The same color numbers tell India from Italy at AUROC 0.998, and Ghana
+  children from Eyes-Defy adults at 0.989. Anemia inside a population is only 0.61-0.68.
+- **Population gaps are bigger than anemia gaps.** Redness (a*), anemic minus non-anemic, is -3.5 in Ghana and -2.8 in
+  India, while non-anemic Ghana children are 12.0 lower than non-anemic Italians.
+- **Italy is two photo batches.**
+  - Folders 1-31 are 21/31 anemic, while folders 32-123 are 2/91.
+  - Healthy people in the early batch already look paler (a* 32.9 vs 40.1).
+  - The batch alone predicts Italian anemia at 0.91, and inside the early batch the redness rule is 0.752 [0.517,
+    0.937].
+  - The same 31 early masks put the conjunctiva on a white background instead of a transparent one. We fixed that in
+    `src/eyelid/roi.py` and reran Part II (Section 5.1).
+
+Report: [`reports/stage10_populations.md`](reports/stage10_populations.md).
+
+### 6.3 Debiasing the country shortcut
+
+On pooled Eyes-Defy we tried:
+- gray-world;
+- brightness scaling;
+- per-country standardization;
+- brightness and contrast jitter;
+- reweighing (Kamiran and Calders);
+- a logistic regression penalized for score gaps between countries;
+- one model per country.
+
+The fairness metrics were fixed beforehand: AUROC inside each country and in the Italy early batch, the rank gap
+between countries at the same anemia status, and the TPR and FPR gaps at 90% sensitivity.
+
+| Method | Pooled | Inside India | Italy early batch | Rank gap, non-anemic | FPR gap |
+|---|---|---|---|---|---|
+| Random forest | 0.890 [0.845, 0.932] | 0.687 [0.565, 0.799] | 0.752 [0.556, 0.923] | 0.39 | 0.75 |
+| Random forest, brightness scaled | 0.897 [0.854, 0.938] | 0.739 [0.631, 0.838] | 0.771 [0.561, 0.948] | 0.37 | 0.74 |
+| Fairness penalty, lambda=100 | 0.756 [0.683, 0.821] | 0.675 [0.557, 0.788] | 0.667 [0.429, 0.891] | 0.10 | 0.11 |
+| One model per country | 0.883 [0.836, 0.928] | 0.676 [0.552, 0.787] | 0.710 [0.486, 0.913] | 0.41 | 0.91 |
+
+The penalty and per-country standardization close the gaps, but no method improves AUROC inside a country beyond its
+CI. Across datasets, the untrained rule still beats every debiased model (Eyes-Defy -> CP-AnemiC: rule 0.650, best
+debiased model 0.606). Report: [`reports/stage11_debias.md`](reports/stage11_debias.md).
+
+### 6.4 What it would mean in a clinic
+
+The mentors pointed out that AUROC alone doesn't say what a clinic gains. We ranked people by score and asked what
+share of everyone has to get a blood test to catch 90% (or 100%) of the anemic ones. Testing at random needs 90% to
+catch 90%.
+
+| Population (anemic) | Model | Tested to catch 90% | Anemic among those tested | Tested to catch 100% |
+|---|---|---|---|---|
+| CP-AnemiC (42.5%) | redness rule | 0.807 [0.760, 0.897] | 0.476 [0.406, 0.534] | 1.000 [0.985, 1.000] |
+| | gradient boosting | **0.644 [0.552, 0.711]** | 0.596 [0.525, 0.704] | 0.979 [0.851, 0.990] |
+| India (71.6%) | random forest | 0.832 [0.758, 0.916] | 0.797 [0.678, 0.877] | 1.000 [0.947, 1.000] |
+| Italy early batch (67.7%, n = 31) | redness rule | 0.871 [0.677, 0.968] | 0.778 [0.615, 0.929] | 0.871 [0.742, 0.968] |
+
+- In Ghana children the best model saves about a quarter of blood tests at 90% sensitivity.
+- To catch every anemic person, every model tests 96-100% of people.
+- So an eyelid photo can rank who to test first, but it can't rule anyone out.
+- Which sensitivity a clinic needs is a question for clinicians.
+
+Report: [`reports/clinical_eyelid.md`](reports/clinical_eyelid.md).
+
+### 6.5 Pretrained eyelid models and more data
+
+- **Pretrained eyelid models.** No public model is pretrained on conjunctiva photos without having seen ours. The one
+  Hugging Face anemia model was trained on CP-AnemiC and Eyes-Defy themselves. The closest real candidate, VisionFM's
+  external-eye encoder, has not been downloaded.
+- **More data.** The best candidates are:
+  - an open Russian fingernail set (250 adults);
+  - a large Indian conjunctiva, palm and nail set (1,485 people, IEEE DataPort login);
+  - Ghana palm and nail sets that are almost certainly the CP-AnemiC children.
+
+  Nothing has been downloaded. The table is in [`docs/eyelid_followup.md`](docs/eyelid_followup.md).
+
+## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
 
-**What survives is simple.** On clean CP-AnemiC data, color statistics beat a large pretrained model; across datasets, only the untrained "less red = anemic" rule keeps working. The learned models fit the camera, not the conjunctiva. That points to fixing the camera gap (a color reference card in each photo, or per-device color calibration) before training anything bigger.
+**What survives is simple.** On clean CP-AnemiC data, color statistics beat a large pretrained model; across datasets, only the untrained "less red = anemic" rule keeps working. The learned models fit the camera, not the conjunctiva. That points to fixing the camera gap (a color reference card in each photo, or per-device color calibration) before training anything bigger. Part III backs this up: a fine-tuned ViT fits every training set perfectly yet does worse than gradient boosting on 29 color numbers, and removing the country shortcut by debiasing doesn't add accuracy inside a country. The limit is the data (too few photos per population, one camera setup per site), not the model.
 
 **Survey answers are a weak but portable screen.** Six routine questions lift the share of anemic women found at a 30% testing budget from 29% to 38%, and that small gain carries to two other countries and a survey 9 years newer with little loss. It is a modest tool on its own; the simulation suggests it is most useful as a cheap add-on to a better signal.
 
@@ -245,14 +361,14 @@ The "strong" scenario borrows Italy's redness scores, which Part III shows are m
 4. Never choose epochs or thresholds on the test set.
 5. Test on a different dataset or country before trusting a number.
 
-## 7. Ethics and data use
+## 8. Ethics and data use
 
 - **No individual data in this repository.** Photos, survey records, labels and per-person results stay on our machines (`data/` and `results/` are gitignored); only code, configs and aggregate reports are committed.
 - **We follow each dataset's terms.** CP-AnemiC is for academic use; Eyes-Defy asks users to cite its papers [3]; DHS data is used under the DHS Program's registration terms and cannot be shared.
 - **Skin tone, camera and site.** Conjunctiva color varies with skin tone, camera and lighting. Our results show how easily models latch onto site and camera differences, which could make a deployed tool fail unevenly across populations.
 - **Not a diagnostic tool.** Nothing here is clinically validated. A screening tool would need prospective testing on new patients from new sites.
 
-## 8. Limitations
+## 9. Limitations
 
 - **No paired data.** No dataset links an eyelid photo to survey answers for the same person, so fusion is simulated and assumes the two signals are independent given anemia.
 - **Different populations.** CP-AnemiC is young children, Eyes-Defy is adults including men, the survey is women 15-49.
@@ -261,9 +377,11 @@ The "strong" scenario borrows Italy's redness scores, which Part III shows are m
 - **Small image test sets.** Eyes-Defy test sets hold 44 photos when split by photo; Italy has few anemic adults.
 - **Replications are not identical recipes.** Replication A uses ImageNet weights and 30 epochs; we do not have either paper's exact split or code; GPU differences (Apple M1 vs NVIDIA) can shift results slightly.
 - **Duplicate detection is not perfect**, and labels on copied CP-AnemiC photos conflict (one photo is recorded with Hb 10.2 and 5.8); there is no patient ID.
+- **Italy is confounded by photo batch.** Its anemic patients were almost all photographed in the first 31 folders, so Italian scores mostly measure the batch; we report the early batch alone (31 photos) as the fairer check.
+- **The fine-tuned ViT in Part III has one seed**, so its CIs come from the bootstrap only, not from seed variation.
 - **The Chemhaka et al. comparison is not done yet**: the publisher blocks scripted downloads, and we compare only against numbers taken from the paper itself.
 
-## 9. Reproducing
+## 10. Reproducing
 
 ```bash
 python3.12 -m venv .venv          # Python 3.11 or newer
@@ -280,7 +398,7 @@ Raw data is **never committed** (`data/` and `results/` are gitignored). Downloa
 | Eyes-Defy-Anemia | `data/raw/eyes_defy/` (the `India/`, `Italy/` folders and the `.docx`) | IEEE DataPort, or the Kaggle mirror `harshwardhanfartale/eyes-defy-anemia` |
 | DHS Individual Recode | `data/raw/dhs/{zimbabwe,malawi,zambia}/` (the `*IR*DT` folders: ZWIR72, MWIR81, ZMIR81) | DHS Program (registration required) |
 
-Then run, in order (Section 10 lists what each file does):
+Then run, in order (Section 11 lists what each file does):
 
 ```bash
 python -m src.eyelid.audit                 # CP-AnemiC audit and labels
@@ -296,13 +414,18 @@ python -m src.survey.audit                 # DHS audit
 python -m src.survey.train_baselines       # 5.2, ~2 min
 python -m src.survey.transfer              # 5.3, ~2 min
 python -m src.fusion_sim                   # 5.4, ~2 min
+python -m src.eyelid.finetune_vit          # 6.1, fine-tuned ViT per population, ~2 h on an M1
+python -m src.eyelid.ceiling               # 6.1, model ladder, learning curves, regions, copies (reads the ViT results)
+python -m src.eyelid.populations           # 6.2
+python -m src.eyelid.debias                # 6.3
+python -m src.eyelid.clinical              # 6.4 (reads the ViT results)
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
-## 10. Key files
+## 11. Key files
 
 | File | What it does |
 |---|---|
@@ -310,16 +433,19 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/eyelid/replicate_cnn.py`, `replicate_vit.py` | Replications A and B: paper's split vs no photo in both, best-epoch check |
 | `src/eyelid/train_color.py`, `train_probe.py` | Color-statistics baselines, no-color control, DINOv2 probe |
 | `src/eyelid/cross_dataset.py` | Train on one image dataset, test on the other |
-| `src/eyelid/roi.py` | Reads the conjunctiva cut-outs (with an OpenCV fallback for Eyes-Defy's damaged masks) |
+| `src/eyelid/roi.py` | Reads the conjunctiva cut-outs (with an OpenCV fallback for Eyes-Defy's damaged masks, and white made transparent in the 31 masks that have no transparency) |
 | `src/survey/build_dataset.py`, `audit.py` | DHS: verified variables -> clean table per country; audit and coding checks |
 | `src/survey/train_baselines.py`, `transfer.py` | Survey baselines by cluster; transfer and recalibration |
 | `src/fusion_sim.py` | Fusion simulation |
+| `src/eyelid/ceiling.py`, `finetune_vit.py` | Part III: each population on its own, model ladder up to a fine-tuned ViT, learning curves |
+| `src/eyelid/populations.py`, `debias.py`, `clinical.py` | Part III: population comparison and Italy batches; fairness metrics and debiasing; testing load at fixed sensitivity |
+| `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
 | `src/summary.py`, `src/figures.py` | Build `reports/summary.md` and the figures from `results/*.json` |
 | `configs/*.yaml` | Every setting: seeds, cutoffs, hyperparameters, DHS variable codes |
 | `tests/` | Metric, feature, split, label and pipeline tests (`python -m pytest -q`) |
 
-## 11. Glossary
+## 12. Glossary
 
 - **Leakage**: when the test set contains information the model saw in training (here, the same photo), so the test score overstates how the model does on new people.
 - **AUROC**: the chance that a model scores a random anemic person higher than a random non-anemic one. 0.5 is a coin flip, 1.0 is perfect.
@@ -330,8 +456,10 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 - **Cluster**: a DHS sampling area (a village or neighborhood). Splitting by cluster keeps neighbors out of each other's test sets.
 - **Bootstrap 95% CI**: we resample the test set 2000 times and report the range that holds the middle 95% of scores.
 - **Seed**: the number that fixes the random split and training order, so a run can be repeated.
+- **No-color control**: a model that sees only image size and cut-out shape. If it beats a coin flip, the photos carry a shortcut (copies, batches, cameras) the real model can use too.
+- **Share tested to catch 90%**: rank everyone by score, test from the top, and stop once 90% of the anemic people are found. Testing in random order needs 90%; lower is better.
 
-## 12. Status and next steps
+## 13. Status and next steps
 
 | Step | Status |
 |---|---|
@@ -342,6 +470,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Survey model on Zimbabwe, transfer to Malawi and Zambia | done |
 | Fusion simulation | done |
 | Comparison with Chemhaka et al. [4] | waiting for the paper's numbers |
+| Part III: the mentors' eyelid advice (ceiling, populations, debiasing, clinical view) | done; answers in `reports/mentor_followup_eyelid.md` |
+| Eyelid-pretrained model (VisionFM external eye) and new datasets | searched; nothing downloaded, waiting for approval |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 

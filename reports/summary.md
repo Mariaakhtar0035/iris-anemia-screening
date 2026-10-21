@@ -1,6 +1,6 @@
 # Summary: anemia screening baselines
 
-Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65, `stage_eyes_defy_audit` 2239613, `replicate_vit` 07ef8ab, `stage5_cross_dataset` b8d5f90, `stage6_survey_audit` 64ec683, `stage7_survey_baselines` dfd3d1f, `stage8_survey_transfer` cf16772, `fusion_simulation` d77cf12.
+Built from `results/*.json` by `python -m src.summary`. Anemia = Hb < 11.0 g/dL (children 6-59 months, CP-AnemiC). Every estimate has a bootstrap 95% CI from 2000 resamples. Commits that produced each file: `stage2_audit` 7b721ca, `stage3_color` bb9a083, `stage4_probe` 945b76d, `replicate_cnn` 1fd7b65, `stage_eyes_defy_audit` 2239613, `replicate_vit` 07ef8ab, `stage5_cross_dataset` 30c6633, `stage6_survey_audit` 64ec683, `stage7_survey_baselines` dfd3d1f, `stage8_survey_transfer` cf16772, `fusion_simulation` 30c6633.
 
 ## Status
 
@@ -119,10 +119,10 @@ Train on one image dataset, test on the other unchanged. Input on both sides is 
 
 | model | CP-AnemiC within (CV) | CP-AnemiC -> Eyes-Defy | -> India only | -> Italy only | Eyes-Defy -> CP-AnemiC |
 |---|---|---|---|---|---|
-| logistic_regression | 0.680 [0.627, 0.730] | 0.251 [0.189, 0.318] | 0.491 [0.359, 0.625] | 0.105 [0.039, 0.190] | 0.562 [0.504, 0.619] |
-| random_forest | 0.796 [0.752, 0.839] | 0.512 [0.435, 0.589] | 0.706 [0.573, 0.826] | 0.372 [0.270, 0.476] | 0.581 [0.529, 0.634] |
-| dinov2_probe | 0.672 [0.616, 0.723] | 0.580 [0.502, 0.658] | 0.568 [0.443, 0.692] | 0.535 [0.400, 0.671] | 0.557 [0.499, 0.612] |
-| rule_low_redness | 0.650 [0.597, 0.705] | 0.808 [0.749, 0.863] | 0.671 [0.552, 0.787] | 0.935 [0.865, 0.982] | 0.650 [0.597, 0.705] |
+| logistic_regression | 0.680 [0.627, 0.730] | 0.315 [0.245, 0.389] | 0.491 [0.359, 0.625] | 0.441 [0.313, 0.567] | 0.506 [0.451, 0.562] |
+| random_forest | 0.796 [0.752, 0.839] | 0.587 [0.511, 0.662] | 0.706 [0.573, 0.826] | 0.790 [0.692, 0.876] | 0.580 [0.521, 0.635] |
+| dinov2_probe | 0.672 [0.616, 0.723] | 0.624 [0.546, 0.697] | 0.568 [0.443, 0.692] | 0.715 [0.598, 0.827] | 0.561 [0.502, 0.618] |
+| rule_low_redness | 0.650 [0.597, 0.705] | 0.835 [0.779, 0.884] | 0.671 [0.552, 0.787] | 0.924 [0.856, 0.977] | 0.650 [0.597, 0.705] |
 
 - Learned models do not survive the change of dataset: the color logistic regression ranks Eyes-Defy patients worse than chance, and the random forest and DINOv2 probe fall to near chance. They fit color patterns tied to CP-AnemiC's camera and lighting.
 - The untrained redness rule (less red = anemic) holds up best in both directions, so redness itself carries across datasets even when learned color models do not.
@@ -175,13 +175,13 @@ No dataset has an eyelid photo and survey answers for the same woman. Each Malaw
 | malawi | survey only | 0.568 [0.555, 0.581] | 0.295 [0.281, 0.310] | 0.122 [0.105, 0.135] | 0.351 [0.335, 0.367] |
 | malawi | image only, weak (India photos) | 0.674 [0.662, 0.687] | 0.507 [0.487, 0.526] | 0.255 [0.237, 0.273] | 0.512 [0.483, 0.524] |
 | malawi | survey + image, weak (India photos) | 0.687 [0.676, 0.700] | 0.495 [0.473, 0.516] | 0.305 [0.284, 0.328] | 0.487 [0.471, 0.504] |
-| malawi | image only, strong (Italy photos) | 0.937 [0.932, 0.943] | 0.846 [0.833, 0.859] | 0.919 [0.908, 0.929] | 0.896 [0.858, 0.923] |
-| malawi | survey + image, strong (Italy photos) | 0.935 [0.930, 0.941] | 0.792 [0.772, 0.812] | 0.919 [0.885, 0.937] | 0.887 [0.863, 0.912] |
+| malawi | image only, strong (Italy photos) | 0.927 [0.921, 0.932] | 0.801 [0.782, 0.818] | 0.818 [0.755, 0.831] | 0.818 [0.803, 0.833] |
+| malawi | survey + image, strong (Italy photos) | 0.929 [0.924, 0.935] | 0.789 [0.770, 0.807] | 0.789 [0.767, 0.814] | 0.821 [0.807, 0.836] |
 | zambia | survey only | 0.565 [0.549, 0.580] | 0.356 [0.336, 0.376] | 0.137 [0.117, 0.157] | 0.349 [0.331, 0.365] |
 | zambia | image only, weak (India photos) | 0.675 [0.660, 0.689] | 0.559 [0.538, 0.578] | 0.258 [0.240, 0.277] | 0.466 [0.438, 0.496] |
 | zambia | survey + image, weak (India photos) | 0.689 [0.674, 0.703] | 0.555 [0.532, 0.576] | 0.314 [0.292, 0.340] | 0.485 [0.467, 0.503] |
-| zambia | image only, strong (Italy photos) | 0.935 [0.928, 0.941] | 0.876 [0.864, 0.889] | 0.915 [0.903, 0.947] | 0.815 [0.780, 0.835] |
-| zambia | survey + image, strong (Italy photos) | 0.932 [0.925, 0.939] | 0.839 [0.818, 0.859] | 0.916 [0.882, 0.936] | 0.797 [0.773, 0.824] |
+| zambia | image only, strong (Italy photos) | 0.923 [0.915, 0.930] | 0.830 [0.812, 0.849] | 0.779 [0.764, 0.836] | 0.766 [0.733, 0.786] |
+| zambia | survey + image, strong (Italy photos) | 0.925 [0.919, 0.933] | 0.818 [0.799, 0.838] | 0.784 [0.765, 0.815] | 0.771 [0.753, 0.786] |
 
 - The eyelid score would carry most of the signal; the survey score adds about 0.01-0.02 AUROC on top of a weak eyelid score and nothing on top of a strong one.
 

@@ -26,7 +26,7 @@ Paraphrased from the meeting, without names.
 | M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | searched: one candidate (VisionFM), waiting for Jaineel before downloading |
 | M11 | VLMs don't fit this problem, because the images come with no text or metadata. | Recorded, not pursued | done |
 | M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | searched (Step 7); downloads wait for Jaineel |
-| M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | planned |
+| M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
 | M14 | The mentors will email a list of models to try. | Add them here when the email arrives | waiting |
 
 ## Part 2. Step log
@@ -87,6 +87,10 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
   - **Duplicate copies as augmentation (M3):** training with all 566 rows instead of one per photo, scored on the
     photos with no copy: random forest 0.824 -> 0.831, logistic regression 0.680 -> 0.662, DINOv2 0.680 -> 0.675. **No
     real gain.** Copies are harmless in training, as long as no copy of a test photo is there, but they don't help.
+  - **Fine-tuned ViT-B/16 (1 seed, 30 epochs, flips plus brightness/contrast jitter):** training AUROC 1.00 everywhere.
+    Held out: CP-AnemiC 0.715 [0.661, 0.765], India 0.654 [0.522, 0.783], Italy 0.919 [0.830, 0.980], pooled 0.892
+    [0.848, 0.930]. Without jitter, pooled is 0.898 [0.853, 0.937], so the jitter makes no difference. On CP-AnemiC the
+    ViT is clearly worse than gradient boosting on 29 color numbers (CIs don't overlap). It took about 2 h on an M1.
 - **Answer to M1:**
   - On CP-AnemiC there is a real color signal. A flexible model fits it, held-out AUROC reaches 0.85, and it is still
     rising, so more Ghana photos would likely help.
@@ -154,6 +158,37 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
   - **Transfer to CP-AnemiC:** no debiasing method beats the untrained redness rule (0.650). The best trained model is
     the random forest with jitter, 0.606.
 
+### Step 4: what the models would mean in a clinic (M13)
+- **Why:** the mentors said AUROC alone isn't enough. They asked for PR-AUC, precision and recall at thresholds, and the
+  cost of a miss vs an unneeded test, which clinicians have to set.
+- **Ran:** `python -m src.eyelid.clinical`. Settings in `configs/clinical.yaml`. Report: `reports/clinical_eyelid.md`,
+  figure `reports/figures/clinical_pr_curves.png`. New metrics in `src/common/metrics.py`:
+  `share_tested_at_sensitivity` and `precision_at_sensitivity` (test:
+  `tests/test_metrics.py::test_share_tested_and_precision_at_sensitivity`).
+- **Setup:**
+  - Stage 9's held-out scores.
+  - For each population: what share of everyone has to be tested to catch 80, 90, 95 or 100% of the anemic people,
+    and what share of those tested are anemic.
+  - Testing in random order needs 90% of people to catch 90%.
+- **Results:**
+
+| Population (anemic) | Model | Tested to catch 90% | Anemic among tested | Tested to catch 100% | PR-AUC |
+|---|---|---|---|---|---|
+| CP-AnemiC (42.5%) | redness rule | 0.807 [0.760, 0.897] | 0.476 | 1.000 | 0.555 |
+| | gradient boosting | **0.644 [0.552, 0.711]** | 0.596 | 0.979 | 0.780 |
+| | fine-tuned ViT | 0.776 [0.665, 0.838] | 0.495 | 0.979 | 0.637 |
+| India (71.6%) | redness rule | 0.874 [0.800, 0.926] | 0.759 | 0.947 | 0.846 |
+| | random forest | 0.832 [0.758, 0.916] | 0.797 | 1.000 | 0.840 |
+| Italy early batch (67.7%, n = 31) | redness rule | 0.871 [0.677, 0.968] | 0.778 | 0.871 | 0.810 |
+| | random forest | 0.839 [0.677, 1.000] | 0.731 | 1.000 | 0.800 |
+
+- **Answer to M13:**
+  - In Ghana children the best model saves about a quarter of blood tests at 90% sensitivity.
+  - At recall near 1, every model tests 96-100% of people, so there's no saving.
+  - India and the Italy early batch are close to random.
+  - So an eyelid photo can prioritize who to test, but it can't rule anyone out. The clinical operating point is a
+    question for the mentors and for clinicians.
+
 ### Step 5: eyelid-pretrained models (M10)
 - **Why:** the mentors suggested reusing a model that was already pretrained on eyelid images.
 - **What we searched:** Hugging Face, GitHub and papers, for "conjunctiva", "eyelid", "anemia" and "external eye"
@@ -169,6 +204,11 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
   is VisionFM's external-eye encoder. Given Step 1 (a fine-tuned ViT already reaches training AUROC 1.00 and does
   worse than gradient boosting on color numbers), a better starting point is unlikely to fix what is limiting us, which
   is the data rather than the model. It is still worth one run if Jaineel approves the download.
+
+### Step 6: write-up for the mentors
+- `reports/mentor_followup_eyelid.md`: one section per suggestion, with what we did, the numbers and a plain answer,
+  plus our questions for the mentors.
+- README Part III (Section 6) summarizes Stages 9-11 and the clinical view.
 
 ### Step 7: more data (M9, M12)
 - **Why:** the mentors suggested more countries (each with its own shortcut) and fingernail or palm datasets with

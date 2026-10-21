@@ -1,0 +1,259 @@
+# Eyelid models: what we did with the mentors' suggestions
+
+Prepared for the next mentor meeting. This covers only the eyelid-photo advice; the survey advice belongs to the survey
+side of the project. The suggestions are recorded, and every step is logged, in
+[`docs/eyelid_followup.md`](../docs/eyelid_followup.md). The detailed reports are linked from each section.
+
+**Setup used everywhere below.**
+- Anemic means:
+  - CP-AnemiC (Ghana, children 6-59 months): Hb < 11.0 g/dL. We use the 388 photos that have no duplicate copy.
+  - Eyes-Defy (Italy and India, adults): WHO cutoffs by sex, women < 12.0 and men < 13.0 g/dL (pregnancy isn't
+    recorded).
+- Scores are held out with 5-fold cross-validation repeated 5 times, split by photo (one photo per person).
+- Numbers are AUROC (0.5 = coin flip) with bootstrap 95% CIs from 2000 resamples.
+- Every table has an untrained baseline: the "less red = anemic" rule.
+- Every population also has a **no-color control**: a model that sees only image size and cut-out shape. If it scores
+  well above 0.5, the photos carry a shortcut (copies, batches, cameras) and the other scores in that population can't
+  be trusted on their own.
+
+## The short version
+
+1. **There is a real pallor signal in Ghana children, and more photos would help.** Gradient boosting on 29 color
+   numbers reaches 0.846 [0.807, 0.882] and is still rising with training size. A fine-tuned ViT-B/16 fits the
+   training photos perfectly but scores lower, 0.715 [0.661, 0.765].
+2. **Within India nothing beats the untrained redness rule (0.67).** With 95 photos, every model memorizes the training
+   set.
+3. **We found two data problems in Eyes-Defy Italy.**
+   - 31 mask files had a white background instead of a transparent one. We fixed that.
+   - Almost all anemic Italians were photographed in one early batch, which looks different. The batch alone predicts
+     Italian anemia at 0.91, so Italy's 0.92 is mostly the batch.
+4. **The debiasing methods remove the country gaps but don't improve the model inside any country.**
+5. **In clinical terms:** to catch 90% of anemic children, the best model still sends about 2 in 3 children for a
+   blood test, where testing at random would need 9 in 10 (see M13). To catch all of them, nearly everyone gets
+   tested. Today an eyelid photo can help decide who to test first; it can't rule anyone out.
+
+## M1 and M2: exhaust each dataset, one population at a time
+
+**You suggested:** use the biggest model we can on each population alone and see whether it can overfit. If it can't
+fit one distribution, the signal isn't there.
+
+**What we did:** a ladder of models from the untrained rule up to a fine-tuned ViT-B/16, trained on each population
+alone. We report training AUROC next to held-out AUROC, and learning curves at 25-100% of the training data. Report:
+[`stage9_ceiling.md`](stage9_ceiling.md).
+
+| Population | n (anemic) | Redness rule | Best color model | DINOv2 probe | Fine-tuned ViT | No-color control |
+|---|---|---|---|---|---|---|
+| Ghana children (CP-AnemiC) | 388 (42%) | 0.650 [0.597, 0.705] | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 [0.616, 0.723] | 0.715 [0.661, 0.765] | 0.537 [0.474, 0.595] |
+| India | 95 (72%) | **0.671 [0.552, 0.787]** | random forest 0.673 [0.542, 0.791] | 0.658 [0.543, 0.778] | 0.654 [0.522, 0.783] | 0.548 [0.410, 0.677] |
+| Italy | 122 (19%) | 0.924 [0.856, 0.977] | logistic regression 0.920 [0.822, 0.983] | 0.879 [0.765, 0.963] | 0.919 [0.830, 0.980] | **0.751** [0.646, 0.837] |
+| Italy + India pooled | 217 (42%) | 0.835 [0.779, 0.884] | random forest 0.892 [0.849, 0.935] | 0.868 [0.818, 0.916] | 0.892 [0.848, 0.930] | **0.742** [0.675, 0.804] |
+
+**What we found:**
+- **Every flexible model can overfit.** Gradient boosting and the ViT reach training AUROC 1.00 in every population.
+  So the models are big enough; what limits them is the data.
+- **Ghana children:**
+  - The color signal is real (the no-color control is near chance).
+  - Gradient boosting improves steadily with more photos: 0.72 with 78 training photos, 0.78 with 155, 0.83 with 233
+    and 0.85 with 310. More photos from the same clinics would likely help.
+  - The ViT does worse than gradient boosting on 29 color numbers, so a bigger model is not what's missing.
+- **India:** every model sits at about 0.65-0.67, the same as the untrained rule, with wide CIs.
+  - Training AUROC is 0.95-1.00, so the models memorize the 76 training photos.
+  - One useful lead: the deeper fold of the eyelid (the forniceal mask) works better than the palpebral one we used.
+    The rule goes from 0.671 to 0.755 and logistic regression from 0.612 to 0.739.
+- **Italy and pooled:** the no-color control already scores 0.74-0.75, so these numbers are inflated by a shortcut.
+  The country gives it away in the pooled data and the batch does in Italy (see M4).
+
+**Answer:** Ghana children have a real signal that a flexible model can learn, and it isn't saturated yet. India is too
+small to learn more than the simple rule, and the Italy scores can't be taken at face value.
+
+## M3: duplicate photos as augmentation
+
+**You suggested:** copies are fine as augmentation if no copy of a test photo is in training, and if they don't hurt
+transfer.
+
+**What we did:** CP-AnemiC has 233 extra copies of its photos. We split by photo group, kept every copy of the
+training photos in training, and tested on photos that have no copy. We compared that with training on one copy per
+photo.
+
+**What we found:**
+
+| Model | One copy per photo (381 training rows) | All copies (566 training rows) |
+|---|---|---|
+| Random forest | 0.824 [0.783, 0.863] | 0.831 [0.791, 0.869] |
+| Logistic regression | 0.680 [0.624, 0.733] | 0.662 [0.608, 0.717] |
+| DINOv2 probe | 0.680 [0.624, 0.732] | 0.675 [0.620, 0.727] |
+
+**Answer:** copies are harmless once they stay on the training side, but they add nothing.
+
+## M4: why do the populations differ?
+
+**You suggested:** when transfer fails, compare the populations: brightness, color, age, label balance.
+
+**What we found** (report: [`stage10_populations.md`](stage10_populations.md)):
+- **The population is obvious from the pixels.**
+  - A classifier on the same 29 color numbers tells India from Italy at AUROC 0.998, and still 0.999 among non-anemic
+    people only.
+  - Ghana children vs Eyes-Defy adults: 0.989 from color numbers, 1.000 from DINOv2.
+  - Anemia within a population is much harder: 0.61-0.68.
+- **The gaps between populations are bigger than the gap from anemia.**
+  - Redness (a*), anemic minus non-anemic: -3.5 in Ghana, -2.8 in India.
+  - Between populations: non-anemic Ghana children are 12.0 lower than non-anemic Italians.
+  - Brightness (L*) differs by 7-17 points between populations.
+- **The people differ too.**
+  - Ghana: children aged 2-3 on average.
+  - India: adults around 33, 72% anemic.
+  - Italy: adults around 49, 19% anemic, and the anemic Italians are older (65 vs 46).
+- **Italy is two batches.**
+  - Folders 1-31 are 21/31 anemic, while folders 32-123 are 2/91 anemic.
+  - Non-anemic people in the early batch already look paler (a* 32.9 vs 40.1).
+  - The batch alone predicts Italian anemia at 0.91. Inside the early batch the redness rule drops to 0.752 [0.517,
+    0.937].
+  - On the way we also found and fixed 31 Italian mask files with a white background.
+
+**Answer:** each dataset has its own camera, lighting, age group and prevalence. A model can score well by recognizing
+the dataset or the batch, which is far easier than seeing pallor.
+
+## M5, M6 and M7: fairness metrics, debiasing, and making images look alike (keeping India)
+
+**You suggested:** define parity metrics and regularize the model so its scores don't depend on the population; edit
+the images to look more alike; keep India and use fairness metrics instead of dropping it.
+
+**What we did** (report: [`stage11_debias.md`](stage11_debias.md)):
+- **Fairness metrics, fixed before running:**
+  - AUROC inside India and inside Italy;
+  - the Italy early batch alone;
+  - the worse of the two countries;
+  - the rank gap between countries among people with the same anemia status;
+  - the false-positive and true-positive rate gaps at the threshold that catches 90% of anemic people.
+- **Methods:**
+  - gray-world color correction;
+  - brightness scaling;
+  - per-country standardization of the color numbers;
+  - brightness and contrast jitter during training;
+  - reweighing so that country and anemia are independent (Kamiran and Calders);
+  - a logistic regression with a fairness penalty on the score gap between countries (lambda 1, 10 and 100).
+- India stays in every run.
+
+| Method | Pooled | Inside India | Italy early batch | Rank gap, non-anemic | FPR gap | Share tested to catch 90% |
+|---|---|---|---|---|---|---|
+| Redness rule | 0.835 | 0.671 | 0.752 | 0.19 | 0.39 | 0.63 |
+| Random forest | 0.890 | 0.687 [0.565, 0.799] | 0.752 | 0.39 | 0.75 | 0.53 |
+| Random forest, brightness scaled | 0.897 | **0.739** [0.631, 0.838] | 0.771 | 0.37 | 0.74 | 0.54 |
+| Fairness penalty, lambda=100 | 0.756 | 0.675 [0.557, 0.788] | 0.667 | **0.10** | **0.11** | 0.76 |
+| Per-country standardized, logistic regression | 0.720 | 0.621 [0.502, 0.737] | 0.638 | **0.05** | **0.04** | 0.86 |
+
+The CIs for every cell are in the report.
+
+**What we found:**
+- **The methods do what they claim.** The penalty and per-country standardization shrink the rank gap from about 0.4
+  to 0.05-0.10, and the FPR gap from 0.75 to about 0.1.
+- **But no method makes the model better inside a country.** All the within-country CIs overlap. Pooled AUROC drops,
+  and more people need testing.
+- **Brightness scaling is the most promising image edit:** India 0.739, at no pooled cost. The gain is inside the CI,
+  though.
+- **Across datasets nothing beats the untrained rule.**
+  - Trained on Eyes-Defy, tested on Ghana children: rule 0.650, best debiased model 0.606.
+  - Trained on India, tested on the Italy early batch: rule 0.752, random forest with jitter 0.781 [0.593, 0.943].
+
+**Answer:** removing the shortcut makes the scores fair across countries, but it doesn't add pallor signal that the
+small within-country data doesn't contain.
+
+## M8: one model per population
+
+**What we found:** a separate random forest per country scores 0.676 inside India and 0.710 in the Italy early batch.
+One pooled model scores 0.687 and 0.752. Separate models are no better, and they widen the gaps (FPR gap 0.91).
+
+**Answer:** with this much data, per-country models aren't worth it.
+
+## M9 and M12: more data, including fingernails and palms
+
+**You suggested:** more countries, keeping in mind that each one brings its own shortcut; fingernail or palm datasets
+with age and sex.
+
+**What we found** (we downloaded nothing; full table in
+[`docs/eyelid_followup.md`](../docs/eyelid_followup.md#step-7-more-data-m9-m12)):
+
+| Dataset | Body site | People | Where | Access | Fit |
+|---|---|---|---|---|---|
+| Yakimov et al. 2024, *Scientific Data* | fingernails and skin | 250 adults | Moscow, Russia | open (figshare) | best fit for M12: new country, adults, fixed lighting. Age and sex are only in summary tables, not per patient |
+| Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers | Faridabad, India | IEEE login | the largest conjunctiva set by far, but no age or sex, and 11% anemic |
+| Asare et al. 2022, Mendeley | palms; fingernails | 710 children | Ghana | open, CC BY 4.0 | almost certainly the same children as CP-AnemiC. Not a new population, but could compare body sites on the same children |
+| Suner et al. 2021, Zenodo | conjunctiva | 344 emergency-department adults | Providence, USA | open, but only two CSV tables, no photos | might allow testing the redness rule on a fourth population |
+| Valles-Coral et al. 2025 | nails, palm and fingertip videos | 909 young adults | Peru | not released yet | watch for release |
+
+**Answer:**
+- Our first choice would be the Russian fingernail set: open, a new country, a new body site, and taken under fixed
+  lighting.
+- Our second choice is the large Indian conjunctiva set.
+- Any new set would get the same duplicate audit and no-color control first, because Step 2 shows each new source
+  brings its own shortcut.
+
+## M10: models pretrained on eyelid images
+
+**What we found:** no public model is pretrained on conjunctiva photos that we could use without leakage.
+- A Hugging Face anemia model (`dawahealth/anemia_screeniing`) was trained on 864 images from Ghana, Italy and India.
+  Those are almost certainly our own two datasets, so it has seen our test photos. Its own validation accuracy is
+  57.7%.
+- The closest real candidate is VisionFM's external-eye encoder: research use only, and its pretraining photos aren't
+  described. We haven't downloaded it.
+
+**Answer:** worth one run if we get approval. But the ViT result above suggests a better starting model won't fix a
+data limit.
+
+## M11: vision-language models
+
+We agree: the photos carry no text or metadata, so we didn't pursue VLMs.
+
+## M13: beyond AUROC, what it would mean in a clinic
+
+**You suggested:**
+- use PR-AUC when the classes are imbalanced, and precision and recall at fixed thresholds;
+- get the cost of a missed case vs an unneeded test from clinicians, who may want recall near 1.
+
+**What we did:** in each population we ranked people by score and asked two questions:
+- To catch 80, 90, 95 or 100% of the anemic people, what share of everyone must get a blood test?
+- What share of those tested are actually anemic?
+
+Testing in random order needs 90% of people to catch 90%. Report: [`clinical_eyelid.md`](clinical_eyelid.md), which
+also has precision-recall curves against the prevalence line.
+
+| Population (share anemic) | Model | Tested to catch 90% | Anemic among those tested | Tested to catch 100% | PR-AUC |
+|---|---|---|---|---|---|
+| Ghana children (42.5%) | redness rule | 0.807 [0.760, 0.897] | 0.476 [0.406, 0.534] | 1.000 [0.985, 1.000] | 0.555 [0.483, 0.645] |
+| | gradient boosting | **0.644 [0.552, 0.711]** | **0.596 [0.525, 0.704]** | 0.979 [0.851, 0.990] | **0.780 [0.710, 0.845]** |
+| | fine-tuned ViT | 0.776 [0.665, 0.838] | 0.495 [0.436, 0.587] | 0.979 [0.954, 0.992] | 0.637 [0.559, 0.707] |
+| India (71.6%) | redness rule | 0.874 [0.800, 0.926] | 0.759 [0.663, 0.845] | 0.947 [0.895, 0.989] | 0.846 [0.759, 0.919] |
+| | random forest | 0.832 [0.758, 0.916] | 0.797 [0.678, 0.877] | 1.000 [0.947, 1.000] | 0.840 [0.751, 0.917] |
+| Italy early batch (67.7%, n = 31) | redness rule | 0.871 [0.677, 0.968] | 0.778 [0.615, 0.929] | 0.871 [0.742, 0.968] | 0.810 [0.636, 0.979] |
+| | random forest | 0.839 [0.677, 1.000] | 0.731 [0.548, 0.913] | 1.000 [0.839, 1.000] | 0.800 [0.613, 0.961] |
+
+**What we found:**
+- **Ghana children:**
+  - Gradient boosting catches 90% of anemic children while testing 64% of all children. That is about a quarter
+    fewer tests than testing at random.
+  - 60% of the children it sends for testing are anemic, against 42.5% overall.
+- **At recall near 1, the saving disappears.** To catch every anemic child, every model has to test 96-100% of
+  children. The last few anemic children look no paler than healthy ones.
+- **India and the Italy early batch are barely better than random.** Catching 90% means testing 83-87% of people, and
+  precision sits only a little above prevalence.
+- **Pooled Eyes-Defy looks better** (random forest: 51% tested to catch 90%), but most of that is the country shortcut
+  from M4.
+
+**Answer:**
+- An eyelid photo can help decide who to test first when tests are rationed: in Ghana children it saves about a quarter
+  of the tests at 90% sensitivity.
+- It can't work as a rule-out test with recall near 1.
+- Which operating point matters is a clinical question we'd like your help with (Question 1).
+
+## M14: models from your email
+
+We'll add them to the log when the email arrives.
+
+## Questions for you
+
+1. **Clinical target.** Which miss rate would a clinic accept: 10%, 5% or none? That decides which row of the M13
+   table matters. Do you know a clinician we could ask?
+2. **Data.** Is the Russian fingernail set worth the effort, given that it has no per-patient sex column? Or should we
+   go after the larger Indian conjunctiva set?
+3. **Pretrained model.** Is VisionFM's external-eye encoder worth a run, given the ViT result?
+4. **Eyelid region.** The deeper fold (forniceal) did better in India. Is that consistent with what you've seen?
