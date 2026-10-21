@@ -18,7 +18,7 @@
 >
 > | Question | Answer (AUROC; 0.5 = coin flip) |
 > |---|---|
-> | Eyelid model trained on Ghana children, tested on Italian/Indian adults | learned models break (0.25-0.58); the untrained "less red = anemic" rule holds up (**0.81**) |
+> | Eyelid model trained on Ghana children, tested on Italian/Indian adults | learned models break (0.32-0.62); the untrained "less red = anemic" rule holds up best (**0.84**), but only 0.67 within India, and Italy's score is mostly a photo-batch effect (Part III) |
 > | Survey answers (age, pregnancy, wealth, education, contraception, urban/rural) in Zimbabwe | weak signal, **0.58**; testing the top 30% finds 38% of anemic women vs 29% at random |
 > | Same survey model, unchanged, in Malawi and Zambia | keeps its small signal (**0.57**, 0.57), calibration stays close |
 > | Survey + eyelid score together (**simulation**, no paired data exists) | the eyelid score would do most of the work; the survey adds about 0.01-0.02 |
@@ -27,7 +27,7 @@
 
 ## Abstract
 
-Anemia can be screened without a blood test by looking at how pale the inside of the lower eyelid (the conjunctiva) is, or by asking a few routine questions. Our goal is a tool that tells health workers who to test first, and an honest test of whether it works outside the place it was built. **Part I** re-implements the two published eyelid-photo results our proposal starts from: a ResNet50 on CP-AnemiC (Ghanaian children, 84.79% accuracy) and a Vision Transformer on Eyes-Defy-Anemia (Italian and Indian adults, 98.47%). We reproduce both protocols (85.1%, and 95.6% over 5 splits), but both let the same photo appear in training and test; with a clean split accuracy falls to 77.5% and 88.5%, and on Eyes-Defy 88.5% equals predicting "anemic" for every Indian photo. **Part II** tests transfer. Eyelid models trained on one dataset collapse on the other (AUROC 0.25-0.58), while the untrained rule "less red = anemic" holds up (0.81 on Eyes-Defy). A survey model trained on Zimbabwe DHS data carries a weak but real signal (AUROC 0.58) and keeps it, with close calibration, in Malawi and Zambia (0.57). A clearly labelled simulation suggests that if an eyelid score worked on these women as it does on Eyes-Defy, it would add far more than the survey. The headline numbers in this field overstate what a model does on new people; leakage, site confounding and camera differences matter more than model choice.
+Anemia can be screened without a blood test by looking at how pale the inside of the lower eyelid (the conjunctiva) is, or by asking a few routine questions. Our goal is a tool that tells health workers who to test first, and an honest test of whether it works outside the place it was built. **Part I** re-implements the two published eyelid-photo results our proposal starts from: a ResNet50 on CP-AnemiC (Ghanaian children, 84.79% accuracy) and a Vision Transformer on Eyes-Defy-Anemia (Italian and Indian adults, 98.47%). We reproduce both protocols (85.1%, and 95.6% over 5 splits), but both let the same photo appear in training and test; with a clean split accuracy falls to 77.5% and 88.5%, and on Eyes-Defy 88.5% equals predicting "anemic" for every Indian photo. **Part II** tests transfer. Eyelid models trained on one dataset collapse on the other (AUROC 0.32-0.62), while the untrained rule "less red = anemic" holds up best (0.84 on Eyes-Defy, 0.67 within India). A survey model trained on Zimbabwe DHS data carries a weak but real signal (AUROC 0.58) and keeps it, with close calibration, in Malawi and Zambia (0.57). A clearly labelled simulation suggests that if an eyelid score worked on these women as it does on Eyes-Defy, it would add far more than the survey. The headline numbers in this field overstate what a model does on new people; leakage, site confounding and camera differences matter more than model choice.
 
 ## 1. Introduction
 
@@ -133,7 +133,7 @@ We audited every dataset before training (`src/eyelid/audit.py`, `src/eyelid/aud
 | India | **0.53 [0.29, 0.80]**, chance | 53 of 64 |
 | Italy | 0.93 [0.86, 0.98] | 7 of 86 |
 
-Among Indian patients, where nearly all of the anemia is, the model cannot tell anemic from non-anemic. The Italian result rests on 7 anemic test photos with fairly severe anemia, so it is a hint, not a finding.
+Among Indian patients, where nearly all of the anemia is, the model cannot tell anemic from non-anemic. The Italian result rests on 7 anemic test photos with fairly severe anemia, so it is a hint, not a finding. Part III adds a second reason for caution: Italy's anemic patients were almost all photographed in one early batch.
 
 ### 4.3 Duplicate photos inflate CP-AnemiC scores
 
@@ -167,13 +167,15 @@ Input is the palpebral conjunctiva on both sides. CP-AnemiC: 388 photos with no 
 
 | Model | CP-AnemiC, within (CV) | CP-AnemiC -> Eyes-Defy | -> India only | -> Italy only | Eyes-Defy -> CP-AnemiC |
 |---|---|---|---|---|---|
-| Color logistic regression | 0.680 [0.627, 0.730] | **0.251** [0.189, 0.318] | 0.491 [0.359, 0.625] | 0.105 [0.039, 0.190] | 0.562 [0.504, 0.619] |
-| Color random forest | 0.796 [0.752, 0.839] | 0.512 [0.435, 0.589] | 0.706 [0.573, 0.826] | 0.372 [0.270, 0.476] | 0.581 [0.529, 0.634] |
-| DINOv2 probe | 0.672 [0.616, 0.723] | 0.580 [0.502, 0.658] | 0.568 [0.443, 0.692] | 0.535 [0.400, 0.671] | 0.557 [0.499, 0.612] |
-| **Rule: less red = anemic (no training)** | 0.650 [0.597, 0.705] | **0.808** [0.749, 0.863] | 0.671 [0.552, 0.787] | 0.935 [0.865, 0.982] | **0.650** [0.597, 0.705] |
+| Color logistic regression | 0.680 [0.627, 0.730] | **0.315** [0.245, 0.389] | 0.491 [0.359, 0.625] | 0.441 [0.313, 0.567] | 0.506 [0.451, 0.562] |
+| Color random forest | 0.796 [0.752, 0.839] | 0.587 [0.511, 0.662] | 0.706 [0.573, 0.826] | 0.790 [0.692, 0.876] | 0.580 [0.521, 0.635] |
+| DINOv2 probe | 0.672 [0.616, 0.723] | 0.624 [0.546, 0.697] | 0.568 [0.443, 0.692] | 0.715 [0.598, 0.827] | 0.561 [0.502, 0.618] |
+| **Rule: less red = anemic (no training)** | 0.650 [0.597, 0.705] | **0.835** [0.779, 0.884] | 0.671 [0.552, 0.787] | 0.924 [0.856, 0.977] | **0.650** [0.597, 0.705] |
 | Rule: Indian photo = anemic | | 0.766 [0.709, 0.823] | | | |
 
 Every learned model loses most of its signal on the other dataset, and the color logistic regression ranks Eyes-Defy patients *worse than chance*: the color patterns it learned are tied to CP-AnemiC's camera and lighting, and they reverse under Eyes-Defy's. The untrained redness rule keeps working in both directions and even beats the country rule on Eyes-Defy. Redness carries over; the learned details of it do not.
+
+*Corrected after the mentor meeting (Part III, 2026-10-20).* 31 Italian mask files (folders 1-31) put the conjunctiva on a white background instead of a transparent one, so those photos were measured on a mostly white frame. With that fixed, the numbers above changed little (redness rule 0.808 -> 0.835). The bigger problem is that Italy's anemic photos sit almost all in that same early batch (21/31 anemic vs 2/91 later), which was photographed differently. The batch alone predicts Italian anemia at AUROC 0.91, and inside the early batch the redness rule scores 0.75 [0.52, 0.94]. So the "-> Italy only" column mostly measures the batch, not pallor.
 
 ### 5.2 Survey answers in Zimbabwe
 
@@ -218,14 +220,14 @@ The model keeps most of its small signal across countries and 9 years, and stays
 | Survey only | 0.568 [0.555, 0.581] | 0.351 [0.335, 0.367] |
 | Eyelid only, weak (Indian photos) | 0.674 [0.662, 0.687] | 0.512 [0.483, 0.524] |
 | Survey + eyelid, weak | 0.687 [0.676, 0.700] | 0.487 [0.471, 0.504] |
-| Eyelid only, strong (Italian photos) | 0.937 [0.932, 0.943] | 0.896 [0.858, 0.923] |
-| Survey + eyelid, strong | 0.935 [0.930, 0.941] | 0.887 [0.863, 0.912] |
+| Eyelid only, strong (Italian photos) | 0.927 [0.921, 0.932] | 0.818 [0.803, 0.833] |
+| Survey + eyelid, strong | 0.929 [0.924, 0.935] | 0.821 [0.807, 0.836] |
 
 ![Fusion simulation](reports/figures/fusion_simulation.png)
 
 *Figure 5. Simulated share of anemic women found by testing budget. Zambia (right) looks the same; full table in [reports/fusion_simulation.md](reports/fusion_simulation.md).*
 
-If an eyelid score worked on these women as well as the redness rule does on Eyes-Defy, it would carry most of the signal; the survey adds about 0.01-0.02 AUROC on top of a weak eyelid score and nothing on top of a strong one. Whether an eyelid score works on African women photographed in the field is exactly what Section 5.1 leaves open, so this is a reason to collect paired data, not evidence that fusion works.
+The "strong" scenario borrows Italy's redness scores, which Part III shows are mostly a photo-batch effect, so treat it as an upper bound on what an eyelid score could add. If an eyelid score worked on these women as well as the redness rule does on Eyes-Defy, it would carry most of the signal; the survey adds about 0.01-0.02 AUROC on top of a weak eyelid score and nothing on top of a strong one. Whether an eyelid score works on African women photographed in the field is exactly what Section 5.1 leaves open, so this is a reason to collect paired data, not evidence that fusion works.
 
 ## 6. Discussion
 

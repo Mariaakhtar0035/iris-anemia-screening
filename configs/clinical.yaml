@@ -1,0 +1,6 @@
+# Step 4: clinical-style view of the eyelid models. Mentor advice M13 (docs/eyelid_followup.md): AUROC alone isn't
+# enough, so this shows the testing load at fixed sensitivities, and PR curves against the prevalence line.
+# Populations, folds and cutoffs as in Stage 9 (configs/ceiling.yaml): CP-AnemiC children Hb < 11.0 g/dL; Eyes-Defy
+# adults WHO by sex (women < 12.0, men < 13.0).
+sensitivities: [0.80, 0.90, 0.95, 1.00]   # share of anemic people the clinic wants to catch
+models: [random_forest, dinov2_probe]      # plus the redness rule, and the fine-tuned ViT when its results exist
