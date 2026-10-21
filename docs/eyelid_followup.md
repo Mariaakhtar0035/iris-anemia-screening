@@ -14,18 +14,18 @@ Paraphrased from the meeting, without names.
 
 | # | Suggestion | What we do | Status |
 |---|---|---|---|
-| M1 | Exhaust each dataset before anything else. Use the biggest model you can and see whether it can overfit. If a complex model can't fit data that all comes from one distribution, the signal isn't there. Only then worry about transfer and bias. | Step 1 (Stage 9): model ladder, training vs held-out AUROC, learning curves | planned |
-| M2 | Train on each population separately and see how well that does. | Step 1: CP-AnemiC, India and Italy each on their own | planned |
-| M3 | Leakage must be prevented. Duplicate photos are fine as augmentation if they never reach the test set and don't hurt transfer. | Step 1: train with the duplicate copies kept inside the training fold, vs without them | planned |
-| M4 | When transfer fails, compare the populations to find out why (brightness, color, age, label balance). | Step 2 (Stage 10): population comparison and a "which country is this?" classifier | planned |
-| M5 | The country acts as a shortcut. Look at recent debiasing and fairness work: define parity metrics, then regularize the model so its score distribution doesn't depend on the population. | Step 3 (Stage 11): fairness metrics, reweighing, fairness-penalized model | planned |
-| M6 | Edit the images so they look more alike, for example by changing the brightness or shifting the color distributions. | Step 3: brightness and color normalization, color-jitter augmentation | planned |
-| M7 | Don't drop India from the data. Use fairness metrics instead. | Step 3: per-country and worst-country AUROC | planned |
-| M8 | Separate models per population are an acceptable fallback. Big models trained on diverse data can learn every population, as Google's skin model eventually did. | Step 3: per-country models vs one pooled model | planned |
-| M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | later |
-| M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | planned |
+| M1 | Exhaust each dataset before anything else. Use the biggest model you can and see whether it can overfit. If a complex model can't fit data that all comes from one distribution, the signal isn't there. Only then worry about transfer and bias. | Step 1 (Stage 9): model ladder, training vs held-out AUROC, learning curves | done |
+| M2 | Train on each population separately and see how well that does. | Step 1: CP-AnemiC, India and Italy each on their own | done |
+| M3 | Leakage must be prevented. Duplicate photos are fine as augmentation if they never reach the test set and don't hurt transfer. | Step 1: train with the duplicate copies kept inside the training fold, vs without them | done |
+| M4 | When transfer fails, compare the populations to find out why (brightness, color, age, label balance). | Step 2 (Stage 10): population comparison and a "which country is this?" classifier | done |
+| M5 | The country acts as a shortcut. Look at recent debiasing and fairness work: define parity metrics, then regularize the model so its score distribution doesn't depend on the population. | Step 3 (Stage 11): fairness metrics, reweighing, fairness-penalized model | done |
+| M6 | Edit the images so they look more alike, for example by changing the brightness or shifting the color distributions. | Step 3: brightness and color normalization, color-jitter augmentation | done |
+| M7 | Don't drop India from the data. Use fairness metrics instead. | Step 3: per-country and worst-country AUROC | done |
+| M8 | Separate models per population are an acceptable fallback. Big models trained on diverse data can learn every population, as Google's skin model eventually did. | Step 3: per-country models vs one pooled model | done |
+| M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | searched (Step 7); downloads wait for Jaineel |
+| M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | searched: one candidate (VisionFM), waiting for Jaineel before downloading |
 | M11 | VLMs don't fit this problem, because the images come with no text or metadata. | Recorded, not pursued | done |
-| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | later |
+| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | searched (Step 7); downloads wait for Jaineel |
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | planned |
 | M14 | The mentors will email a list of models to try. | Add them here when the email arrives | waiting |
 
@@ -153,3 +153,39 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
   - **Separate per-country models (M8)** are no better than one pooled model within each country.
   - **Transfer to CP-AnemiC:** no debiasing method beats the untrained redness rule (0.650). The best trained model is
     the random forest with jitter, 0.606.
+
+### Step 5: eyelid-pretrained models (M10)
+- **Why:** the mentors suggested reusing a model that was already pretrained on eyelid images.
+- **What we searched:** Hugging Face, GitHub and papers, for "conjunctiva", "eyelid", "anemia" and "external eye"
+  checkpoints. Nothing was downloaded.
+- **Found:**
+
+| Model | What it is | License, access | Verdict |
+|---|---|---|---|
+| `dawahealth/anemia_screeniing` (Hugging Face) | an anemia classifier trained on 864 conjunctiva images from Ghana, Italy and India | Apache-2.0, open | **rejected**: those are almost certainly CP-AnemiC and Eyes-Defy, so it has already seen our test photos, and its own validation accuracy is 57.7% |
+| VisionFM "External Eye" encoder (`github.com/ABILab-CUHK/VisionFM`) | an ophthalmic foundation model; one of its encoders is pretrained on external-eye photos | research use only, Google Drive download, pretraining images not described | **the only candidate**; waiting for Jaineel's go-ahead before downloading |
+
+- **Answer to M10:** no public model is pretrained on conjunctiva photos that we could use without leakage. The closest
+  is VisionFM's external-eye encoder. Given Step 1 (a fine-tuned ViT already reaches training AUROC 1.00 and does
+  worse than gradient boosting on color numbers), a better starting point is unlikely to fix what is limiting us, which
+  is the data rather than the model. It is still worth one run if Jaineel approves the download.
+
+### Step 7: more data (M9, M12)
+- **Why:** the mentors suggested more countries (each with its own shortcut) and fingernail or palm datasets with
+  age and sex.
+- **What we searched:** Mendeley Data, IEEE DataPort, Zenodo, figshare, Kaggle and papers that release data. Nothing
+  was downloaded.
+- **Found:**
+
+| Dataset | Body site | People | Where | Labels and metadata | Access | Fit for us |
+|---|---|---|---|---|---|---|
+| Yakimov et al. 2024, *Scientific Data*; figshare `10.6084/m9.figshare.c.6760179` | skin and fingernails, one photo each | 250 adults, 18-95, about half women | Moscow, Russia, one hospital | venous Hb per patient (69/250 below 12 g/dL); nail and skin boxes. **Age and sex are not in the per-patient file** | open; article CC BY-NC-ND | **Best fit for M12.** New country and adults, fixed lighting box. Needs one adult cutoff (no sex column), and skin tones are mostly light (Fitzpatrick I-III) |
+| Girija, Kaur, Sekhar 2026, IEEE DataPort `10.21227/n7km-nr64` | conjunctiva (both eyes), palms, up to 10 nail beds | 1,485 blood-camp volunteers | Faridabad, India | lab Hb 6.0-18.7; WHO < 12: 166 anemic. **No age or sex** | IEEE DataPort login, 1.0 GB, license not stated | **Biggest conjunctiva set by far** and a second Indian site. Blood-camp volunteers, 11% anemic. Needs one adult cutoff |
+| Asare, Appiahene, Donkoh 2022, Mendeley `10.17632/ccr8cm22vz.1` (palm) and `10.17632/2xx4j3kjg2.1` (fingernails) | palms; fingernails | 710 images each, children under 6 | 10 hospitals in Ghana | lab Hb, age, sex | open, CC BY 4.0 | Same authors and same 710 count as CP-AnemiC, so very likely **the same children**. No new population, but if the IDs link, it shows whether palm or nails carry more signal than the eyelid in the same children |
+| Suner et al. 2021, *PLoS ONE*; Zenodo `10.5281/zenodo.4926651` | conjunctiva | 344 emergency-department adults, 19-96 | Providence, USA | lab Hb 4.7-19.6; the paper reports age, sex and a skin-tone score | open, but only two CSV files (270 kB), no photos | Photos aren't shared. If the CSVs hold color values, they could test the redness rule on a fourth population |
+| Valles-Coral et al. 2025 | fingertip and palm videos, nail photos | 909 records, young adults | Peru | Hb, age, sex | **not released yet** | watch for release |
+
+  Also checked: the "710-image online dataset" in a 2025 Korean journal paper is CP-AnemiC again.
+- **Our pick, if Jaineel approves:** (1) Yakimov fingernails, for a new country and body site with open access;
+  (2) the Indian IEEE DataPort set, for a large third conjunctiva source; (3) the Ghana palm and nail sets, only if
+  their IDs match CP-AnemiC's. Each would need a duplicate audit and a no-color control first, as in Steps 1-3.

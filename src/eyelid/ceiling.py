@@ -112,7 +112,7 @@ def vit_rows(pops, boot, seed):
         assert list(df.id) == r["ids"], f"{path.name}: photos differ from the current population"
         y, s = df.anemic.to_numpy(), np.array(r["held_out"])
         m = summarize(y, s, boot["n_resamples"], boot["ci"], seed)
-        rows.append({"population": r["population"], "model": f"vit_b16_finetuned ({'jitter' if r['jitter'] else 'no jitter'}, 1 seed)",
+        rows.append({"population": r["population"], "n": len(y), "anemic": f"{y.mean():.1%}", "model": f"vit_b16_finetuned ({'jitter' if r['jitter'] else 'no jitter'}, 1 seed)",
                      "train": train_text(r["train_auroc"]), "gap": f"{np.mean(r['train_auroc']) - m['auroc']['estimate']:+.3f}",
                      "minutes": round(r["seconds"] / 60), **m})
     return rows
@@ -157,6 +157,7 @@ def main():
                                   "train_auroc": float(np.nanmean(train_auroc)), **m})
             print(f"{name}: {model} done", flush=True)
     ladder += vit_rows(pops, boot, seed)
+    ladder.sort(key=lambda r: list(pops).index(r["population"]))  # ViT rows next to their population
 
     # 2. Eyes-Defy: which mask region, and gray-world on or off. Only photos that have all three masks.
     region_rows = []
