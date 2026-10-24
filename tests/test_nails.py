@@ -1,7 +1,15 @@
 import numpy as np
 from PIL import Image
 
-from src.nails import load_nails, nail_pixels
+from src.nails import load_nails, nail_pixels, white_balance
+
+
+def test_white_balance_makes_the_board_white():
+    rgb = np.full((10, 10, 3), [0.8, 0.9, 0.9], dtype=np.float32)  # a bluish white board
+    rgb[:2, :2] = [0.4, 0.3, 0.3]  # a nail: too dark and too colored to count as board
+    out = white_balance(rgb)
+    assert np.allclose(out[5, 5], 1.0)
+    assert np.allclose(out[0, 0], [0.5, 0.3 / 0.9, 0.3 / 0.9])
 
 
 def test_nail_boxes_are_row_col(tmp_path):

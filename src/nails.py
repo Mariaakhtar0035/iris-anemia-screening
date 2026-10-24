@@ -3,7 +3,8 @@
 Yakimov et al. 2024: 250 adults in Moscow, one photo per patient in a fixed LED box, three nail boxes per photo. Same
 color numbers, redness rule, models, no-color control and metrics as the eyelid stages. The hashed MEASUREMENT_DATE
 marks 20 photo sessions, so after the Italy batch problem (Stage 10) we check whether the session alone predicts
-anemia, and also score on whole held-out sessions.
+anemia, and also score on whole held-out sessions. Stage 12b (approved by Jaineel 2026-10-24) reruns the rule and models
+on white-balanced nails, on nail minus the skin next to it, and on that skin alone.
 
 Run from the repo root: python -m src.nails
 """
@@ -19,7 +20,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 from src.common.evaluate import IMAGE_METRICS, summarize
 from src.common.io import ROOT, load_config, save_results
-from src.common.metrics import auroc, precision_at_sensitivity, share_tested_at_sensitivity
+from src.common.metrics import auroc, bootstrap_ci, precision_at_sensitivity, share_tested_at_sensitivity
 from src.common.splits import leave_one_group_out, repeated_stratified
 from src.eyelid.ceiling import fit_and_score, ladder_models, train_text
 from src.eyelid.color_features import color_features
@@ -42,15 +43,38 @@ def load_nails(cfg):
         "hb_g_per_l": d.HB_LEVEL_GperL,
         "session": d.MEASUREMENT_DATE,
         "nail_boxes": d.NAIL_BOUNDING_BOXES.map(json.loads),
+        "skin_boxes": d.SKIN_BOUNDING_BOXES.map(json.loads),
         "anemic": (d.HB_LEVEL_GperL < cfg["anemia_cutoff_g_per_l"]).astype(int),
     })
 
 
-def nail_pixels(path, boxes):
-    """RGB values in [0, 1] of every pixel inside the nail boxes, shape (n_pixels, 3).
+def read_photo(path):
+    return np.asarray(Image.open(path).convert("RGB"), dtype=np.float32) / 255.0
+
+
+def box_pixels(rgb, boxes):
+    """RGB values of every pixel inside the boxes, shape (n_pixels, 3).
     Boxes are [row1, col1, row2, col2]: read as x/y they fall off the 800x600 photos (checked by drawing them)."""
-    rgb = np.asarray(Image.open(path).convert("RGB"), dtype=np.float32) / 255.0
     return np.concatenate([rgb[r1:r2, c1:c2].reshape(-1, 3) for r1, c1, r2, c2 in boxes])
+
+
+def nail_pixels(path, boxes):
+    return box_pixels(read_photo(path), boxes)
+
+
+def white_balance(rgb):
+    """Divide by the photo's own white board, so the board reads (1, 1, 1). The board = bright pixels with little color
+    (HSV value > 0.5, saturation < 0.15), 54-74% of a photo; pale nails pass too but are too few to move the median."""
+    hi, lo = rgb.max(-1), rgb.min(-1)
+    white = np.median(rgb[(hi > 0.5) & (hi - lo < 0.15 * hi)], axis=0)
+    return np.clip(rgb / white, 0.0, 1.0)
+
+
+def photo_features(path, nail_boxes, skin_boxes):
+    """Color numbers of the nails as photographed, of the nails after white balance, and of the skin next to them."""
+    rgb = read_photo(path)
+    return (color_features(box_pixels(rgb, nail_boxes)), color_features(box_pixels(white_balance(rgb), nail_boxes)),
+            color_features(box_pixels(rgb, skin_boxes)))
 
 
 def box_sizes(boxes):
@@ -68,8 +92,9 @@ def main():
 
     df = load_nails(cfg)
     y, sessions = df.anemic.to_numpy(), df.session.to_numpy()
-    feats = pd.DataFrame([color_features(nail_pixels(p, b)) for p, b in zip(df.image_path, df.nail_boxes)], index=df.id)
-    color, rule = feats.to_numpy(), -feats[color_cfg["rule_feature"]].to_numpy()
+    nail, nail_wb, skin = (pd.DataFrame(list(f), index=df.id) for f in zip(*[
+        photo_features(*row) for row in zip(df.image_path, df.nail_boxes, df.skin_boxes)]))
+    color, rule = nail.to_numpy(), -nail[color_cfg["rule_feature"]].to_numpy()
     models = {name: make for name, (kind, make) in
               ladder_models(color_cfg, load_config("probe"), ceiling_cfg, seed).items() if kind == "color"}
     session_only = lambda: make_pipeline(OneHotEncoder(handle_unknown="ignore"),
@@ -80,8 +105,9 @@ def main():
 
     info = {"n": len(y), "anemic": f"{y.mean():.1%}"}
     cv = repeated_stratified(y, n_splits, n_repeats, seed)
+    splits = {"5x5 CV by patient": cv, "leave one session out": leave_one_group_out(sessions)}
     rows = []
-    for split, folds in {"5x5 CV by patient": cv, "leave one session out": leave_one_group_out(sessions)}.items():
+    for split, folds in splits.items():
         rows.append({"split": split, **info, "model": "rule_low_redness (no training)", "train": "-", **stats(rule)})
         runs = {**{name: (color, make) for name, make in models.items()},
                 "negative_control_rf_no_color": (np.array([box_sizes(b) for b in df.nail_boxes]), models["random_forest"])}
@@ -91,6 +117,30 @@ def main():
             held_out, train_auroc = fit_and_score(make, X, y, folds)
             rows.append({"split": split, **info, "model": name, "train": train_text(train_auroc), **stats(held_out)})
         print(f"done: {split}", flush=True)
+
+    # Stage 12b: cancel lighting (white board) or skin tone (skin next to the nail) before the color numbers.
+    def auroc_gain(scores, reference):
+        """Paired bootstrap: AUROC of scores minus AUROC of reference, both on the same resampled photos."""
+        packed = np.column_stack([np.atleast_2d(reference).mean(0), np.atleast_2d(scores).mean(0)])
+        return bootstrap_ci(lambda yy, ss: auroc(yy, ss[:, 1]) - auroc(yy, ss[:, 0]), y, packed,
+                            boot["n_resamples"], boot["ci"], seed=seed)
+
+    inputs = {"nail (as photographed)": nail, "nail, white-balanced": nail_wb, "nail minus skin": nail - skin,
+              "skin only": skin}
+    corrections, reference = [], {}
+    for split, folds in splits.items():
+        for input_name, table in inputs.items():
+            runs = {"rule_low_redness (no training)": -table[color_cfg["rule_feature"]].to_numpy()}
+            for name, make in models.items():
+                runs[name] = fit_and_score(make, table.to_numpy(), y, folds)[0]
+            for name, scores in runs.items():
+                row = {"split": split, "input": input_name, "model": name, **stats(scores, {"auroc": auroc})}
+                if (split, name) in reference:
+                    row["gain"] = auroc_gain(scores, reference[(split, name)])
+                else:
+                    reference[(split, name)] = scores  # the first input, as photographed
+                corrections.append(row)
+    print("done: corrections", flush=True)
 
     curve = []
     for name in ("logistic_regression", "random_forest", "hist_gradient_boosting"):
@@ -107,7 +157,8 @@ def main():
                     "anemic_share_max": float(per_session["mean"].max()),
                     "sessions_with_no_anemic": int((per_session["mean"] == 0).sum())}
 
-    path = save_results("stage12_nails", {"main": rows, "learning_curve": curve, "sessions": session_info},
+    path = save_results("stage12_nails", {"main": rows, "corrections": corrections, "learning_curve": curve,
+                                          "sessions": session_info},
                         {"default": base, "nails": cfg, "color": color_cfg, "ceiling": ceiling_cfg})
     s = session_info
     report = (
@@ -133,6 +184,16 @@ def main():
         f"- Bootstrap 95% CIs, {boot['n_resamples']} resamples. Share tested to catch 90%: testing at random needs "
         "90%; lower is better.\n\n"
         + markdown_table(rows, ["split", "n", "anemic", "model", "train"], COLUMNS)
+        + "\n\n## Stage 12b: cancelling lighting or skin tone\n\nThe same rule and models on other color numbers:\n\n"
+        "- **nail, white-balanced:** each photo divided by its own white board first (the median of its bright, "
+        "colorless pixels), so the board reads pure white. Cancels lighting drift between sessions.\n"
+        "- **nail minus skin:** the nail's color numbers minus those of the skin boxes just behind each nail in the "
+        "same photo. Cancels lighting and skin tone, but also any pallor the skin shares with the nail bed.\n"
+        "- **skin only:** the skin boxes alone, to show how much of the signal the skin carries.\n\n"
+        "**Change** = held-out AUROC minus the same model's on the nails as photographed, with a paired bootstrap "
+        "95% CI (both scored on the same resampled photos). A CI that crosses 0 = no clear change.\n\n"
+        + markdown_table(corrections, ["split", "input", "model"],
+                         {"auroc": "Held-out AUROC", "gain": "Change vs as photographed"})
         + "\n\n## Learning curve (5x5 CV by patient)\n\nHeld-out AUROC when each training fold is cut to a stratified "
         "share. Still rising at 1.0 = more photos would help.\n\n"
         + markdown_table(curve, ["model", "fraction", "n_train", "train AUROC"], {"auroc": "Held-out AUROC"}) + "\n"
