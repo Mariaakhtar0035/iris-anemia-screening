@@ -23,7 +23,7 @@ Paraphrased from the meeting, without names.
 | M7 | Don't drop India from the data. Use fairness metrics instead. | Step 3: per-country and worst-country AUROC | done |
 | M8 | Separate models per population are an acceptable fallback. Big models trained on diverse data can learn every population, as Google's skin model eventually did. | Step 3: per-country models vs one pooled model | done |
 | M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut |
-| M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | approved (Step 8); weights download pending |
+| M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | done (Step 10): VisionFM probe 0.765 in Ghana children, above DINOv2 and the fine-tuned ViT, below color numbers (0.846) |
 | M11 | VLMs don't fit this problem, because the images come with no text or metadata. | Recorded, not pursued | done |
 | M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut |
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
@@ -290,3 +290,40 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
 - **Caveats:** one cutoff for both sexes, so some anemic men count as healthy; mostly light skin (Fitzpatrick I-III);
   one hospital. A model trained on nails can't be applied to eyelids, so this is a comparison of conditions, not a
   transfer test.
+
+### Step 10: the eye-pretrained model, VisionFM (M10)
+- **Why:** the mentors suggested starting from a model already pretrained on eye images. VisionFM's external-eye
+  encoder was the only candidate that hasn't seen our datasets (Step 5).
+- **Download:** Jaineel downloaded `VFM_External_weights.pth` (1.4 GB) on 2026-10-23 to `data/weights/visionfm/`
+  (gitignored). It is a ViT-B/16 pretrained with iBOT for 400 epochs; we use the teacher weights, as VisionFM's own
+  feature extraction does.
+- **Loading safely:** the file is a pickle. We load it with `torch.load(weights_only=True)`, which builds only
+  tensors, and allow just three harmless extra types the file stores (its training settings, `argparse.Namespace`,
+  and two numpy scalar types). We never use the unsafe loader. All 85.8M weights load strictly into the standard
+  `timm` ViT-B/16. Test: `tests/test_visionfm.py`.
+- **What we did:** frozen features (the CLS token and the mean patch token), with the same logistic-regression probe
+  as DINOv2, as one more rung of the Step 1 ladder. Inputs are prepared like DINOv2's but normalized with VisionFM's
+  own external-eye statistics. Code: `src/eyelid/visionfm.py`; settings: `configs/ceiling.yaml` (`visionfm`).
+- **Ran:** `python -m src.eyelid.ceiling` at commit `6334202` (results recorded clean). Report:
+  `reports/stage9_ceiling.md`.
+- **Results** (held-out AUROC, 5x5 CV by photo):
+
+| Population | Rule | Best color model | DINOv2 probe | Fine-tuned ViT | **VisionFM probe** |
+|---|---|---|---|---|---|
+| Ghana children (388) | 0.650 | gradient boosting **0.846** [0.807, 0.882] | 0.672 [0.616, 0.723] | 0.715 [0.661, 0.765] | **0.765 [0.716, 0.815]** |
+| India (95) | **0.671** [0.552, 0.787] | random forest 0.673 | 0.658 | 0.654 | 0.585 [0.452, 0.722] |
+| Italy (122) | 0.924 | logistic regression 0.920 | 0.879 | 0.919 | 0.927 [0.838, 0.986] |
+| Italy + India pooled (217) | 0.835 | random forest 0.892 | 0.868 | 0.892 | 0.872 [0.823, 0.916] |
+
+- **What it means:**
+  - **Eye pretraining helps compared with general image models.** In Ghana children VisionFM beats both the DINOv2
+    probe (+0.09) and the ViT we fine-tuned ourselves (+0.05), without any fine-tuning.
+  - **But 29 color numbers still win** (0.846 vs 0.765), and VisionFM's learning curve rises more slowly (0.719 with 78
+    training photos, 0.765 with 310).
+  - **India doesn't improve** (0.585, below the untrained rule's 0.671). Italy and pooled are again at the level the
+    batch and country shortcuts allow.
+  - **Clinic view** (`python -m src.eyelid.clinical`, `reports/clinical_eyelid.md`): to catch 90% of anemic Ghana
+    children, VisionFM sends 74% [66%, 84%] of children for a blood test, vs 64% for gradient boosting, 78% for the
+    fine-tuned ViT and 81% for the rule (random testing: 90%). PR-AUC 0.693 vs 0.780 for gradient boosting.
+  - **Answer to M10:** a better starting model narrows the gap but doesn't close it. That fits Step 1: the limit is the
+    data (photo conditions and sample size), not the model.
