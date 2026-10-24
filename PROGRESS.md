@@ -78,6 +78,7 @@ model VisionFM (F11). See [What's next](#whats-next) for what's left.
 | F11 | Eye-pretrained model, VisionFM (M10) | start from a model that has seen eyes | 0.765 in Ghana children: beats DINOv2 and our ViT, loses to color numbers (0.846) | **helps vs general models, not enough** |
 | F12 | Vision-language models (M11) | mentors said no | not pursued | skipped |
 | F13 | More data: fingernails under fixed lighting (M9, M12) | a new country and body site, without camera and batch differences | logistic regression 0.818, no shortcut, flat learning curve | **worked** |
+| F15 | Correct the nail colors: white board, or the skin next to the nail | cancel lighting and skin tone (M6) | white board: rule +0.025, models +0.00-0.03 (within noise); minus skin: -0.11 to -0.31 | **white board: small gain; minus skin: hurt** |
 
 ## Part A: checking the published eyelid results
 
@@ -388,6 +389,41 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 
 ### F14. The mentors' list of models (M14). Waiting for their email.
 
+### F15. Correct the nail colors for lighting and skin tone (Stage 12b). White board: small gain. Minus skin: hurt.
+- **Why:** each nail photo has a white board behind the hand, and the data marks a patch of skin just behind each
+  nail. That lets us try the mentors' "make the images alike" idea (M6) properly: cancel the lighting with a real white
+  reference, or cancel skin tone (the bias they warned about) by comparing the nail with the person's own skin.
+- **What we did:** three new inputs for the same rule and models, same splits as F13:
+  - **white-balanced:** each photo divided by its own white board (the median of its bright, colorless pixels), so
+    the board reads pure white;
+  - **nail minus skin:** the nail's 29 color numbers minus those of the skin next to it;
+  - **skin only:** the skin patches alone, to see how much signal the skin carries.
+  - Each compared with the nails as photographed using a paired bootstrap (both scored on the same resampled
+    people), so the CI is on the change itself.
+- **What happened** (AUROC, CV by patient; the change vs as photographed in brackets when its CI excludes 0):
+
+| Input | Rule | Logistic regression | Random forest | Gradient boosting |
+|---|---|---|---|---|
+| Nails as photographed (F13) | 0.703 | 0.818 | 0.809 | 0.791 |
+| **White-balanced** | **0.727** (+0.025 [0.002, 0.049]) | 0.820 | **0.825** | 0.814 |
+| Nail minus skin | 0.413 (-0.290) | 0.705 (-0.113) | 0.509 (-0.301) | 0.485 (-0.306) |
+| Skin only | 0.730 | 0.763 | 0.728 (-0.081) | 0.732 |
+
+- **Takeaways:**
+  - **The white board helps a little.** The untrained rule gains 0.025 and that gain is real (CI above 0). The models
+    gain 0.00-0.03, within noise; on held-out photo sessions random forest reaches 0.834 (+0.032 [-0.005, 0.068]).
+    The light box already keeps the lighting steady, so there was little to correct.
+  - **Why this worked when gray-world (B6) didn't:** gray-world assumes the average color should be gray, and we
+    applied it to the eyelid cut-out, whose average is the eyelid itself, so it erased the redness. Here the white
+    comes from a real white object.
+  - **Subtracting the skin backfires:** the skin pales with anemia too (skin alone 0.73-0.76), so subtracting it
+    throws the signal away along with the lighting. The rule even drops below chance: in anemic people the skin
+    loses more redness than the nail.
+  - **Lesson:** a color reference only helps if it doesn't share the signal. A white board is a good reference; the
+    person's own skin is not.
+- **Not tried:** the nail and skin numbers side by side as one input, letting the model weigh both. Report:
+  [`reports/stage12_nails.md`](reports/stage12_nails.md), section "Stage 12b".
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -410,11 +446,13 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Fairness methods, for closing the gaps between countries.
 - The clinic view (share tested), for explaining what a model is worth.
 - Fingernails under fixed lighting: 0.82 with no shortcut, holding on unseen photo sessions.
+- A white board in the photo as a color reference (small: the nail rule +0.025, models within noise).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM) instead of color numbers.
 - Learned eyelid models on a new dataset.
 - Gray-world color correction (it erases the signal).
+- Subtracting the skin next to the nail (the skin pales too, so it erases the signal).
 - Debiasing, for raising accuracy inside a country.
 - One model per country.
 - Duplicate copies as extra training data (harmless, no gain).
@@ -426,7 +464,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 
 | Item | Status | Who |
 |---|---|---|
-| Fingernails: a color reference from the white board in each photo | idea, not started: the light box has a white board, which could correct each photo's color the way a reference card would | team |
+| Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
 | Indian IEEE DataPort set | needs Jaineel's IEEE login | Jaineel |
 | Mentors' list of models | waiting for their email | mentors |
 | Comparison with Chemhaka et al. (survey) | waiting for the paper's numbers | survey side |

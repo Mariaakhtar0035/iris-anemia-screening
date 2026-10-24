@@ -327,3 +327,33 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
     fine-tuned ViT and 81% for the rule (random testing: 90%). PR-AUC 0.693 vs 0.780 for gradient boosting.
   - **Answer to M10:** a better starting model narrows the gap but doesn't close it. That fits Step 1: the limit is the
     data (photo conditions and sample size), not the model.
+
+### Step 11: three follow-ups approved by Jaineel (2026-10-24)
+
+Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM, (c) check the forniceal lead in India.
+
+#### 11a (Stage 12b): correcting the nail colors (M6 on the fingernail set)
+- **Why:** each nail photo has a white board behind the hand, and `metadata.csv` also has `SKIN_BOUNDING_BOXES` (same
+  [row1, col1, row2, col2] order as the nail boxes; checked by drawing them on photos from three sessions: they sit on
+  the finger just behind each nail). So we can cancel lighting with a real white reference, or skin tone with the
+  person's own skin.
+- **What we did:** in `src/nails.py`, three new inputs for the rule and the color models, on the same splits:
+  white-balanced nails (each photo divided by the median of its bright, colorless pixels: HSV value > 0.5, saturation
+  < 0.15, which is 54-74% of a photo and almost all white board), nail minus skin (29 numbers each), and skin only.
+  Each is compared with the nails as photographed by a paired bootstrap of the AUROC change (`auroc_change` in
+  `src/common/evaluate.py`, 2000 resamples). Test: `tests/test_nails.py` (the board becomes white).
+- **Ran:** `python -m src.nails` at commit `54e965f` (results recorded clean, about 10 minutes). Report:
+  `reports/stage12_nails.md`, section "Stage 12b".
+- **Results** (held-out AUROC, 5x5 CV by patient; paired change vs as photographed):
+
+| Input | Rule | Logistic regression | Random forest | Gradient boosting |
+|---|---|---|---|---|
+| As photographed | 0.703 | 0.818 | 0.809 | 0.791 |
+| White-balanced | 0.727 (+0.025 [0.002, 0.049]) | 0.820 (+0.002 [-0.025, 0.027]) | 0.825 (+0.016 [-0.017, 0.050]) | 0.814 (+0.023 [-0.016, 0.065]) |
+| Nail minus skin | 0.413 (-0.290 [-0.372, -0.207]) | 0.705 (-0.113 [-0.188, -0.043]) | 0.509 (-0.301 [-0.389, -0.216]) | 0.485 (-0.306 [-0.392, -0.220]) |
+| Skin only | 0.730 (+0.027 [-0.052, 0.102]) | 0.763 (-0.055 [-0.116, 0.006]) | 0.728 (-0.081 [-0.149, -0.008]) | 0.732 (-0.059 [-0.128, 0.021]) |
+
+- **What it means:** the white board helps a little (clearly for the rule, within noise for the models; on held-out
+  sessions random forest reaches 0.834, +0.032 [-0.005, 0.068]). Subtracting skin backfires because the skin pales
+  with anemia too. A color reference only helps if it doesn't share the signal.
+

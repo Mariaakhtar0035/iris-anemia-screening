@@ -379,6 +379,15 @@ set photographed in one fixed LED box: Yakimov et al. 2024, *Scientific Data* (f
 - The untrained rule does better than on eyelids (0.70 vs 0.65-0.67), consistent with controlled lighting helping
   the raw color.
 
+**Correcting the colors (Stage 12b).** Each photo has a white board behind the hand, and the data marks a patch of
+skin just behind each nail. Changes below are paired (both inputs scored on the same resampled people).
+
+- **White board as a color reference:** dividing each photo by its own white board raises the untrained rule from
+  0.703 to 0.727 (change +0.025 [0.002, 0.049]) and the models by 0.00-0.03, within noise (random forest 0.825; 0.834
+  on held-out sessions). The light box already keeps the lighting steady, so there is little to correct.
+- **Nail minus skin hurts** (-0.11 to -0.31): the skin pales too (skin alone scores 0.73-0.76), so subtracting it
+  removes the signal along with the lighting. A color reference helps only if it doesn't share the signal.
+
 Report: [`reports/stage12_nails.md`](reports/stage12_nails.md).
 
 ## 7. Discussion
@@ -513,6 +522,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Comparison with Chemhaka et al. [4] | waiting for the paper's numbers |
 | Part III: the mentors' eyelid advice (ceiling, populations, debiasing, clinical view) | done; answers in `reports/mentor_followup_eyelid.md` |
 | Fingernails under fixed lighting (Section 6.6) | done |
+| Fingernail color correction: white board, skin (Section 6.6) | done |
 | Eye-pretrained model (VisionFM external eye, Section 6.1) | done |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.

@@ -34,7 +34,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
    tested. Today an eyelid photo can help decide who to test first; it can't rule anyone out.
 6. **Under fixed lighting the color signal is clean.** On a fingernail set photographed in one light box (250 adults,
    Moscow), logistic regression reaches 0.818 [0.755, 0.872], holds on photo sessions it never saw, and no shortcut
-   shows up (see M9 and M12).
+   shows up (see M9 and M12). Correcting each photo with the white board in the frame adds a little (up to +0.03).
 
 ## M1 and M2: exhaust each dataset, one population at a time
 
@@ -215,6 +215,14 @@ with age and sex.
 **Answer:** when the lighting is fixed, a pallor color signal shows up cleanly and needs only a simple model. That
 supports our reading of the eyelid results: the problem there is uncontrolled photos, not too small a model.
 
+**Follow-up: making the nail photos alike (your M6 idea).** Each photo has a white board behind the hand, and the data
+marks a patch of skin just behind each nail. Changes are paired (same resampled people):
+- **White board as a color reference:** the untrained rule rises from 0.703 to 0.727 (+0.025 [0.002, 0.049]); the
+  models gain 0.00-0.03, within noise (random forest 0.825, and 0.834 on held-out sessions). The light box already
+  keeps the lighting steady, so there is little left to correct.
+- **Nail minus the person's own skin hurts** (-0.11 to -0.31), because the skin pales with anemia too (skin alone
+  scores 0.73-0.76). A reference only helps if it doesn't share the signal.
+
 ## M10: models pretrained on eyelid images
 
 **What we found:** no public model is pretrained on conjunctiva photos that we could use without leakage.
@@ -292,9 +300,9 @@ We'll add them to the log when the email arrives.
 
 1. **Clinical target.** Which miss rate would a clinic accept: 10%, 5% or none? That decides which row of the M13
    table matters. Do you know a clinician we could ask?
-2. **Controlled photos.** Fingernails in a light box give a clean 0.82. Is it worth trying to correct eyelid photos
-   for lighting (for example with a white or color reference in the frame), or going after the larger Indian
-   conjunctiva set (1,485 people) next?
+2. **Controlled photos.** Fingernails in a light box give a clean 0.82, and the white board in each photo adds a
+   little more. Our eyelid photos have no such reference. Is it worth asking for eyelid photos with a white or color
+   card in the frame, or going after the larger Indian conjunctiva set (1,485 people) next?
 3. **Pretrained models.** VisionFM's external-eye encoder beat general image models but not color numbers (0.765 vs
    0.846). Is there an encoder pretrained closer to our task that you'd try next, or is your email's model list the
    next step?
