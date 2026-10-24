@@ -32,8 +32,8 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Does fixed lighting help? (M9, M12) | **Yes**: a clean signal on fingernails | 0.82, no shortcut, same on unseen sessions |
 | Do palm or fingernail photos work in Ghana children? (M12) | **Palm yes, as well as the eyelid; nails weaker** | palm 0.91, nails 0.80, eyelid 0.92 |
 
-**Not checked yet:** TabPFN on the no-color numbers, and with whole hospitals held out. If it passes both, 0.92 is
-our headline eyelid number.
+**Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
+size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak.
 
 ## M1 and M2: exhaust each dataset, one population at a time
 
@@ -337,7 +337,8 @@ table with no tuning.
 - **Ghana: the best eyelid model so far**, still rising with more photos (0.72 with 78 training photos, 0.92 with 310).
 - **India: no gain**, still at the rule's level.
 - **Fingernails: no gain** over logistic regression; under fixed lighting a simple model is already at the limit.
-- **Not checked yet:** TabPFN on the no-color numbers and with whole hospitals held out.
+- **Shortcut checks pass** (report: [`tabpfn_checks.md`](tabpfn_checks.md)): leave one hospital out 0.913 [0.885,
+  0.940] (gradient boosting 0.819); size and shape only, no color, 0.565 [0.507, 0.622]; hospital alone 0.549.
 
 **Answer:** the model matters for the color numbers in Ghana, where there are enough photos. It can't create signal
 where the data is too small (India).

@@ -33,7 +33,7 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Does debiasing help? | it closes the country gaps (rank gap 0.39 -> 0.10) but doesn't raise AUROC inside any country |
 > | What would it save a clinic? | to catch 90% of anemic children, test 50% (TabPFN) instead of 90%; to catch all, test 83-98% |
 > | Does color work without camera and batch differences? | on fingernails photographed in one light box (250 Moscow adults), logistic regression reaches **0.82**, the same on held-out photo sessions, and the no-color control sits at chance |
-| Do other body sites work in Ghana children? | palm photos: **0.91** (TabPFN), as good as the eyelid, no shortcut found; fingernail cut-outs: 0.80. They can't be combined per child: the files carry no IDs |
+> | Do other body sites work in Ghana children? | palm photos: **0.91** (TabPFN), as good as the eyelid, no shortcut found; fingernail cut-outs: 0.80. They can't be combined per child: the files carry no IDs |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
 
@@ -272,8 +272,10 @@ are bringing back to the mentors are in [`reports/mentor_followup_eyelid.md`](re
 - **TabPFN, the tabular model named at the mentor meeting, is the best eyelid model so far.** TabPFN v2 is pretrained
   on millions of synthetic small tables and classifies a new one with no tuning. On the same 29 color numbers it
   reaches 0.919 in Ghana children (gradient boosting 0.846), and still rises with more photos (0.72 with 78, 0.92 with
-  310). It doesn't help in India (0.648) or Italy (0.909). We have not yet run it on the no-color numbers or with
-  hospitals held out, so 0.92 is not yet checked for shortcuts.
+  310). It doesn't help in India (0.648) or Italy (0.909). **It passes the shortcut checks:** trained on 9 hospitals and
+  scored on the 10th it still reaches 0.913 [0.885, 0.940] (gradient boosting 0.819), and on image size and shape
+  alone, no color, it scores 0.565 [0.507, 0.622]; the hospital alone predicts anemia at 0.549. Report:
+  [`reports/tabpfn_checks.md`](reports/tabpfn_checks.md).
 - **Ghana children carry a real color signal.** Gradient boosting climbs from 0.72 to 0.85 as its training photos go
   from 78 to 310, so more photos would likely help. The ViT does worse than 29 color numbers.
 - **India is at the level of the untrained rule.** The deeper fold of the eyelid (the forniceal mask) does better than
@@ -463,7 +465,6 @@ Report: [`reports/stage13_ghana_sites.md`](reports/stage13_ghana_sites.md).
 - **Duplicate detection is not perfect**, and labels on copied CP-AnemiC photos conflict (one photo is recorded with Hb 10.2 and 5.8); there is no patient ID.
 - **Italy is confounded by photo batch.** Its anemic patients were almost all photographed in the first 31 folders, so Italian scores mostly measure the batch; we report the early batch alone (31 photos) as the fairer check.
 - **The fine-tuned ViT and VisionFM in Part III have one seed each**, so their CIs come from the bootstrap only, not from seed variation.
-- **TabPFN's 0.92 is not yet checked for shortcuts** (no-color numbers, held-out hospitals).
 - **The Chemhaka et al. comparison was done by the survey side** and is not in this branch.
 
 ## 10. Reproducing
@@ -512,11 +513,12 @@ python -m src.eyelid.debias                # 6.3
 python -m src.eyelid.clinical              # 6.4 (reads the ViT results)
 python -m src.nails                        # 6.6, fingernails
 python -m src.ghana_sites                  # 6.7, Ghana palm and fingernails
+python -m src.eyelid.tabpfn_checks         # 6.1, TabPFN shortcut checks (no color, leave one hospital out)
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -571,7 +573,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Fingernail color correction: white board, skin (Section 6.6) | done |
 | Eye-pretrained model (VisionFM external eye, frozen and fine-tuned, Section 6.1) | done |
 | Deeper eyelid fold, paired check (Section 6.1) | done: borderline lead in India |
-| TabPFN, the model named at the mentor meeting (Section 6.1) | done; shortcut checks pending |
+| TabPFN, the model named at the mentor meeting (Section 6.1) | done; passes the shortcut checks (0.913 with hospitals held out) |
 | Ghana palm and fingernail photos (Section 6.7) | done; can't be paired with the eyelids |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.

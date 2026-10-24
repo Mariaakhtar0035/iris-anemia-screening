@@ -410,8 +410,7 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **Clinic view, CP-AnemiC:** tests 50.0% [44.3%, 57.0%] to catch 90% (gradient boosting 64.4%), 76.8% of those tested
   are anemic, PR-AUC 0.874. To catch everyone: 82.7%.
 - **What it means:** the best eyelid model so far, in Ghana only. India stays at the rule's level.
-- **Not run yet (proposed):** TabPFN on the no-color numbers (image size and cut-out shape), and leave-one-hospital-out
-  on CP-AnemiC. Until those come back near chance and near 0.92, treat 0.92 as unconfirmed.
+- **Shortcut checks:** see Step 14.
 
 ### Step 13 (Stage 13): Ghana palm and fingernail photos (M9, M12)
 - **Why:** the mentors suggested palm or fingernail sets; Asare et al. 2022 (Mendeley 10.17632/ccr8cm22vz.1 and
@@ -451,3 +450,26 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **What it means:** the palm carries as much signal as the eyelid (0.912 vs 0.919, both TabPFN) with no shortcut
   found; nails less, and the untrained rule fails there. Combining sites per child would need a linking sheet from
   the authors.
+
+### Step 14: shortcut checks for TabPFN (follow-up to Step 12)
+- **Why:** 0.92 was a big jump over gradient boosting (0.85), and Stage 10 showed how a batch can fake a score.
+- **What we did:** with Jaineel's go-ahead (2026-10-24), `src/eyelid/tabpfn_checks.py`: TabPFN on the no-color inputs
+  (image width, height, aspect, opaque and edge shares; the random-forest control's inputs) for the eyelid, palm and
+  nail sets; CP-AnemiC leave one hospital out (10 hospitals, pooled held-out scores) for TabPFN and gradient boosting;
+  and a hospital-only logistic regression (within-hospital 5x5 CV). Run at commit `98ad699` (results recorded clean).
+  Report: `reports/tabpfn_checks.md`.
+- **Results** (held-out AUROC):
+
+| Data | Check | Result |
+|---|---|---|
+| Eyelid (388) | TabPFN, 5x5 CV (as in Stage 9) | 0.919 [0.893, 0.945] |
+| Eyelid | TabPFN, leave one hospital out | **0.913 [0.885, 0.940]** |
+| Eyelid | gradient boosting, leave one hospital out | 0.819 [0.775, 0.858] |
+| Eyelid | TabPFN, no color | 0.565 [0.507, 0.622] |
+| Eyelid | hospital only | 0.549 [0.493, 0.605] |
+| Palm (514) | TabPFN, no color | 0.438 [0.388, 0.488] |
+| Nails (526) | TabPFN, no color | 0.572 [0.521, 0.623] |
+
+- **What it means:** the 0.92 is color signal. It barely moves when the scored hospital is unseen, and without color
+  TabPFN finds only a small shortcut (0.57, similar to the random-forest control's 0.54). The palm has none; the nails
+  keep the same small one (0.57, as in Stage 13).

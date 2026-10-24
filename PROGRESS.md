@@ -23,7 +23,7 @@ fingernail photos of Ghanaian children (F16). See
    Inside India the published model is a coin flip.
 3. **Color numbers beat big image models.** 29 color numbers beat every image model we tried, even one pretrained
    on eye photos (0.85 vs 0.79). The best so far is TabPFN, a model built for small tables, on those same 29 numbers:
-   **0.92** in Ghana children (not yet checked for shortcuts). The untrained "less red = anemic" rule is still the
+   **0.92** in Ghana children, and it holds with whole hospitals left out (0.91). The untrained "less red = anemic" rule is still the
    only thing that keeps working on a new dataset.
 4. **Survey answers are a weak but portable signal.** AUROC 0.58 in Zimbabwe, and it holds unchanged in Malawi and
    Zambia.
@@ -82,7 +82,7 @@ fingernail photos of Ghanaian children (F16). See
 | F11 | Eye-pretrained model, VisionFM (M10) | start from a model that has seen eyes | frozen 0.765, fine-tuned 0.785 in Ghana children: beats DINOv2 and our ViT, loses to color numbers (0.846) | **helps vs general models, not enough** |
 | F12 | Vision-language models (M11) | mentors said no | not pursued | skipped |
 | F13 | More data: fingernails under fixed lighting (M9, M12) | a new country and body site, without camera and batch differences | logistic regression 0.818, no shortcut, flat learning curve | **worked** |
-| F14 | TabPFN, the tabular model the mentors named (M14) | a model pretrained for small tables, on our 29 color numbers | Ghana 0.919 vs 0.846; India 0.648; nails 0.823 | **best in Ghana; no help elsewhere** |
+| F14 | TabPFN, the tabular model the mentors named (M14) | a model pretrained for small tables, on our 29 color numbers | Ghana 0.919 vs 0.846 (0.913 with hospitals held out); India 0.648; nails 0.823 | **best in Ghana, passes the shortcut checks; no help elsewhere** |
 | F16 | Palm and fingernail photos of Ghana children (M9, M12) | other body sites, same country and age group as the eyelids | palm 0.912, nails 0.798 (TabPFN); no shortcut in palm | **palm as good as eyelid; nails weaker** |
 | F15 | Correct the nail colors: white board, or the skin next to the nail | cancel lighting and skin tone (M6) | white board: rule +0.025, models +0.00-0.03 (within noise); minus skin: -0.11 to -0.31 | **white board: small gain; minus skin: hurt** |
 
@@ -436,8 +436,18 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   - **Clinic view:** to catch 90% of anemic children, test 50% of children, vs 64% for gradient boosting.
   - **India doesn't move** (0.648, at the rule's level): too few photos for any model.
   - **Fingernails: same as logistic regression.** Under fixed lighting a simple model is already at the limit.
-- **Not checked yet:** TabPFN on the no-color numbers only, and with whole hospitals held out. If the no-color
-  version also scores well, part of the 0.92 is a shortcut. Until then, treat 0.92 as unconfirmed.
+- **Shortcut checks (run 2026-10-24, Jaineel's go-ahead):**
+
+| Check | Result | What it means |
+|---|---|---|
+| Train on 9 hospitals, score the 10th | **0.913** (vs 0.919 normal) | doesn't lean on the hospital |
+| Same check, gradient boosting | 0.819 (vs 0.846) | TabPFN's lead holds |
+| TabPFN on size and shape only, no color | 0.565 [0.51, 0.62] | a tiny shortcut, far below 0.92 |
+| Knowing only the hospital | 0.549 | the hospital alone says little |
+| Palm / nails, size and shape only | 0.438 / 0.572 | palm none; nails the same small one as before |
+
+  - **Verdict: the 0.92 is real color signal.** It is our headline eyelid number.
+  - Report: [`reports/tabpfn_checks.md`](reports/tabpfn_checks.md).
 
 ### F15. Correct the nail colors for lighting and skin tone (Stage 12b). White board: small gain. Minus skin: hurt.
 - **Why:** each nail photo has a white board behind the hand, and the data marks a patch of skin just behind each
@@ -534,7 +544,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - The clinic view (share tested), for explaining what a model is worth.
 - Fingernails under fixed lighting: 0.82 with no shortcut, holding on unseen photo sessions.
 - A white board in the photo as a color reference (small: the nail rule +0.025, models within noise).
-- TabPFN on the 29 color numbers in Ghana children (0.92, the best eyelid result; shortcut check pending).
+- TabPFN on the 29 color numbers in Ghana children (0.92, the best eyelid result; 0.91 with hospitals held out).
 - Palm photos of Ghana children (0.91 with TabPFN, no shortcut found).
 
 **Didn't work**
@@ -551,13 +561,11 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 
 **Still open**
 - The deeper eyelid fold in India (F2): real but borderline, needs new Indian photos.
-- Whether TabPFN's 0.92 survives the no-color and held-out-hospital checks (F14).
 
 ## What's next
 
 | Item | Status | Who |
 |---|---|---|
-| TabPFN shortcut checks: no-color numbers, held-out hospitals | proposed, about 10 minutes | Jaineel to approve |
 | Eyelid + palm + nail for the same child | can't: the Ghana palm and nail files have no IDs or Hb linking them to the eyelids | ask the dataset authors for the linking sheet |
 | Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
