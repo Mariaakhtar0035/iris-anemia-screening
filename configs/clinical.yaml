@@ -3,4 +3,4 @@
 # Populations, folds and cutoffs as in Stage 9 (configs/ceiling.yaml): CP-AnemiC children Hb < 11.0 g/dL; Eyes-Defy
 # adults WHO by sex (women < 12.0, men < 13.0).
 sensitivities: [0.80, 0.90, 0.95, 1.00]   # share of anemic people the clinic wants to catch
-models: [random_forest, hist_gradient_boosting, dinov2_probe]  # plus the redness rule, and the fine-tuned ViT when its results exist
+models: [random_forest, hist_gradient_boosting, dinov2_probe, visionfm_probe]  # plus the redness rule, and the fine-tuned ViT when its results exist; visionfm_probe only with its weights

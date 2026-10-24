@@ -1,7 +1,7 @@
 """Stage 9: how far can each population be fit on its own? (mentor advice M1-M3, docs/eyelid_followup.md)
 
 For CP-AnemiC, Eyes-Defy India, Italy and the two pooled, run a ladder of models from the no-training redness rule
-up to a frozen DINOv2 probe. For each one, report training-set AUROC next to held-out AUROC, plus a learning curve.
+up to frozen DINOv2 and VisionFM (eye-pretrained) probes. For each one, report training-set AUROC next to held-out AUROC, plus a learning curve.
 The fine-tuned ViT rung comes from src.eyelid.finetune_vit and is read from its results files.
 Also covered: the three Eyes-Defy mask regions with gray-world on and off, and CP-AnemiC duplicates used as
 training-only augmentation.
@@ -30,6 +30,7 @@ from src.eyelid.embed import load_embeddings
 from src.eyelid.report import markdown_table
 from src.eyelid.train_color import model_factories
 from src.eyelid.train_probe import probe_factory
+from src.eyelid import visionfm
 
 FIGURES = ROOT / "reports" / "figures"
 PROBE_SET = "cls_and_patch_mean"
@@ -46,8 +47,13 @@ def population_frames(cfg):
             "eyes_defy_pooled": ed}
 
 
-def population_inputs(frames, color_cfg, probe_cfg):
-    """name -> (frame, {"color", "rule", "embedding"}), reusing the Stage 4 and Stage 5 embedding caches."""
+def has_visionfm(cfg):
+    return (ROOT / cfg["visionfm"]["weights"]).exists()
+
+
+def population_inputs(frames, color_cfg, probe_cfg, cfg):
+    """name -> (frame, {"color", "rule", "embedding", "visionfm"?}), reusing the Stage 4 and Stage 5 embedding caches.
+    VisionFM features only when its weights are present; cut-outs prepared as for DINOv2 (cropped for Eyes-Defy)."""
     emb = load_embeddings(probe_cfg)
     pos = {i: k for k, i in enumerate(emb["ids"])}
     ed = frames["eyes_defy_pooled"]
@@ -56,6 +62,8 @@ def population_inputs(frames, color_cfg, probe_cfg):
     for name, df in frames.items():
         e = emb[PROBE_SET][[pos[i] for i in df.id]] if name == "cp_anemic" else ed_emb.loc[df.id].to_numpy()
         out[name] = (df, inputs(df, e, color_cfg))
+        if has_visionfm(cfg):
+            out[name][1]["visionfm"] = visionfm.embeddings(df, cfg["visionfm"], name, crop=name != "cp_anemic")
     return out
 
 
@@ -63,11 +71,14 @@ def ladder_models(color_cfg, probe_cfg, cfg, seed):
     """name -> (input kind, model factory), smallest to biggest. The rule and the fine-tuned ViT are added separately."""
     color = model_factories(color_cfg, seed)
     hgb = cfg["hist_gradient_boosting"]
-    return {"dummy": ("color", color["dummy"]),
-            "logistic_regression": ("color", color["logistic_regression"]),
-            "random_forest": ("color", color["random_forest"]),
-            "hist_gradient_boosting": ("color", lambda: HistGradientBoostingClassifier(**hgb, random_state=seed)),
-            "dinov2_probe": ("embedding", probe_factory(probe_cfg, seed))}
+    out = {"dummy": ("color", color["dummy"]),
+           "logistic_regression": ("color", color["logistic_regression"]),
+           "random_forest": ("color", color["random_forest"]),
+           "hist_gradient_boosting": ("color", lambda: HistGradientBoostingClassifier(**hgb, random_state=seed)),
+           "dinov2_probe": ("embedding", probe_factory(probe_cfg, seed))}
+    if has_visionfm(cfg):
+        out["visionfm_probe"] = ("visionfm", probe_factory(probe_cfg, seed))
+    return out
 
 
 def subsample(train, y, frac, seed):
@@ -123,7 +134,7 @@ def main():
     color_cfg, probe_cfg = load_config("color"), load_config("probe")
     seed, boot = base["seed"], base["bootstrap"]
     n_splits, n_repeats = cfg["cv"]["n_splits"], cfg["cv"]["n_repeats"]
-    pops = population_inputs(population_frames(cfg), color_cfg, probe_cfg)
+    pops = population_inputs(population_frames(cfg), color_cfg, probe_cfg, cfg)
     models = ladder_models(color_cfg, probe_cfg, cfg, seed)
 
     # 1. The ladder and learning curves, each population on its own.
@@ -219,6 +230,11 @@ def main():
                               **summarize(y[single], held_out[:, single], boot["n_resamples"], boot["ci"], seed)})
         print(f"copies: {model} done", flush=True)
 
+    # Save before writing the tracked figure and report, so the results record a clean commit on the first run.
+    save_results("stage9_ceiling", {"ladder": ladder, "learning_curve": curve, "regions": region_rows,
+                                    "copies_as_augmentation": copy_rows},
+                 {"default": base, "ceiling": cfg, "color": color_cfg, "probe": probe_cfg})
+
     # Learning-curve figure: held-out AUROC (solid) and training AUROC (dotted) against training photos.
     FIGURES.mkdir(parents=True, exist_ok=True)
     cv = pd.DataFrame([{**c, "held_out": c["auroc"]["estimate"]} for c in curve])
@@ -251,7 +267,9 @@ def main():
         f"5-fold CV by photo ({n_repeats} repeats, scores averaged), bootstrap 95% CIs ({boot['n_resamples']} resamples). "
         "**train** = AUROC of each fold's model on its own training photos, mean (min-max) over folds: a diagnostic of "
         "how well the model can fit, so no bootstrap. **gap** = train minus held-out; a large gap means the model "
-        "memorizes rather than generalizes. The fine-tuned ViT uses one seed and 5 folds.\n\n"
+        "memorizes rather than generalizes. The fine-tuned ViT uses one seed and 5 folds. **visionfm_probe** = the "
+        "frozen VisionFM external-eye encoder (pretrained on eye photos, mentor advice M10) with the same probe as "
+        "DINOv2.\n\n"
         "## Model ladder\n\n" + ladder_table
         + "\n\n## Learning curves\n\nHeld-out AUROC when each training fold is cut to a stratified share. Still rising at "
         "1.0 = more photos would help; flat = the population's ceiling for that model. Points with fewer than "
@@ -266,9 +284,6 @@ def main():
     )
     (ROOT / "reports" / "stage9_ceiling.md").write_text(text)
     print(text)
-    save_results("stage9_ceiling", {"ladder": ladder, "learning_curve": curve, "regions": region_rows,
-                                    "copies_as_augmentation": copy_rows},
-                 {"default": base, "ceiling": cfg, "color": color_cfg, "probe": probe_cfg})
 
 
 if __name__ == "__main__":

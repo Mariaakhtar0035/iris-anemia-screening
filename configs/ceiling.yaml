@@ -46,3 +46,15 @@ vit:
     eyes_defy_india: [true]
     eyes_defy_italy: [true]
     eyes_defy_pooled: [true, false]
+
+# M10 rung: VisionFM's external-eye encoder (github.com/ABILab-CUHK/VisionFM, research use only), frozen, with the same
+# logistic-regression probe as DINOv2 (probe.yaml). Download approved by Jaineel 2026-10-23; weights are gitignored.
+# Teacher weights. Inputs are prepared like DINOv2's (cut-out on the mean color, padded square, resized) but normalized
+# with VisionFM's own External-eye stats (their utils.get_stats). The rung is skipped when the weights file is absent.
+visionfm:
+  weights: data/weights/visionfm/VFM_External_weights.pth
+  arch: vit_base_patch16_224
+  image_size: 224
+  batch_size: 32
+  mean: [0.4936253, 0.36324808, 0.25956994]
+  std: [0.32001, 0.27109432, 0.21991591]

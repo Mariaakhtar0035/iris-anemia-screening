@@ -2,7 +2,7 @@
 
 For each population: to catch 80/90/95/100% of anemic people, what share of everyone must be sent for a blood test,
 and what share of those tested are anemic? Also PR curves against the prevalence line (a model with no signal sits
-on that line). Scores come from Stage 9's folds: the redness rule, the random forest and the DINOv2 probe are refit
+on that line). Scores come from Stage 9's folds: the redness rule and the models in configs/clinical.yaml are refit
 here, and the fine-tuned ViT is read from results/stage9_vit_*.json.
 
 Run from the repo root: python -m src.eyelid.clinical
@@ -30,7 +30,7 @@ def main():
     color_cfg, probe_cfg = load_config("color"), load_config("probe")
     seed, boot = base["seed"], base["bootstrap"]
     early_last = load_config("populations")["italy_early_batch_last_folder"]
-    pops = population_inputs(population_frames(ceiling), color_cfg, probe_cfg)
+    pops = population_inputs(population_frames(ceiling), color_cfg, probe_cfg, ceiling)
     models = ladder_models(color_cfg, probe_cfg, ceiling, seed)
     metrics = {f"share_{s}": partial(share_tested_at_sensitivity, sens=s) for s in cfg["sensitivities"]}
     metrics |= {f"precision_{s}": partial(precision_at_sensitivity, sens=s) for s in cfg["sensitivities"]}
@@ -41,7 +41,7 @@ def main():
         y = df.anemic.to_numpy()
         folds = repeated_stratified(y, ceiling["cv"]["n_splits"], ceiling["cv"]["n_repeats"], seed)
         scores = {"rule_low_redness": x["rule"]}
-        for model in cfg["models"]:
+        for model in [m for m in cfg["models"] if m in models]:  # visionfm_probe only when its weights are present
             kind, make = models[model]
             scores[model] = fit_and_score(make, x[kind], y, folds)[0].mean(0)
         vit = RESULTS / f"stage9_vit_{name}_jitter.json"
@@ -58,6 +58,9 @@ def main():
                              **summarize(y[m], s[m], boot["n_resamples"], boot["ci"], seed, metrics=metrics)})
                 curves[(subset, model)] = (y[m], s[m])
         print(f"{name} done", flush=True)
+
+    # Save before writing the tracked figure and report, so the results record a clean commit on the first run.
+    save_results("clinical_eyelid", {"rows": rows}, {"default": base, "clinical": cfg, "ceiling": ceiling})
 
     FIGURES.mkdir(parents=True, exist_ok=True)
     panels = list(dict.fromkeys(p for p, _ in curves))
@@ -97,7 +100,6 @@ def main():
     )
     (ROOT / "reports" / "clinical_eyelid.md").write_text(text)
     print(text)
-    save_results("clinical_eyelid", {"rows": rows}, {"default": base, "clinical": cfg, "ceiling": ceiling})
 
 
 if __name__ == "__main__":
