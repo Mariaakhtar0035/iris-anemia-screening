@@ -32,7 +32,7 @@ def load_encoder(cfg):
 def embeddings(df, cfg, name, crop):
     """(n, 2 x width) CLS + mean patch token for each row of df, cached by population name and row ids."""
     path = CACHE / f"visionfm_external_{name}.npz"
-    ids = df.id.astype(str).to_numpy()
+    ids = df.id.to_numpy().astype(str)  # fixed-width strings: an object array can't be read back without pickle
     if path.exists():
         cached = np.load(path, allow_pickle=False)
         if list(cached["ids"]) == list(ids):
