@@ -35,3 +35,10 @@ def summarize(y, scores, n_resamples, ci, seed, groups=None, metrics=IMAGE_METRI
         per_repeat = [auroc(y, s) for s in scores]
         out["auroc_per_repeat"] = {"mean": float(np.mean(per_repeat)), "sd": float(np.std(per_repeat))}
     return out
+
+
+def auroc_change(y, scores, reference, n_resamples, ci, seed):
+    """AUROC of scores minus AUROC of reference, with a paired bootstrap CI: both scored on the same resampled rows.
+    Each may be (n,) or (n_repeats, n); repeats are averaged as in summarize."""
+    packed = np.column_stack([np.atleast_2d(reference).mean(0), np.atleast_2d(scores).mean(0)])
+    return bootstrap_ci(lambda yy, ss: auroc(yy, ss[:, 1]) - auroc(yy, ss[:, 0]), y, packed, n_resamples, ci, seed=seed)

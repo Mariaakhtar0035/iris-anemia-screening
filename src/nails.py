@@ -18,9 +18,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-from src.common.evaluate import IMAGE_METRICS, summarize
+from src.common.evaluate import IMAGE_METRICS, auroc_change, summarize
 from src.common.io import ROOT, load_config, save_results
-from src.common.metrics import auroc, bootstrap_ci, precision_at_sensitivity, share_tested_at_sensitivity
+from src.common.metrics import auroc, precision_at_sensitivity, share_tested_at_sensitivity
 from src.common.splits import leave_one_group_out, repeated_stratified
 from src.eyelid.ceiling import fit_and_score, ladder_models, train_text
 from src.eyelid.color_features import color_features
@@ -119,12 +119,6 @@ def main():
         print(f"done: {split}", flush=True)
 
     # Stage 12b: cancel lighting (white board) or skin tone (skin next to the nail) before the color numbers.
-    def auroc_gain(scores, reference):
-        """Paired bootstrap: AUROC of scores minus AUROC of reference, both on the same resampled photos."""
-        packed = np.column_stack([np.atleast_2d(reference).mean(0), np.atleast_2d(scores).mean(0)])
-        return bootstrap_ci(lambda yy, ss: auroc(yy, ss[:, 1]) - auroc(yy, ss[:, 0]), y, packed,
-                            boot["n_resamples"], boot["ci"], seed=seed)
-
     inputs = {"nail (as photographed)": nail, "nail, white-balanced": nail_wb, "nail minus skin": nail - skin,
               "skin only": skin}
     corrections, reference = [], {}
@@ -136,7 +130,7 @@ def main():
             for name, scores in runs.items():
                 row = {"split": split, "input": input_name, "model": name, **stats(scores, {"auroc": auroc})}
                 if (split, name) in reference:
-                    row["gain"] = auroc_gain(scores, reference[(split, name)])
+                    row["gain"] = auroc_change(y, scores, reference[(split, name)], boot["n_resamples"], boot["ci"], seed)
                 else:
                     reference[(split, name)] = scores  # the first input, as photographed
                 corrections.append(row)

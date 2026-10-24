@@ -141,3 +141,13 @@ def test_share_tested_and_precision_at_sensitivity():
     assert share_tested_at_sensitivity(y, s, 1.0) == 0.5 and precision_at_sensitivity(y, s, 1.0) == 1.0
     assert share_tested_at_sensitivity(y, np.zeros(4), 0.9) == 1.0  # no ranking: everyone must be tested
     assert precision_at_sensitivity(y, np.zeros(4), 0.9) == 0.5     # precision then equals prevalence
+
+
+def test_auroc_change_is_paired():
+    from src.common.evaluate import auroc_change
+    y = np.array([0, 0, 0, 1, 1, 1] * 5)
+    perfect, flat = y + 0.1 * np.arange(len(y)) / len(y), np.zeros(len(y))
+    same = auroc_change(y, perfect, perfect, 200, 0.95, 0)
+    assert same["estimate"] == same["lo"] == same["hi"] == 0.0  # same photos in every resample, so no noise
+    better = auroc_change(y, np.vstack([perfect, perfect]), flat, 200, 0.95, 0)  # repeats are averaged
+    assert better["estimate"] == better["lo"] == 0.5

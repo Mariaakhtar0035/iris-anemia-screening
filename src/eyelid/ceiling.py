@@ -19,7 +19,7 @@ import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import train_test_split
 
-from src.common.evaluate import summarize
+from src.common.evaluate import auroc_change, summarize
 from src.common.io import RESULTS, ROOT, load_config, save_results
 from src.common.metrics import auroc
 from src.common.splits import repeated_stratified
@@ -185,18 +185,23 @@ def main():
         keep = complete & (ed.country == country).to_numpy()
         y = ed.anemic.to_numpy()[keep]
         folds = repeated_stratified(y, n_splits, n_repeats, seed)
+        palpebral = {}  # (gray_world, model) -> scores, the reference for the paired change of the other regions
         for region in cfg["regions"]:
             for gw in cfg["gray_world"]:
                 feats = feature_table([p for p, k in zip(paths[region], keep) if k], ed.id[keep], gw,
                                       color_cfg["roi"]["alpha_threshold"])
                 info = {"country": country, "n": len(y), "anemic": f"{y.mean():.1%}", "region": region, "gray_world": gw}
-                region_rows.append({**info, "model": "rule_low_redness",
-                                    **summarize(y, -feats[color_cfg["rule_feature"]].to_numpy(), boot["n_resamples"],
-                                                boot["ci"], seed, metrics=AUROC_ONLY)})
+                runs = {"rule_low_redness": -feats[color_cfg["rule_feature"]].to_numpy()}
                 for model in ("logistic_regression", "random_forest"):
-                    held_out, _ = fit_and_score(color[model], feats.to_numpy(), y, folds)
-                    region_rows.append({**info, "model": model,
-                                        **summarize(y, held_out, boot["n_resamples"], boot["ci"], seed, metrics=AUROC_ONLY)})
+                    runs[model] = fit_and_score(color[model], feats.to_numpy(), y, folds)[0]
+                for model, scores in runs.items():
+                    row = {**info, "model": model,
+                           **summarize(y, scores, boot["n_resamples"], boot["ci"], seed, metrics=AUROC_ONLY)}
+                    if region == "palpebral":
+                        palpebral[(gw, model)] = scores
+                    else:
+                        row["change"] = auroc_change(y, scores, palpebral[(gw, model)], boot["n_resamples"], boot["ci"], seed)
+                    region_rows.append(row)
         print(f"regions: {country} done", flush=True)
 
     # 3. CP-AnemiC duplicates as training augmentation: same held-out photos, training with or without the copies.
@@ -257,7 +262,7 @@ def main():
     curve_table = markdown_table([{**c, "train AUROC": f"{c['train_auroc']:.3f}"} for c in curve],
                                  ["population", "model", "fraction", "n_train", "train AUROC"], {"auroc": "Held-out AUROC"})
     region_table = markdown_table(region_rows, ["country", "n", "anemic", "region", "gray_world", "model"],
-                                  {"auroc": "AUROC"})
+                                  {"auroc": "AUROC", "change": "Change vs palpebral"})
     copy_table = markdown_table(copy_rows, ["model", "training rows", "mean training rows", "n"])
     text = (
         "# Stage 9: how far can each population be fit on its own?\n\n"
@@ -276,7 +281,9 @@ def main():
         f"{cfg['learning_curve']['min_class_train']} training photos of the rarer class are skipped.\n\n"
         + curve_table + "\n\n![Learning curves](figures/stage9_learning_curves.png)\n\n"
         "## Eyes-Defy: mask region and gray-world\n\nOnly photos with all three masks. Color models and the rule, "
-        "within one country at a time.\n\n" + region_table
+        "within one country at a time. **Change vs palpebral** = AUROC minus the same model's (same gray-world setting) on "
+        "the palpebral mask, with a paired bootstrap 95% CI on the same photos; a CI that crosses 0 = no clear change."
+        "\n\n" + region_table
         + "\n\n## CP-AnemiC: duplicate copies as training augmentation\n\nFolds over all 476 distinct photos; the "
         "training side either keeps every copy of its photos or only one, and copies of a test photo never enter "
         "training. Scored only on the held-out photos that have no copy (n below), the subset where the no-color "
