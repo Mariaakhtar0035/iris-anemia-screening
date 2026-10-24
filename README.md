@@ -33,6 +33,7 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Does debiasing help? | it closes the country gaps (rank gap 0.39 -> 0.10) but doesn't raise AUROC inside any country |
 > | What would it save a clinic? | to catch 90% of anemic children, test 50% (TabPFN) instead of 90%; to catch all, test 83-98% |
 > | Does color work without camera and batch differences? | on fingernails photographed in one light box (250 Moscow adults), logistic regression reaches **0.82**, the same on held-out photo sessions, and the no-color control sits at chance |
+| Do other body sites work in Ghana children? | palm photos: **0.91** (TabPFN), as good as the eyelid, no shortcut found; fingernail cut-outs: 0.80. They can't be combined per child: the files carry no IDs |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
 
@@ -359,10 +360,9 @@ Report: [`reports/clinical_eyelid.md`](reports/clinical_eyelid.md).
   - an open Russian fingernail set (250 adults);
   - a large Indian conjunctiva, palm and nail set (1,485 people), which needs a paid IEEE DataPort subscription, so
     we skipped it;
-  - Ghana palm and nail sets (Mendeley, CC BY 4.0) that are almost certainly the CP-AnemiC children, not downloaded
-    yet.
+  - Ghana palm and nail sets (Mendeley, CC BY 4.0) from the CP-AnemiC group.
 
-  We used the fingernail set (Section 6.6). The table and the download log are in
+  We used the Russian fingernail set (Section 6.6) and the Ghana palm and nail sets (Section 6.7). The table and the download log are in
   [`docs/eyelid_followup.md`](docs/eyelid_followup.md) (Steps 7-9).
 
 ### 6.6 Fingernails under fixed lighting
@@ -402,6 +402,33 @@ skin just behind each nail. Changes below are paired (both inputs scored on the 
 
 Report: [`reports/stage12_nails.md`](reports/stage12_nails.md).
 
+### 6.7 Palm and fingernail photos of Ghanaian children
+
+The CP-AnemiC group also published palm and fingernail photos of Ghanaian children (Asare et al. 2022, Mendeley, CC BY
+4.0). Each photo is stored 6 or 12 times (exact copies and rotations), so the 4,260 files per set are **514 palm and 526
+nail photos** once merged (one palm photo filed under both labels is dropped). The only label is Anemic / Non-anemic in
+the file name: no Hb, age, sex or hospital, and nothing links a photo to an eyelid photo, so the body sites can't be
+combined per child. **Anemia here is the dataset's own label; its cutoff isn't stated** (the group's eyelid set uses
+Hb < 11.0 g/dL). Same 29 color numbers and models, 5x5 CV by photo, plus a model that sees only the file-naming style
+(`AnemicP-`, `Anemic-Pa-`, ...) in case styles mark batches.
+
+| Model | Palm (514, 57.8% anemic) | Fingernails (526, 58.4%) | Eyelid (CP-AnemiC, 388, 42.5%) |
+|---|---|---|---|
+| Redness rule | 0.620 [0.569, 0.666] | 0.497 [0.448, 0.546] | 0.650 [0.597, 0.705] |
+| Gradient boosting | 0.855 [0.820, 0.887] | 0.682 [0.635, 0.727] | 0.846 [0.807, 0.882] |
+| **TabPFN** | **0.912 [0.886, 0.935]** | **0.798 [0.757, 0.836]** | **0.919 [0.893, 0.945]** |
+| No-color control | 0.454 [0.405, 0.503] | 0.566 [0.517, 0.618] | 0.537 [0.474, 0.595] |
+| Naming style only | 0.497 [0.448, 0.547] | 0.431 [0.382, 0.480] | - |
+
+- **The palm carries as much signal as the eyelid**, with no sign of a shortcut: the no-color control and the naming
+  style are at chance, and inside the main naming style TabPFN still scores 0.900. Gradient boosting is still rising
+  with more photos (0.73 with 103 training photos, 0.86 with 411).
+- **Fingernail cut-outs are weaker** and the untrained rule is at chance; cut-out size alone reaches 0.57.
+- **TabPFN is the best model on all three Ghana sets.** To catch 90% of anemic children it tests 62.5% (palm) and
+  74.9% (nails), vs 50.0% for the eyelid.
+
+Report: [`reports/stage13_ghana_sites.md`](reports/stage13_ghana_sites.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -429,7 +456,7 @@ Report: [`reports/stage12_nails.md`](reports/stage12_nails.md).
 
 - **No paired data.** No dataset links an eyelid photo to survey answers for the same person, so fusion is simulated and assumes the two signals are independent given anemia.
 - **Different populations.** CP-AnemiC is young children, Eyes-Defy is adults including men, the survey is women 15-49.
-- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking). Fingernails (Section 6.6): Hb < 12.0 for everyone, since sex is not recorded.
+- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking). Fingernails (Section 6.6): Hb < 12.0 for everyone, since sex is not recorded. Ghana palm and nails (Section 6.7): the dataset's own label, cutoff not stated.
 - **Survey rounds differ.** Zimbabwe 2015 vs Malawi and Zambia 2024, so transfer mixes country with time. Malawi's missing wealth index is imputed inside the model.
 - **Small image test sets.** Eyes-Defy test sets hold 44 photos when split by photo; Italy has few anemic adults.
 - **Replications are not identical recipes.** Replication A uses ImageNet weights and 30 epochs; we do not have either paper's exact split or code; GPU differences (Apple M1 vs NVIDIA) can shift results slightly.
@@ -458,6 +485,8 @@ Raw data is **never committed** (`data/` and `results/` are gitignored). Downloa
 | VisionFM external-eye weights (optional) | `data/weights/visionfm/VFM_External_weights.pth` | VisionFM GitHub README (github.com/ABILab-CUHK/VisionFM), research use only |
 | TabPFN v2 classifier weights | `data/weights/tabpfn/tabpfn-v2-classifier-finetuned-zk73skhh.ckpt` | Hugging Face `Prior-Labs/TabPFN-v2-clf` (open download; see its model card for the license) |
 | Fingernails (Yakimov et al. 2024) | `data/raw/yakimov_nails/` (`metadata.csv` and `photo/`, unzipped from `data.zip`) | figshare 10.6084/m9.figshare.c.6760179 (CC0) |
+| Ghana palm (Asare et al. 2022) | `data/raw/ghana_palm/Palm/` (unpacked from `Palm.rar`) | Mendeley Data 10.17632/ccr8cm22vz.1 (CC BY 4.0) |
+| Ghana fingernails (Asare et al. 2022) | `data/raw/ghana_nails/Fingernails/` (unpacked from `Fingernails.rar`) | Mendeley Data 10.17632/2xx4j3kjg2.1 (CC BY 4.0) |
 
 Then run, in order (Section 11 lists what each file does):
 
@@ -481,12 +510,13 @@ python -m src.eyelid.ceiling               # 6.1, model ladder incl. TabPFN, lea
 python -m src.eyelid.populations           # 6.2
 python -m src.eyelid.debias                # 6.3
 python -m src.eyelid.clinical              # 6.4 (reads the ViT results)
-python -m src.nails                        # 6.6, fingernails, ~1 min
+python -m src.nails                        # 6.6, fingernails
+python -m src.ghana_sites                  # 6.7, Ghana palm and fingernails
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -504,6 +534,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/eyelid/populations.py`, `debias.py`, `clinical.py` | Part III: population comparison and Italy batches; fairness metrics and debiasing; testing load at fixed sensitivity |
 | `src/eyelid/visionfm.py` | Part III: frozen VisionFM external-eye features, loaded in PyTorch's safe weights-only mode |
 | `src/nails.py` | Part III: fingernail photos under fixed lighting (Section 6.6) |
+| `src/ghana_sites.py` | Part III: Ghana palm and fingernail photos, copies and rotations merged (Section 6.7) |
 | `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
 | `src/summary.py`, `src/figures.py` | Build `reports/summary.md` and the figures from `results/*.json` |
@@ -541,6 +572,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Eye-pretrained model (VisionFM external eye, frozen and fine-tuned, Section 6.1) | done |
 | Deeper eyelid fold, paired check (Section 6.1) | done: borderline lead in India |
 | TabPFN, the model named at the mentor meeting (Section 6.1) | done; shortcut checks pending |
+| Ghana palm and fingernail photos (Section 6.7) | done; can't be paired with the eyelids |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 

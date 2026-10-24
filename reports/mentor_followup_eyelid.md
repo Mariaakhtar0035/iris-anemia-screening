@@ -30,6 +30,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Does debiasing help? (M5-M8) | **Fairer, not more accurate** | country gap 0.39 -> 0.10; no gain inside a country |
 | What would it save a clinic? (M13) | **Who to test first, not a rule-out** | test 50% of children to catch 90% (random: 90%) |
 | Does fixed lighting help? (M9, M12) | **Yes**: a clean signal on fingernails | 0.82, no shortcut, same on unseen sessions |
+| Do palm or fingernail photos work in Ghana children? (M12) | **Palm yes, as well as the eyelid; nails weaker** | palm 0.91, nails 0.80, eyelid 0.92 |
 
 **Not checked yet:** TabPFN on the no-color numbers, and with whole hospitals held out. If it passes both, 0.92 is
 our headline eyelid number.
@@ -181,15 +182,15 @@ with age and sex.
 |---|---|---|---|---|---|
 | Yakimov et al. 2024, *Scientific Data* | fingernails and skin | 250 adults | Moscow, Russia | open (figshare) | best fit for M12: new country, adults, fixed lighting. Age and sex are only in summary tables, not per patient |
 | Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers | Faridabad, India | paid subscription (we don't have one) | the largest conjunctiva set by far, but no age or sex, and 11% anemic |
-| Asare et al. 2022, Mendeley | palms; fingernails | 710 children | Ghana | open, CC BY 4.0 | almost certainly the same children as CP-AnemiC. Not a new population, but could compare body sites on the same children |
+| Asare et al. 2022, Mendeley | palms; fingernails | 514 and 526 distinct photos of children | Ghana | open, CC BY 4.0 | same group as CP-AnemiC; labels only, no IDs, so it can't be paired with the eyelids. We ran it (below) |
 | Suner et al. 2021, Zenodo | conjunctiva | 344 emergency-department adults | Providence, USA | open, but only two CSV tables, no photos | might allow testing the redness rule on a fourth population |
 | Valles-Coral et al. 2025 | nails, palm and fingertip videos | 909 young adults | Peru | not released yet | watch for release |
 
 **Answer:**
 - Our first choice was the Russian fingernail set: open, a new country, a new body site, and taken under fixed
   lighting. We ran it (below).
-- Our second choice was the large Indian conjunctiva set, but it needs a paid IEEE DataPort subscription. Next is the
-  Ghana palm and fingernail sets, to compare body sites on the same children.
+- Our second choice was the large Indian conjunctiva set, but it needs a paid IEEE DataPort subscription. So we ran
+  the Ghana palm and fingernail sets next (below).
 - Any new set would get the same duplicate audit and no-color control first, because Step 2 shows each new source
   brings its own shortcut.
 
@@ -223,6 +224,24 @@ marks a patch of skin just behind each nail. Changes are paired (same resampled 
   keeps the lighting steady, so there is little left to correct.
 - **Nail minus the person's own skin hurts** (-0.11 to -0.31), because the skin pales with anemia too (skin alone
   scores 0.73-0.76). A reference only helps if it doesn't share the signal.
+
+**What we did with the Ghana palm and fingernail sets** (report:
+[`stage13_ghana_sites.md`](stage13_ghana_sites.md)):
+- Each photo is stored 6-12 times (copies and rotations): merged, 514 palm and 526 nail photos.
+- The only label is Anemic / Non-anemic in the file name (cutoff not stated). No Hb, age, sex or hospital, and no IDs
+  linking to the eyelid photos, so we compare body sites but can't combine them per child.
+
+| Model | Palm | Fingernails | Eyelid (for comparison) |
+|---|---|---|---|
+| Redness rule | 0.620 | 0.497 | 0.650 |
+| Gradient boosting | 0.855 | 0.682 | 0.846 |
+| **TabPFN** | **0.912 [0.886, 0.935]** | **0.798 [0.757, 0.836]** | **0.919** |
+| No-color control | 0.454 | 0.566 | 0.537 |
+| Naming style only (batch check) | 0.497 | 0.431 | - |
+
+**Answer:** in Ghana children the palm carries as much signal as the eyelid, with no shortcut found; fingernail
+cut-outs carry less. Combining them per child would need the authors' linking sheet. Do you think it's worth asking
+them?
 
 ## M10: models pretrained on eyelid images
 

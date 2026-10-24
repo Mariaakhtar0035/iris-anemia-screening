@@ -11,7 +11,8 @@ new dataset or country, built a survey model and tested it in two new countries,
 then followed up every piece of eyelid advice from the mentor meeting. All of that is done and pushed.
 
 Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained model VisionFM, frozen and fine-tuned
-(F11), a proper check of the deeper eyelid fold (F2), and TabPFN, the model the mentors named (F14). See
+(F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
+fingernail photos of Ghanaian children (F16). See
 [What's next](#whats-next) for what's left.
 
 ## The story in six points
@@ -82,6 +83,7 @@ Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained mode
 | F12 | Vision-language models (M11) | mentors said no | not pursued | skipped |
 | F13 | More data: fingernails under fixed lighting (M9, M12) | a new country and body site, without camera and batch differences | logistic regression 0.818, no shortcut, flat learning curve | **worked** |
 | F14 | TabPFN, the tabular model the mentors named (M14) | a model pretrained for small tables, on our 29 color numbers | Ghana 0.919 vs 0.846; India 0.648; nails 0.823 | **best in Ghana; no help elsewhere** |
+| F16 | Palm and fingernail photos of Ghana children (M9, M12) | other body sites, same country and age group as the eyelids | palm 0.912, nails 0.798 (TabPFN); no shortcut in palm | **palm as good as eyelid; nails weaker** |
 | F15 | Correct the nail colors: white board, or the skin next to the nail | cancel lighting and skin tone (M6) | white board: rule +0.025, models +0.00-0.03 (within noise); minus skin: -0.11 to -0.31 | **white board: small gain; minus skin: hurt** |
 
 ## Part A: checking the published eyelid results
@@ -376,7 +378,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 |---|---|---|---|---|
 | Yakimov et al. 2024, *Scientific Data* | fingernails and skin, fixed LED lighting box | 250 adults, Moscow; 69 below Hb 12 | open, CC0 on figshare (92 MB) | **done: Stage 12** |
 | Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers, India | paid IEEE DataPort subscription | **skipped**: no access |
-| Asare et al. 2022, Mendeley | palms; fingernails | 710 children, Ghana | open, CC BY 4.0 | almost certainly the CP-AnemiC children; not downloaded yet |
+| Asare et al. 2022, Mendeley | palms; fingernails | 514 and 526 distinct photos of children, Ghana | open, CC BY 4.0 | **done: Stage 13 (F16)**; labels only, no link to the eyelid photos |
 | Suner et al. 2021, Zenodo | conjunctiva | 344 adults, USA | open, but no photos | tables only |
 | Valles-Coral et al. 2025 | nails, palms | 909 young adults, Peru | not released | watch |
 
@@ -472,6 +474,42 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Not tried:** the nail and skin numbers side by side as one input, letting the model weigh both. Report:
   [`reports/stage12_nails.md`](reports/stage12_nails.md), section "Stage 12b".
 
+### F16. Palm and fingernail photos of Ghanaian children (M9, M12). Palm: as good as the eyelid. Nails: weaker.
+- **Question:** in Ghana children, does the palm or the fingernail show anemia as well as the eyelid?
+- **Answer:** the palm does, about the same. The nails less so. **Palm 0.91, nails 0.80, eyelid 0.92** (all TabPFN).
+- **Why:** the mentors suggested palm and fingernail sets (M12). This pair comes from the same research group as the
+  eyelid set, in Ghanaian children.
+- **What we found in the files** (Jaineel downloaded them on 2026-10-24):
+  - Each photo is saved 6 or 12 times (exact copies and rotations): 4,260 files per set are **514 palm photos and 526
+    nail photos**. We merged them and dropped 1 palm photo filed under both labels.
+  - **Only an Anemic / Non-anemic label in the file name.** No Hb, age, sex or hospital, and nothing links a palm or
+    nail photo to an eyelid photo, so **we can't combine body sites per child**.
+- **What we did (Stage 13):** the same 29 color numbers, rule, models (TabPFN included), no-color control, and a
+  model that sees only the file-naming style (`AnemicP-`, `Anemic-Pa-`, ...), in case the styles are batches like
+  Italy's. 5x5 CV by photo.
+- **What happened:**
+
+| Model | Palm (514) | Fingernails (526) | Eyelid, for comparison (388, F1/F14) |
+|---|---|---|---|
+| Rule: less red = anemic | 0.620 | 0.497 (chance) | 0.650 |
+| Logistic regression | 0.703 | 0.648 | 0.680 |
+| Random forest | 0.815 | 0.711 | 0.796 |
+| Gradient boosting | 0.855 | 0.682 | 0.846 |
+| **TabPFN** | **0.912 [0.886, 0.935]** | **0.798 [0.757, 0.836]** | **0.919** |
+| No-color control | 0.454 | 0.566 | 0.537 |
+| Naming style only | 0.497 | 0.431 | - |
+| Tested to catch 90% (TabPFN) | 62.5% | 74.9% | 50.0% |
+
+- **Takeaways:**
+  - **Palm works as well as the eyelid**, with no shortcut: the no-color control and the naming style sit at
+    chance, and inside the main naming style TabPFN still scores 0.900.
+  - **Still rising with more photos** in the palm (gradient boosting 0.73 -> 0.86 from 103 to 411 training photos).
+  - **Nails are weaker**, and the untrained rule is at chance there. Nail cut-out size alone scores 0.57 [0.52, 0.62],
+    a small shortcut we can't explain without age data, far below the color models.
+  - **TabPFN wins on every Ghana set** (eyelid, palm, nails), by 0.06-0.12 over gradient boosting.
+- **Caveats:** the label's cutoff isn't stated in the files; the eyelid comparison uses different photos and maybe
+  different children. Report: [`reports/stage13_ghana_sites.md`](reports/stage13_ghana_sites.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -482,6 +520,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | The ViT paper's counts only come out with Italy Hb <= 10.5, though it says "< 10.5" | Eyes-Defy | noted; Part A copies the paper, everything else uses WHO cutoffs |
 | 31 Italian masks on a white background instead of transparent | Eyes-Defy Italy | fixed in `src/eyelid/roi.py`, reran Parts C and E; conclusions held (rule 0.808 -> 0.835) |
 | Italy's anemic patients almost all in the first photo batch (21/31 vs 2/91) | Eyes-Defy Italy | report the early batch alone as the fair Italy check |
+| Each palm and nail photo stored 6-12 times (copies and rotations); no Hb, age or link to the eyelid photos | Ghana palm and nails | one row per photo; body sites compared, not combined |
 
 ## What worked and what didn't, in one list
 
@@ -496,11 +535,13 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Fingernails under fixed lighting: 0.82 with no shortcut, holding on unseen photo sessions.
 - A white board in the photo as a color reference (small: the nail rule +0.025, models within noise).
 - TabPFN on the 29 color numbers in Ghana children (0.92, the best eyelid result; shortcut check pending).
+- Palm photos of Ghana children (0.91 with TabPFN, no shortcut found).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
   color numbers.
 - Any model, TabPFN included, inside India (stuck at the rule's 0.65-0.67).
+- The untrained rule on Ghana fingernail cut-outs (chance).
 - Learned eyelid models on a new dataset.
 - Gray-world color correction (it erases the signal).
 - Subtracting the skin next to the nail (the skin pales too, so it erases the signal).
@@ -517,7 +558,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Item | Status | Who |
 |---|---|---|
 | TabPFN shortcut checks: no-color numbers, held-out hospitals | proposed, about 10 minutes | Jaineel to approve |
-| Ghana palm and fingernail photos (same children as the eyelids), eyelid + palm + nail together | open download, not downloaded | Jaineel downloads into `data/raw/ghana_palm/`, `data/raw/ghana_nails/` |
+| Eyelid + palm + nail for the same child | can't: the Ghana palm and nail files have no IDs or Hb linking them to the eyelids | ask the dataset authors for the linking sheet |
 | Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |

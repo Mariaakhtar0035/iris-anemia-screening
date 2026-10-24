@@ -25,7 +25,7 @@ Paraphrased from the meeting, without names.
 | M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut |
 | M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | done (Step 10): VisionFM probe 0.765 in Ghana children, above DINOv2 and the fine-tuned ViT, below color numbers (0.846) |
 | M11 | VLMs don't fit this problem, because the images come with no text or metadata. | Recorded, not pursued | done |
-| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut |
+| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut; Ghana palm and nails as Stage 13 (Step 13): palm 0.912, nails 0.798 |
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
 | M14 | The mentors will email a list of models to try. | The email never came, so Step 12 runs the models named in the meeting | done (Step 12): TabPFN 0.919 in Ghana children, the best eyelid model; no gain in India or on nails |
 
@@ -412,3 +412,42 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **What it means:** the best eyelid model so far, in Ghana only. India stays at the rule's level.
 - **Not run yet (proposed):** TabPFN on the no-color numbers (image size and cut-out shape), and leave-one-hospital-out
   on CP-AnemiC. Until those come back near chance and near 0.92, treat 0.92 as unconfirmed.
+
+### Step 13 (Stage 13): Ghana palm and fingernail photos (M9, M12)
+- **Why:** the mentors suggested palm or fingernail sets; Asare et al. 2022 (Mendeley 10.17632/ccr8cm22vz.1 and
+  10.17632/2xx4j3kjg2.1, CC BY 4.0) come from the CP-AnemiC group, in Ghanaian children. Jaineel downloaded both on
+  2026-10-24 and said to place them as I saw fit: `data/raw/ghana_palm/` and `data/raw/ghana_nails/`, each with its
+  original `.rar` and the unpacked folder.
+- **What's in the files** (inspected before any code): 4,260 PNGs per set, no spreadsheet. Names like
+  `AnemicP-010 (3).png` carry the label and a copy number (with typos: `Anrmic`, `Anmeic`). Each photo is stored 6
+  times (copy 2 identical, 3-4 rotated 270 degrees, 5-6 rotated 180) or 12 times. Palm: square patches of palm skin,
+  fully opaque. Nails: nail-bed cut-outs on a transparent background. No Hb, age, sex or hospital; the names don't
+  match the eyelid sheet's `Image_001` IDs, so nothing links a child across body sites.
+- **What we did:** `src/ghana_sites.py`, `configs/ghana_sites.yaml`. One row per photo: a rotation-aware hash merges
+  copies and rotations, then near-copies by the CP-AnemiC audit's rule (dHash within 20 bits, size within 5%);
+  photos under both labels dropped. Label = the file name's. The 29 color numbers (palm: every pixel; nails: opaque
+  pixels), the rule, dummy, logistic regression, random forest, gradient boosting, TabPFN, a no-color control (image
+  size and cut-out shape) and a naming-style-only model (`p`, `pa` and `none` in palm; `fn` and `fin` in nails),
+  5x5 CV by photo, plus AUROC re-scored inside the main naming style and learning curves. Tests:
+  `tests/test_ghana_sites.py` (label and style parsing with the typos; rotated copies share a key, a mirror image
+  doesn't). Run at commit `bca52df` (results recorded clean). Report: `reports/stage13_ghana_sites.md`.
+- **Audit:** palm 516 exact photos -> 515 after 1 near-copy link, 11 photos under several names, 1 with both labels
+  dropped: **514 kept** (297 anemic). Nails 532 -> 526 after 6 links, 21 under several names, none conflicting:
+  **526 kept** (307 anemic).
+- **Results** (held-out AUROC):
+
+| Model | Palm | Fingernails |
+|---|---|---|
+| Rule | 0.620 [0.569, 0.666] | 0.497 [0.448, 0.546] |
+| Logistic regression | 0.703 | 0.648 |
+| Random forest | 0.815 | 0.711 |
+| Gradient boosting | 0.855 [0.820, 0.887] | 0.682 [0.635, 0.727] |
+| TabPFN | **0.912 [0.886, 0.935]** | **0.798 [0.757, 0.836]** |
+| No-color control | 0.454 [0.405, 0.503] | 0.566 [0.517, 0.618] |
+| Naming style only | 0.497 [0.448, 0.547] | 0.431 [0.382, 0.480] |
+| TabPFN inside the main style | 0.900 [0.869, 0.929] | 0.804 [0.765, 0.842] |
+| TabPFN, share tested to catch 90% | 62.5% [58.6%, 66.5%] | 74.9% [70.0%, 78.3%] |
+
+- **What it means:** the palm carries as much signal as the eyelid (0.912 vs 0.919, both TabPFN) with no shortcut
+  found; nails less, and the untrained rule fails there. Combining sites per child would need a linking sheet from
+  the authors.
