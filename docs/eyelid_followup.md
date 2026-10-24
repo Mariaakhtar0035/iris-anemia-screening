@@ -234,8 +234,18 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
 - **Why:** Jaineel approved the VisionFM external-eye encoder (M10) and the first-choice dataset (M12).
 - **Yakimov fingernails:** downloaded from figshare (`data.zip`, 91.6 MB, 253 files including `photo/*.jpg`; figshare
   lists the dataset as CC0) to `data/raw/yakimov_nails/data.zip`. Claude's permission check blocked unzipping it
-  (medical photos), so Jaineel unzips it. The per-patient file has no sex column (Step 7), so Jaineel picks one adult
+  (medical photos), so Jaineel unzipped it. The per-patient file has no sex column (Step 7), so Jaineel picks one adult
   cutoff before any labels are made.
+- **What the files hold** (inspected 2026-10-23, `metadata.csv` + `photo/`):
+  - Columns: `PATIENT_ID`, `MEASUREMENT_DATE`, `HB_LEVEL_GperL`, `NAIL_BOUNDING_BOXES`, `SKIN_BOUNDING_BOXES`. **No sex
+    or age column**, confirmed.
+  - 250 rows, one per patient, each with one photo `photo/<PATIENT_ID>.jpg`. One extra photo (`185.jpg`) has no row and
+    will be skipped.
+  - Hb is in **g/L**, not g/dL: 44-169, median 131.5, none missing. Below 120 g/L: 69 people; below 130 g/L: 118.
+  - Every photo has 3 nail boxes and 3 skin boxes.
+  - `MEASUREMENT_DATE` is hashed but has only **20 distinct values**, so it works as a photo-session ID. After the Italy
+    batch problem, the first check will be whether the session alone predicts anemia, and the CV will also hold out
+    whole sessions.
 - **VisionFM external-eye encoder:** `VFM_External_weights.pth`, 1.5 GB, Google Drive link from the VisionFM README,
   research use only. Claude's permission check blocked downloading the weights file, so Jaineel downloads it to
   `data/weights/visionfm/` (gitignored). It is a pickle file, so it will be loaded with `torch.load(...,
