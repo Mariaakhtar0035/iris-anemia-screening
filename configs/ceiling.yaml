@@ -47,6 +47,14 @@ vit:
     eyes_defy_italy: [true]
     eyes_defy_pooled: [true, false]
 
+# M14 rung, from the mentor meeting: a tabular foundation model on the same 29 color numbers. TabPFN v2 (Prior Labs;
+# Hollmann et al. 2025, Nature), the ungated v2 classifier checkpoint (29 MB), downloaded on first use into
+# data/weights/tabpfn (gitignored). Install approved by Jaineel 2026-10-24. The tabpfn package loads it with
+# PyTorch's default weights-only mode (checked: it loads with weights_only=True). CPU for repeatable scores.
+tabpfn:
+  model_path: data/weights/tabpfn/tabpfn-v2-classifier-finetuned-zk73skhh.ckpt
+  device: cpu
+
 # M10 rung: VisionFM's external-eye encoder (github.com/ABILab-CUHK/VisionFM, research use only), frozen, with the same
 # logistic-regression probe as DINOv2 (probe.yaml). Download approved by Jaineel 2026-10-23; weights are gitignored.
 # Teacher weights. Inputs are prepared like DINOv2's (cut-out on the mean color, padded square, resized) but normalized

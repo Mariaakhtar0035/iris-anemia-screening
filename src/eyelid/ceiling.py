@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.model_selection import train_test_split
+from tabpfn import TabPFNClassifier
+from tabpfn.constants import ModelVersion
 
 from src.common.evaluate import auroc_change, summarize
 from src.common.io import RESULTS, ROOT, load_config, save_results
@@ -70,11 +72,13 @@ def population_inputs(frames, color_cfg, probe_cfg, cfg):
 def ladder_models(color_cfg, probe_cfg, cfg, seed):
     """name -> (input kind, model factory), smallest to biggest. The rule and the fine-tuned ViT are added separately."""
     color = model_factories(color_cfg, seed)
-    hgb = cfg["hist_gradient_boosting"]
+    hgb, tab = cfg["hist_gradient_boosting"], cfg["tabpfn"]
     out = {"dummy": ("color", color["dummy"]),
            "logistic_regression": ("color", color["logistic_regression"]),
            "random_forest": ("color", color["random_forest"]),
            "hist_gradient_boosting": ("color", lambda: HistGradientBoostingClassifier(**hgb, random_state=seed)),
+           "tabpfn": ("color", lambda: TabPFNClassifier.create_default_for_version(
+               ModelVersion.V2, model_path=ROOT / tab["model_path"], device=tab["device"], random_state=seed)),
            "dinov2_probe": ("embedding", probe_factory(probe_cfg, seed))}
     if has_visionfm(cfg):
         out["visionfm_probe"] = ("visionfm", probe_factory(probe_cfg, seed))
@@ -274,7 +278,8 @@ def main():
         "how well the model can fit, so no bootstrap. **gap** = train minus held-out; a large gap means the model "
         "memorizes rather than generalizes. The fine-tuned ViT uses one seed and 5 folds. **visionfm_probe** = the "
         "frozen VisionFM external-eye encoder (pretrained on eye photos, mentor advice M10) with the same probe as "
-        "DINOv2.\n\n"
+        "DINOv2. **tabpfn** = TabPFN v2, a model pretrained on millions of synthetic tables that classifies new rows "
+        "in one pass (the tabular foundation model named at the mentor meeting, M14), on the same 29 color numbers.\n\n"
         "## Model ladder\n\n" + ladder_table
         + "\n\n## Learning curves\n\nHeld-out AUROC when each training fold is cut to a stratified share. Still rising at "
         "1.0 = more photos would help; flat = the population's ceiling for that model. Points with fewer than "
