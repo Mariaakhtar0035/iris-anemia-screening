@@ -170,7 +170,7 @@ One pooled model scores 0.687 and 0.752. Separate models are no better, and they
 **You suggested:** more countries, keeping in mind that each one brings its own shortcut; fingernail or palm datasets
 with age and sex.
 
-**What we found** (we downloaded nothing; full table in
+**What we found** (full table in
 [`docs/eyelid_followup.md`](../docs/eyelid_followup.md#step-7-more-data-m9-m12)):
 
 | Dataset | Body site | People | Where | Access | Fit |
@@ -182,8 +182,8 @@ with age and sex.
 | Valles-Coral et al. 2025 | nails, palm and fingertip videos | 909 young adults | Peru | not released yet | watch for release |
 
 **Answer:**
-- Our first choice would be the Russian fingernail set: open, a new country, a new body site, and taken under fixed
-  lighting.
+- Our first choice is the Russian fingernail set: open, a new country, a new body site, and taken under fixed
+  lighting. Jaineel approved it and it was downloaded on 2026-10-23; results will follow.
 - Our second choice is the large Indian conjunctiva set.
 - Any new set would get the same duplicate audit and no-color control first, because Step 2 shows each new source
   brings its own shortcut.
@@ -195,7 +195,7 @@ with age and sex.
   Those are almost certainly our own two datasets, so it has seen our test photos. Its own validation accuracy is
   57.7%.
 - The closest real candidate is VisionFM's external-eye encoder: research use only, and its pretraining photos aren't
-  described. We haven't downloaded it.
+  described. Jaineel approved one run on 2026-10-23; the weights aren't downloaded yet.
 
 **Answer:** worth one run if we get approval. But the ViT result above suggests a better starting model won't fix a
 data limit.

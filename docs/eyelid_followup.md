@@ -22,10 +22,10 @@ Paraphrased from the meeting, without names.
 | M6 | Edit the images so they look more alike, for example by changing the brightness or shifting the color distributions. | Step 3: brightness and color normalization, color-jitter augmentation | done |
 | M7 | Don't drop India from the data. Use fairness metrics instead. | Step 3: per-country and worst-country AUROC | done |
 | M8 | Separate models per population are an acceptable fallback. Big models trained on diverse data can learn every population, as Google's skin model eventually did. | Step 3: per-country models vs one pooled model | done |
-| M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | searched (Step 7); downloads wait for Jaineel |
-| M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | searched: one candidate (VisionFM), waiting for Jaineel before downloading |
+| M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | searched (Step 7); fingernail set downloaded (Step 8), waiting to be unzipped |
+| M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | approved (Step 8); weights download pending |
 | M11 | VLMs don't fit this problem, because the images come with no text or metadata. | Recorded, not pursued | done |
-| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | searched (Step 7); downloads wait for Jaineel |
+| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | searched (Step 7); fingernail set downloaded (Step 8), waiting to be unzipped |
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
 | M14 | The mentors will email a list of models to try. | Add them here when the email arrives | waiting |
 
@@ -229,3 +229,18 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
 - **Our pick, if Jaineel approves:** (1) Yakimov fingernails, for a new country and body site with open access;
   (2) the Indian IEEE DataPort set, for a large third conjunctiva source; (3) the Ghana palm and nail sets, only if
   their IDs match CP-AnemiC's. Each would need a duplicate audit and a no-color control first, as in Steps 1-3.
+
+### Step 8: downloads after Jaineel's go-ahead (2026-10-23, in progress)
+- **Why:** Jaineel approved the VisionFM external-eye encoder (M10) and the first-choice dataset (M12).
+- **Yakimov fingernails:** downloaded from figshare (`data.zip`, 91.6 MB, 253 files including `photo/*.jpg`; figshare
+  lists the dataset as CC0) to `data/raw/yakimov_nails/data.zip`. Claude's permission check blocked unzipping it
+  (medical photos), so Jaineel unzips it. The per-patient file has no sex column (Step 7), so Jaineel picks one adult
+  cutoff before any labels are made.
+- **VisionFM external-eye encoder:** `VFM_External_weights.pth`, 1.5 GB, Google Drive link from the VisionFM README,
+  research use only. Claude's permission check blocked downloading the weights file, so Jaineel downloads it to
+  `data/weights/visionfm/` (gitignored). It is a pickle file, so it will be loaded with `torch.load(...,
+  weights_only=True)`.
+- **Indian IEEE DataPort set:** needs Jaineel's IEEE login; not downloaded.
+- **Next, once the files are in place:** VisionFM as one more probe row in Step 1's ladder and Step 4's clinic table;
+  the fingernails as a new Stage 12 (audit, nail-box color numbers, rule, dummy, no-color control, 5x5 CV by
+  patient). A short plan goes to Jaineel before the Stage 12 code.

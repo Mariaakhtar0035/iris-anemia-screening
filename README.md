@@ -1,6 +1,7 @@
 # Can eyelid photos and survey answers flag anemia across populations?
 
-*Student research project for RBC Borealis's Let's SOLVE it mentorship program. Working branch: `jaineel`.*
+*Student research project for RBC Borealis's Let's SOLVE it mentorship program. Working branch: `jaineel`.
+Every strategy we tried, why, and whether it worked, in plain English: [`PROGRESS.md`](PROGRESS.md).*
 
 > **Key findings at a glance**
 >
@@ -337,13 +338,14 @@ Report: [`reports/clinical_eyelid.md`](reports/clinical_eyelid.md).
 
 - **Pretrained eyelid models.** No public model is pretrained on conjunctiva photos without having seen ours. The one
   Hugging Face anemia model was trained on CP-AnemiC and Eyes-Defy themselves. The closest real candidate, VisionFM's
-  external-eye encoder, has not been downloaded.
+  external-eye encoder, was approved for one run on 2026-10-23; its weights are not downloaded yet.
 - **More data.** The best candidates are:
   - an open Russian fingernail set (250 adults);
   - a large Indian conjunctiva, palm and nail set (1,485 people, IEEE DataPort login);
   - Ghana palm and nail sets that are almost certainly the CP-AnemiC children.
 
-  Nothing has been downloaded. The table is in [`docs/eyelid_followup.md`](docs/eyelid_followup.md).
+  The fingernail set was downloaded on 2026-10-23 and is not analyzed yet. The table and the download log are in
+  [`docs/eyelid_followup.md`](docs/eyelid_followup.md) (Steps 7-8).
 
 ## 7. Discussion
 
@@ -471,7 +473,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Fusion simulation | done |
 | Comparison with Chemhaka et al. [4] | waiting for the paper's numbers |
 | Part III: the mentors' eyelid advice (ceiling, populations, debiasing, clinical view) | done; answers in `reports/mentor_followup_eyelid.md` |
-| Eyelid-pretrained model (VisionFM external eye) and new datasets | searched; nothing downloaded, waiting for approval |
+| Eyelid-pretrained model (VisionFM external eye) and new datasets | approved 2026-10-23; fingernail set downloaded, VisionFM weights pending |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 
