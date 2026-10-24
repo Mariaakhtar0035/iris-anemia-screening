@@ -31,6 +31,9 @@ side of the project. The suggestions are recorded, and every step is logged, in
 5. **In clinical terms:** to catch 90% of anemic children, the best model still sends about 2 in 3 children for a
    blood test, where testing at random would need 9 in 10 (see M13). To catch all of them, nearly everyone gets
    tested. Today an eyelid photo can help decide who to test first; it can't rule anyone out.
+6. **Under fixed lighting the color signal is clean.** On a fingernail set photographed in one light box (250 adults,
+   Moscow), logistic regression reaches 0.818 [0.755, 0.872], holds on photo sessions it never saw, and no shortcut
+   shows up (see M9 and M12).
 
 ## M1 and M2: exhaust each dataset, one population at a time
 
@@ -182,11 +185,34 @@ with age and sex.
 | Valles-Coral et al. 2025 | nails, palm and fingertip videos | 909 young adults | Peru | not released yet | watch for release |
 
 **Answer:**
-- Our first choice is the Russian fingernail set: open, a new country, a new body site, and taken under fixed
-  lighting. Jaineel approved it and it was downloaded on 2026-10-23; results will follow.
+- Our first choice was the Russian fingernail set: open, a new country, a new body site, and taken under fixed
+  lighting. We ran it (below).
 - Our second choice is the large Indian conjunctiva set.
 - Any new set would get the same duplicate audit and no-color control first, because Step 2 shows each new source
   brings its own shortcut.
+
+**What we did with the fingernail set** (report: [`stage12_nails.md`](stage12_nails.md)):
+- Anemic = Hb < 12.0 g/dL for everyone (69 of 250): the file has no sex column, so we picked one adult cutoff.
+- The same 29 color numbers from the three nail boxes per photo, the same models, a no-color control (nail box
+  sizes), and a model that sees only the photo session (20 sessions), to catch a batch shortcut like Italy's.
+
+| Model | AUROC, CV by patient | AUROC, held-out sessions | Share tested to catch 90% |
+|---|---|---|---|
+| Rule: less red = anemic | 0.703 [0.632, 0.770] | 0.703 | 0.732 |
+| Logistic regression | **0.818 [0.755, 0.872]** | **0.815 [0.752, 0.871]** | 0.608 |
+| Random forest | 0.809 [0.746, 0.865] | 0.802 | 0.576 |
+| Gradient boosting | 0.791 [0.730, 0.848] | 0.795 | 0.612 |
+| No-color control | 0.492 | 0.491 | 0.948 |
+| Session only | 0.438 | - | 0.968 |
+
+**What we found:**
+- No shortcut: the no-color control and the session-only model sit at chance.
+- The signal holds on photo sessions the model never saw.
+- A simple model is enough, and the learning curve is flat (0.811 with 50 training photos, 0.818 with 200).
+- The untrained rule does better than on eyelids (0.70 vs 0.65-0.67).
+
+**Answer:** when the lighting is fixed, a pallor color signal shows up cleanly and needs only a simple model. That
+supports our reading of the eyelid results: the problem there is uncontrolled photos, not too small a model.
 
 ## M10: models pretrained on eyelid images
 
@@ -253,7 +279,8 @@ We'll add them to the log when the email arrives.
 
 1. **Clinical target.** Which miss rate would a clinic accept: 10%, 5% or none? That decides which row of the M13
    table matters. Do you know a clinician we could ask?
-2. **Data.** Is the Russian fingernail set worth the effort, given that it has no per-patient sex column? Or should we
-   go after the larger Indian conjunctiva set?
+2. **Controlled photos.** Fingernails in a light box give a clean 0.82. Is it worth trying to correct eyelid photos
+   for lighting (for example with a white or color reference in the frame), or going after the larger Indian
+   conjunctiva set (1,485 people) next?
 3. **Pretrained model.** Is VisionFM's external-eye encoder worth a run, given the ViT result?
 4. **Eyelid region.** The deeper fold (forniceal) did better in India. Is that consistent with what you've seen?

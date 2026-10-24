@@ -10,10 +10,10 @@ We checked the two published eyelid-photo results, built our own honest baseline
 new dataset or country, built a survey model and tested it in two new countries, simulated combining the two, and
 then followed up every piece of eyelid advice from the mentor meeting. All of that is done and pushed.
 
-In progress: a new fingernail dataset (downloaded, waiting to be unzipped) and a pretrained eye-photo model (VisionFM,
-approved, waiting to be downloaded). See [What's next](#whats-next).
+Since then: a fingernail dataset photographed under fixed lighting is done (Stage 12, F13). Still in progress: a
+pretrained eye-photo model (VisionFM, approved, waiting for its weights). See [What's next](#whats-next).
 
-## The story in five points
+## The story in six points
 
 1. **Published eyelid scores are inflated.** Both papers test on photos that are also in training (copies, or flipped
    versions). A clean split costs 7-8 accuracy points.
@@ -26,6 +26,8 @@ approved, waiting to be downloaded). See [What's next](#whats-next).
 5. **After the mentors: the limit is the data, not the model.** A big ViT memorizes the training photos, debiasing
    makes scores fair across countries but not more accurate, and in a clinic the best model saves about a quarter of
    blood tests but can't rule anyone out.
+6. **Under fixed lighting the color signal is clean.** On fingernails photographed in one light box, a simple model
+   reaches 0.82 with no shortcut, the same on photo sessions it never saw.
 
 ## How to read the numbers
 
@@ -75,7 +77,7 @@ approved, waiting to be downloaded). See [What's next](#whats-next).
 | F10 | Clinic view: share tested, precision, PR-AUC (M13) | AUROC alone doesn't say what a clinic gains | 64% tested to catch 90% | **worked: clearer story** |
 | F11 | Eyelid-pretrained model (M10) | start from a model that has seen eyes | one candidate, VisionFM | **in progress** |
 | F12 | Vision-language models (M11) | mentors said no | not pursued | skipped |
-| F13 | More data: nails, palms, new countries (M9, M12) | more people, new shortcuts to test | fingernail set downloaded | **in progress** |
+| F13 | More data: fingernails under fixed lighting (M9, M12) | a new country and body site, without camera and batch differences | logistic regression 0.818, no shortcut, flat learning curve | **worked** |
 
 ## Part A: checking the published eyelid results
 
@@ -318,14 +320,14 @@ India stays in every run, and is reported with the fairness metrics instead of b
 ### F12. Vision-language models (M11). Skipped.
 The mentors said VLMs don't fit: the photos come with no text or metadata. We agree.
 
-### F13. More data (M9, M12). In progress.
+### F13. More data: fingernails under fixed lighting (M9, M12). Worked.
 - **Why:** more countries make the data more diverse (each bringing its own shortcut to test for), and the mentors
   suggested fingernail or palm sets with age and sex.
 - **What we found:**
 
 | Dataset | Body site | People | Access | Status |
 |---|---|---|---|---|
-| Yakimov et al. 2024, *Scientific Data* | fingernails and skin, fixed LED lighting box | 250 adults, Moscow; 69 below Hb 12 | open, CC0 on figshare (92 MB) | **downloaded** to `data/raw/yakimov_nails/data.zip`; no sex column per patient |
+| Yakimov et al. 2024, *Scientific Data* | fingernails and skin, fixed LED lighting box | 250 adults, Moscow; 69 below Hb 12 | open, CC0 on figshare (92 MB) | **done: Stage 12** |
 | Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers, India | IEEE login (1 GB) | needs Jaineel's login |
 | Asare et al. 2022, Mendeley | palms; fingernails | 710 children, Ghana | open | almost certainly the CP-AnemiC children |
 | Suner et al. 2021, Zenodo | conjunctiva | 344 adults, USA | open, but no photos | tables only |
@@ -333,6 +335,34 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 
 - **Why the fingernail set first:** open, a new country and body site, and photographed under fixed lighting. That
   makes it a direct test of our main suspicion: is the eyelid signal weak because the photos are uncontrolled?
+- **What we did (Stage 12):** anemic = Hb < 12.0 g/dL for everyone (no sex column, so Jaineel picked one adult
+  cutoff; 69 of 250 anemic). The same 29 color numbers from the three nail boxes in each photo; the rule, logistic
+  regression, random forest, gradient boosting, a dummy, a no-color control (nail box sizes only), and a model that
+  sees only the photo session (20 sessions) to catch a batch shortcut like Italy's. Scored with 5x5 CV by patient and
+  on whole held-out sessions.
+- **What happened:**
+
+| Model | AUROC, CV by patient | AUROC, held-out sessions | Share tested to catch 90% |
+|---|---|---|---|
+| Rule: less red = anemic | 0.703 [0.632, 0.770] | 0.703 | 0.732 |
+| **Logistic regression** | **0.818 [0.755, 0.872]** | **0.815** | 0.608 |
+| Random forest | 0.809 [0.746, 0.865] | 0.802 | **0.576** |
+| Gradient boosting | 0.791 [0.730, 0.848] | 0.795 | 0.612 |
+| No-color control | 0.492 | 0.491 | 0.948 |
+| Session only | 0.438 | - | 0.968 |
+
+- **Takeaways:**
+  - **A real color signal and no shortcut:** the no-color control and the session-only model sit at chance, and the
+    scores hold on sessions the model never saw. That's the clean result the eyelid data never gave us.
+  - **Simple is enough:** logistic regression wins; gradient boosting memorizes (training 1.00) and scores lower.
+  - **Flat learning curve:** 0.811 with 50 training photos, 0.818 with 200. With fixed lighting these color numbers
+    hit their limit fast, so more of the same photos won't help much.
+  - **The untrained rule does better than on eyelids** (0.70 vs 0.65 in Ghana and 0.67 in India), consistent with
+    controlled lighting helping the raw color.
+  - **Clinic view:** catching 90% of anemic people means testing 58-61% of everyone, vs 90% at random.
+- **Caveats:** one cutoff for both sexes (some anemic men count as healthy), mostly light skin, one hospital. A nail
+  model can't be applied to eyelids, so this compares conditions, not transfer. Report:
+  [`reports/stage12_nails.md`](reports/stage12_nails.md).
 
 ### F14. The mentors' list of models (M14). Waiting for their email.
 
@@ -357,6 +387,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - The survey model carrying over to new countries.
 - Fairness methods, for closing the gaps between countries.
 - The clinic view (share tested), for explaining what a model is worth.
+- Fingernails under fixed lighting: 0.82 with no shortcut, holding on unseen photo sessions.
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT) instead of color numbers.
@@ -367,27 +398,21 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Duplicate copies as extra training data (harmless, no gain).
 
 **Still open**
-- The deeper eyelid fold (F2), the pretrained eye model (F11), the fingernail data (F13).
+- The deeper eyelid fold (F2) and the pretrained eye model (F11).
 
 ## What's next
 
 | Item | Status | Who |
 |---|---|---|
-| Fingernail dataset (Yakimov) | downloaded; Claude's permission check blocked unzipping medical photos, so Jaineel unzips it | Jaineel |
-| One adult anemia cutoff for the fingernail set | the per-patient file has no sex column, so by the project rules Jaineel picks one | Jaineel |
-| VisionFM external-eye weights (1.5 GB) | approved; Claude's permission check blocked downloading the weights file, so Jaineel downloads it | Jaineel |
+| VisionFM external-eye weights (1.5 GB) | approved; Claude's permission check blocked the download, and Jaineel's first try didn't produce the file | Jaineel |
+| Fingernails: a color reference from the white board in each photo | idea, not started: the light box has a white board, which could correct each photo's color the way a reference card would | team |
 | Indian IEEE DataPort set | needs Jaineel's IEEE login | Jaineel |
 | Mentors' list of models | waiting for their email | mentors |
 | Comparison with Chemhaka et al. (survey) | waiting for the paper's numbers | survey side |
 | Paired photo + survey data, to test fusion for real | future | team |
 
-**Plan once the files are in place** (to be confirmed before coding, as the project rules require):
-- **VisionFM:** frozen features into the same logistic-regression probe as DINOv2. One new row in the F1 ladder and
-  the F10 clinic table, same splits and controls.
-- **Fingernails (new Stage 12):** audit first (columns, duplicates, one photo per patient?). Then color numbers from
-  the nail boxes, the redness rule, logistic regression, random forest, gradient boosting, a dummy and the no-color
-  control, 5x5 cross-validation by patient, all with 95% ranges. The question: under fixed lighting, is the color
-  signal stronger than in our eyelid photos?
+**Plan once the VisionFM weights are in place:** frozen features into the same logistic-regression probe as
+DINOv2. One new row in the F1 ladder and the F10 clinic table, same splits and controls.
 
 ## Where to find things
 

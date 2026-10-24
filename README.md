@@ -32,6 +32,7 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Why do populations differ? | the dataset is obvious from the pixels (AUROC 0.99-1.00); Italy's anemic photos sit almost all in one early batch, which alone predicts anemia at 0.91 |
 > | Does debiasing help? | it closes the country gaps (rank gap 0.39 -> 0.10) but doesn't raise AUROC inside any country |
 > | What would it save a clinic? | to catch 90% of anemic children, test 64% instead of 90%; to catch all, test 98% |
+> | Does color work without camera and batch differences? | on fingernails photographed in one light box (250 Moscow adults), logistic regression reaches **0.82**, the same on held-out photo sessions, and the no-color control sits at chance |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
 
@@ -344,8 +345,36 @@ Report: [`reports/clinical_eyelid.md`](reports/clinical_eyelid.md).
   - a large Indian conjunctiva, palm and nail set (1,485 people, IEEE DataPort login);
   - Ghana palm and nail sets that are almost certainly the CP-AnemiC children.
 
-  The fingernail set was downloaded on 2026-10-23 and is not analyzed yet. The table and the download log are in
-  [`docs/eyelid_followup.md`](docs/eyelid_followup.md) (Steps 7-8).
+  We used the fingernail set (Section 6.6). The table and the download log are in
+  [`docs/eyelid_followup.md`](docs/eyelid_followup.md) (Steps 7-9).
+
+### 6.6 Fingernails under fixed lighting
+
+Our eyelid photos mix cameras, lighting and batches, and models keep learning those instead of pallor. So we tested a
+set photographed in one fixed LED box: Yakimov et al. 2024, *Scientific Data* (figshare
+10.6084/m9.figshare.c.6760179), 250 adults in Moscow, one photo each with three nail boxes.
+
+- **Cutoff: Hb < 12.0 g/dL (120 g/L) for everyone** (69 of 250 anemic). The file has no sex column, so we use one adult
+  cutoff, the WHO cutoff for women; anemic men between 12.0 and 13.0 count as not anemic.
+- Same 29 color numbers from the nail boxes, the same models, a no-color control on nail box sizes, and a model that
+  sees only the photo session (20 sessions), to catch a batch shortcut like Italy's.
+
+| Model | 5x5 CV by patient | Leave one session out | Share tested to catch 90% |
+|---|---|---|---|
+| Rule: less red = anemic | 0.703 [0.632, 0.770] | 0.703 [0.632, 0.770] | 0.732 [0.572, 0.876] |
+| **Logistic regression** | **0.818 [0.755, 0.872]** | **0.815 [0.752, 0.871]** | 0.608 [0.484, 0.760] |
+| Random forest | 0.809 [0.746, 0.865] | 0.802 [0.740, 0.858] | 0.576 [0.484, 0.684] |
+| Gradient boosting | 0.791 [0.730, 0.848] | 0.795 [0.736, 0.848] | 0.612 [0.476, 0.736] |
+| No-color control | 0.492 [0.406, 0.574] | 0.491 [0.413, 0.572] | 0.948 [0.908, 0.976] |
+| Session only | 0.438 [0.350, 0.528] | - | 0.968 [0.920, 0.992] |
+
+- **A clean color signal:** no shortcut shows up, and the scores hold on photo sessions the model never saw.
+- **Simple is enough, and the learning curve is flat** (0.811 with 50 training photos, 0.818 with 200), so with fixed
+  lighting these color numbers reach their limit fast.
+- The untrained rule does better than on eyelids (0.70 vs 0.65-0.67), consistent with controlled lighting helping
+  the raw color.
+
+Report: [`reports/stage12_nails.md`](reports/stage12_nails.md).
 
 ## 7. Discussion
 
@@ -374,7 +403,7 @@ Report: [`reports/clinical_eyelid.md`](reports/clinical_eyelid.md).
 
 - **No paired data.** No dataset links an eyelid photo to survey answers for the same person, so fusion is simulated and assumes the two signals are independent given anemia.
 - **Different populations.** CP-AnemiC is young children, Eyes-Defy is adults including men, the survey is women 15-49.
-- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking).
+- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking). Fingernails (Section 6.6): Hb < 12.0 for everyone, since sex is not recorded.
 - **Survey rounds differ.** Zimbabwe 2015 vs Malawi and Zambia 2024, so transfer mixes country with time. Malawi's missing wealth index is imputed inside the model.
 - **Small image test sets.** Eyes-Defy test sets hold 44 photos when split by photo; Italy has few anemic adults.
 - **Replications are not identical recipes.** Replication A uses ImageNet weights and 30 epochs; we do not have either paper's exact split or code; GPU differences (Apple M1 vs NVIDIA) can shift results slightly.
@@ -399,6 +428,7 @@ Raw data is **never committed** (`data/` and `results/` are gitignored). Downloa
 | CP-AnemiC | `data/raw/cp_anemic/` | Mendeley Data (academic use) |
 | Eyes-Defy-Anemia | `data/raw/eyes_defy/` (the `India/`, `Italy/` folders and the `.docx`) | IEEE DataPort, or the Kaggle mirror `harshwardhanfartale/eyes-defy-anemia` |
 | DHS Individual Recode | `data/raw/dhs/{zimbabwe,malawi,zambia}/` (the `*IR*DT` folders: ZWIR72, MWIR81, ZMIR81) | DHS Program (registration required) |
+| Fingernails (Yakimov et al. 2024) | `data/raw/yakimov_nails/` (`metadata.csv` and `photo/`, unzipped from `data.zip`) | figshare 10.6084/m9.figshare.c.6760179 (CC0) |
 
 Then run, in order (Section 11 lists what each file does):
 
@@ -421,11 +451,12 @@ python -m src.eyelid.ceiling               # 6.1, model ladder, learning curves,
 python -m src.eyelid.populations           # 6.2
 python -m src.eyelid.debias                # 6.3
 python -m src.eyelid.clinical              # 6.4 (reads the ViT results)
+python -m src.nails                        # 6.6, fingernails, ~1 min
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -441,6 +472,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/fusion_sim.py` | Fusion simulation |
 | `src/eyelid/ceiling.py`, `finetune_vit.py` | Part III: each population on its own, model ladder up to a fine-tuned ViT, learning curves |
 | `src/eyelid/populations.py`, `debias.py`, `clinical.py` | Part III: population comparison and Italy batches; fairness metrics and debiasing; testing load at fixed sensitivity |
+| `src/nails.py` | Part III: fingernail photos under fixed lighting (Section 6.6) |
 | `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
 | `src/summary.py`, `src/figures.py` | Build `reports/summary.md` and the figures from `results/*.json` |
@@ -473,7 +505,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Fusion simulation | done |
 | Comparison with Chemhaka et al. [4] | waiting for the paper's numbers |
 | Part III: the mentors' eyelid advice (ceiling, populations, debiasing, clinical view) | done; answers in `reports/mentor_followup_eyelid.md` |
-| Eyelid-pretrained model (VisionFM external eye) and new datasets | approved 2026-10-23; fingernail set downloaded, VisionFM weights pending |
+| Fingernails under fixed lighting (Section 6.6) | done |
+| Eyelid-pretrained model (VisionFM external eye) | approved 2026-10-23; weights pending |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 

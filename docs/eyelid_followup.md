@@ -22,10 +22,10 @@ Paraphrased from the meeting, without names.
 | M6 | Edit the images so they look more alike, for example by changing the brightness or shifting the color distributions. | Step 3: brightness and color normalization, color-jitter augmentation | done |
 | M7 | Don't drop India from the data. Use fairness metrics instead. | Step 3: per-country and worst-country AUROC | done |
 | M8 | Separate models per population are an acceptable fallback. Big models trained on diverse data can learn every population, as Google's skin model eventually did. | Step 3: per-country models vs one pooled model | done |
-| M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | searched (Step 7); fingernail set downloaded (Step 8), waiting to be unzipped |
+| M9 | More countries make the data more diverse, but each new country brings its own shortcut, so debiasing is still needed. | Step 7: data search, plus the write-up | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut |
 | M10 | Look for vision models pretrained on eyelid images and reuse their pretraining. | Step 5: search, then ask Jaineel before downloading anything | approved (Step 8); weights download pending |
 | M11 | VLMs don't fit this problem, because the images come with no text or metadata. | Recorded, not pursued | done |
-| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | searched (Step 7); fingernail set downloaded (Step 8), waiting to be unzipped |
+| M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut |
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
 | M14 | The mentors will email a list of models to try. | Add them here when the email arrives | waiting |
 
@@ -251,6 +251,42 @@ While running Step 2 we found two problems in Eyes-Defy Italy. Neither was repor
   `data/weights/visionfm/` (gitignored). It is a pickle file, so it will be loaded with `torch.load(...,
   weights_only=True)`.
 - **Indian IEEE DataPort set:** needs Jaineel's IEEE login; not downloaded.
-- **Next, once the files are in place:** VisionFM as one more probe row in Step 1's ladder and Step 4's clinic table;
-  the fingernails as a new Stage 12 (audit, nail-box color numbers, rule, dummy, no-color control, 5x5 CV by
-  patient). A short plan goes to Jaineel before the Stage 12 code.
+- **Boxes are [row1, col1, row2, col2].** Read as x/y they fall off the 800x600 photos; drawn as rows/columns they
+  sit on the nails (checked by eye on photo 1). The photos have no rotation flag.
+- **Still waiting:** the VisionFM weights (the first download attempt didn't produce the file).
+
+### Step 9 (Stage 12): fingernail photos under fixed lighting (M9, M12)
+- **Why:** our eyelid photos come from different cameras, lighting and batches, and the models keep learning those
+  instead of pallor. A set photographed in one fixed light box tests what a color signal looks like without that
+  problem, in a new country and body site.
+- **Plan approved by Jaineel (2026-10-23):** cutoff Hb < 12.0 g/dL (120 g/L) for everyone, since there is no sex
+  column; the same 29 color numbers from the 3 nail boxes; the rule, logistic regression, random forest, gradient
+  boosting, a dummy and a no-color control (nail box sizes only); 5x5 CV by patient plus leave one session out; a
+  session-only model to check for a batch shortcut.
+- **Ran:** `python -m src.nails` at commit `c2e8f21`. Settings in `configs/nails.yaml`. Report:
+  `reports/stage12_nails.md`. Tests: `tests/test_nails.py` (box order, cutoff).
+- **Results** (69 of 250 anemic):
+
+| Model | 5x5 CV by patient | Leave one session out | Share tested to catch 90% (CV) |
+|---|---|---|---|
+| Dummy | 0.465 | 0.362 | 1.000 |
+| Rule: less red = anemic | 0.703 [0.632, 0.770] | 0.703 | 0.732 |
+| Logistic regression | **0.818 [0.755, 0.872]** | **0.815 [0.752, 0.871]** | 0.608 |
+| Random forest | 0.809 [0.746, 0.865] | 0.802 | **0.576 [0.484, 0.684]** |
+| Gradient boosting | 0.791 [0.730, 0.848] | 0.795 | 0.612 |
+| No-color control (box sizes) | 0.492 [0.406, 0.574] | 0.491 | 0.948 |
+| Session only | 0.438 [0.350, 0.528] | - | 0.968 |
+
+- **What it means:**
+  - **A real color signal and no shortcut.** The no-color control and the session-only model sit at chance, and the
+    scores hold on photo sessions the model never saw.
+  - **Simple is enough.** Logistic regression is the best model, and gradient boosting fits training perfectly
+    (1.00) but scores lower.
+  - **The learning curve is flat.** Logistic regression scores 0.811 with 50 training photos and 0.818 with 200.
+    Under fixed lighting these color numbers reach their limit fast; more photos of the same kind won't add much.
+  - **The untrained rule works better here (0.70) than on the eyelid in Ghana (0.65) or India (0.67)**, which fits
+    the idea that controlled lighting helps the raw color signal.
+  - **Clinic view:** catching 90% of anemic people means testing 58-61% of everyone, against 90% at random.
+- **Caveats:** one cutoff for both sexes, so some anemic men count as healthy; mostly light skin (Fitzpatrick I-III);
+  one hospital. A model trained on nails can't be applied to eyelids, so this is a comparison of conditions, not a
+  transfer test.
