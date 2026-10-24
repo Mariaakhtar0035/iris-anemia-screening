@@ -27,7 +27,7 @@ Paraphrased from the meeting, without names.
 | M11 | VLMs don't fit this problem, because the images come with no text or metadata. | Recorded, not pursued | done |
 | M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut |
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
-| M14 | The mentors will email a list of models to try. | Add them here when the email arrives | waiting |
+| M14 | The mentors will email a list of models to try. | The email never came, so Step 12 runs the models named in the meeting | done (Step 12): TabPFN 0.919 in Ghana children, the best eyelid model; no gain in India or on nails |
 
 ## Part 2. Step log
 
@@ -357,3 +357,58 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   sessions random forest reaches 0.834, +0.032 [-0.005, 0.068]). Subtracting skin backfires because the skin pales
   with anemia too. A color reference only helps if it doesn't share the signal.
 
+#### 11b: fine-tuning VisionFM (M10)
+- **Why:** frozen VisionFM (Step 10) beat the general image models; fine-tuning all of it might close the gap to the
+  color numbers.
+- **What we did:** `python -m src.eyelid.finetune_vit --model visionfm`: the same recipe as our ViT (30 epochs, lr
+  1e-5, NAdam, batch 8, flips plus brightness/contrast jitter, 5 folds, 1 seed); only the starting weights and the
+  input normalization (VisionFM's own) differ. CP-AnemiC only. Run at commit `952ef2d` (results recorded clean), in a
+  separate git worktree so other edits couldn't mark it dirty.
+- **Result:** 0.785 [0.739, 0.829] held out; training AUROC 1.00 (it memorizes). Frozen VisionFM 0.765, our ViT
+  0.715, gradient boosting 0.846. Clinic view: tests 72.9% to catch 90%, PR-AUC 0.729 (our ViT: 77.6%).
+- **What it means:** fine-tuning adds a little, within the range of frozen. Still below the color numbers.
+
+#### 11c: the forniceal lead in India, checked properly
+- **Why:** Step 1 found the deeper fold scored higher in India, but as two separate numbers with overlapping ranges.
+- **What we did:** a paired bootstrap of the AUROC change, forniceal (or both regions) minus palpebral, on the same
+  resampled people (`auroc_change`, 2000 resamples), added to the region table of `python -m src.eyelid.ceiling`.
+  Results recorded clean at `da77a3c`. Test: `tests/test_metrics.py::test_auroc_change_is_paired`.
+- **Result (India, no gray-world):**
+
+| Model | Palpebral | Forniceal (change) | Both regions (change) |
+|---|---|---|---|
+| Rule | 0.671 | 0.755 (+0.084 [+0.001, +0.175]) | 0.746 (+0.075 [+0.022, +0.138]) |
+| Logistic regression | 0.612 | 0.739 (+0.127 [+0.029, +0.228]) | 0.729 (+0.117 [+0.037, +0.203]) |
+| Random forest | 0.673 | 0.639 (-0.034 [-0.147, +0.074]) | 0.709 (+0.035 [-0.055, +0.135]) |
+
+- Italy: no change for any model without gray-world.
+- **What it means:** real for the rule and logistic regression, but borderline (95 photos, many comparisons, lower
+  ends near 0). Confirm on new Indian photos before relying on it.
+
+### Step 12: the models named at the meeting (M14)
+- **Why:** the mentors' email with a model list never came. From the meeting itself: vision models trained on eyelid
+  images (VisionFM, Steps 10 and 11b), the biggest model we can run (ViT, Step 1), and tabular foundation models such
+  as TabPFN, used directly or with an embedding plus a simple classifier. TabPFN was the one not yet run.
+- **What we did:** with Jaineel's go-ahead (2026-10-24), installed `tabpfn==9.2.0` (Apache-2.0 code) and downloaded
+  the TabPFN v2 classifier weights from Hugging Face `Prior-Labs/TabPFN-v2-clf` into `data/weights/tabpfn/` (29 MB,
+  open download). The newer versions (2.5 and up) need a license sign-up in the browser, so we didn't use them. The
+  checkpoint loads in PyTorch's tensors-only mode. Added as one more color-number rung (`tabpfn` in
+  `src/eyelid/ceiling.py`, `configs/ceiling.yaml`, `configs/clinical.yaml`), so it also runs in the learning curves,
+  the nails stage and the clinic view. Commit `acbc78a`; reruns recorded clean at `acbc78a` (Stage 9), `a3370f4`
+  (nails) and `b4ae591` (clinic view).
+- **Results** (held-out AUROC, 5x5 CV):
+
+| Data | Rule | Best before | TabPFN | TabPFN training AUROC |
+|---|---|---|---|---|
+| CP-AnemiC (388) | 0.650 | gradient boosting 0.846 | **0.919 [0.893, 0.945]** | 1.000 |
+| India (95) | 0.671 | random forest 0.673 | 0.648 [0.514, 0.766] | 0.937 |
+| Italy (122) | 0.924 | logistic regression 0.920 | 0.909 [0.811, 0.975] | 0.993 |
+| Italy + India pooled (217) | 0.835 | random forest 0.892 | 0.887 [0.840, 0.931] | 0.983 |
+| Fingernails (250) | 0.703 | logistic regression 0.818 | 0.823 [0.764, 0.876]; 0.823 on held-out sessions | 0.904 |
+
+- **Learning curve, CP-AnemiC:** 0.719, 0.804, 0.896, 0.919 with 78, 155, 233, 310 training photos: still rising.
+- **Clinic view, CP-AnemiC:** tests 50.0% [44.3%, 57.0%] to catch 90% (gradient boosting 64.4%), 76.8% of those tested
+  are anemic, PR-AUC 0.874. To catch everyone: 82.7%.
+- **What it means:** the best eyelid model so far, in Ghana only. India stays at the rule's level.
+- **Not run yet (proposed):** TabPFN on the no-color numbers (image size and cut-out shape), and leave-one-hospital-out
+  on CP-AnemiC. Until those come back near chance and near 0.92, treat 0.92 as unconfirmed.

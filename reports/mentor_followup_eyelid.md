@@ -18,23 +18,21 @@ side of the project. The suggestions are recorded, and every step is logged, in
 
 ## The short version
 
-1. **There is a real pallor signal in Ghana children, and more photos would help.** Gradient boosting on 29 color
-   numbers reaches 0.846 [0.807, 0.882] and is still rising with training size. A fine-tuned ViT-B/16 fits the
-   training photos perfectly but scores lower, 0.715 [0.661, 0.765], and a model pretrained on eye
-   photos (VisionFM) reaches 0.765 [0.716, 0.815].
-2. **Within India nothing beats the untrained redness rule (0.67).** With 95 photos, every model memorizes the training
-   set.
-3. **We found two data problems in Eyes-Defy Italy.**
-   - 31 mask files had a white background instead of a transparent one. We fixed that.
-   - Almost all anemic Italians were photographed in one early batch, which looks different. The batch alone predicts
-     Italian anemia at 0.91, so Italy's 0.92 is mostly the batch.
-4. **The debiasing methods remove the country gaps but don't improve the model inside any country.**
-5. **In clinical terms:** to catch 90% of anemic children, the best model still sends about 2 in 3 children for a
-   blood test, where testing at random would need 9 in 10 (see M13). To catch all of them, nearly everyone gets
-   tested. Today an eyelid photo can help decide who to test first; it can't rule anyone out.
-6. **Under fixed lighting the color signal is clean.** On a fingernail set photographed in one light box (250 adults,
-   Moscow), logistic regression reaches 0.818 [0.755, 0.872], holds on photo sessions it never saw, and no shortcut
-   shows up (see M9 and M12). Correcting each photo with the white board in the frame adds a little (up to +0.03).
+| Question | Simple answer | Number |
+|---|---|---|
+| Is there a real pallor signal in eyelid photos? | **Yes, in Ghana children** | 0.85 with gradient boosting, 0.92 with TabPFN; a model blind to color: 0.54 |
+| Would more photos help? | **Yes, in Ghana** | still rising: 0.72 -> 0.92 from 78 to 310 training photos |
+| Does a bigger image model help? (M1, M10) | **No** | fine-tuned ViT 0.72, eye-pretrained VisionFM 0.79, vs 0.85 for 29 color numbers |
+| Does TabPFN, the model you named, help? (M14) | **Yes in Ghana, not elsewhere** | Ghana 0.92 vs 0.85; India 0.65; fingernails 0.82 |
+| Can any model learn more than the simple rule in India? | **No**, too few photos | rule 0.67, best model 0.67 |
+| Is the deeper eyelid fold better in India? | **Maybe**, borderline | rule 0.67 -> 0.76 (change +0.08 [+0.00, +0.18]) |
+| Can Italy's score be trusted? | **No**, one early photo batch holds the anemic patients | the batch alone predicts anemia at 0.91 |
+| Does debiasing help? (M5-M8) | **Fairer, not more accurate** | country gap 0.39 -> 0.10; no gain inside a country |
+| What would it save a clinic? (M13) | **Who to test first, not a rule-out** | test 50% of children to catch 90% (random: 90%) |
+| Does fixed lighting help? (M9, M12) | **Yes**: a clean signal on fingernails | 0.82, no shortcut, same on unseen sessions |
+
+**Not checked yet:** TabPFN on the no-color numbers, and with whole hospitals held out. If it passes both, 0.92 is
+our headline eyelid number.
 
 ## M1 and M2: exhaust each dataset, one population at a time
 
@@ -60,10 +58,12 @@ alone. We report training AUROC next to held-out AUROC, and learning curves at 2
   - Gradient boosting improves steadily with more photos: 0.72 with 78 training photos, 0.78 with 155, 0.83 with 233
     and 0.85 with 310. More photos from the same clinics would likely help.
   - The ViT does worse than gradient boosting on 29 color numbers, so a bigger model is not what's missing.
+  - TabPFN on the same 29 numbers does better still: 0.919 [0.893, 0.945] (see M14).
 - **India:** every model sits at about 0.65-0.67, the same as the untrained rule, with wide CIs.
   - Training AUROC is 0.95-1.00, so the models memorize the 76 training photos.
-  - One useful lead: the deeper fold of the eyelid (the forniceal mask) works better than the palpebral one we used.
-    The rule goes from 0.671 to 0.755 and logistic regression from 0.612 to 0.739.
+  - One lead: the deeper fold of the eyelid (the forniceal mask) works better than the palpebral one we used. The
+    rule goes from 0.671 to 0.755 (paired change +0.084 [+0.001, +0.175]) and logistic regression from 0.612 to
+    0.739 (+0.127 [+0.029, +0.228]); random forest doesn't change. Borderline with 95 photos.
 - **Italy and pooled:** the no-color control already scores 0.74-0.75, so these numbers are inflated by a shortcut.
   The country gives it away in the pooled data and the batch does in Italy (see M4).
 
@@ -180,7 +180,7 @@ with age and sex.
 | Dataset | Body site | People | Where | Access | Fit |
 |---|---|---|---|---|---|
 | Yakimov et al. 2024, *Scientific Data* | fingernails and skin | 250 adults | Moscow, Russia | open (figshare) | best fit for M12: new country, adults, fixed lighting. Age and sex are only in summary tables, not per patient |
-| Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers | Faridabad, India | IEEE login | the largest conjunctiva set by far, but no age or sex, and 11% anemic |
+| Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers | Faridabad, India | paid subscription (we don't have one) | the largest conjunctiva set by far, but no age or sex, and 11% anemic |
 | Asare et al. 2022, Mendeley | palms; fingernails | 710 children | Ghana | open, CC BY 4.0 | almost certainly the same children as CP-AnemiC. Not a new population, but could compare body sites on the same children |
 | Suner et al. 2021, Zenodo | conjunctiva | 344 emergency-department adults | Providence, USA | open, but only two CSV tables, no photos | might allow testing the redness rule on a fourth population |
 | Valles-Coral et al. 2025 | nails, palm and fingertip videos | 909 young adults | Peru | not released yet | watch for release |
@@ -188,7 +188,8 @@ with age and sex.
 **Answer:**
 - Our first choice was the Russian fingernail set: open, a new country, a new body site, and taken under fixed
   lighting. We ran it (below).
-- Our second choice is the large Indian conjunctiva set.
+- Our second choice was the large Indian conjunctiva set, but it needs a paid IEEE DataPort subscription. Next is the
+  Ghana palm and fingernail sets, to compare body sites on the same children.
 - Any new set would get the same duplicate audit and no-color control first, because Step 2 shows each new source
   brings its own shortcut.
 
@@ -242,6 +243,8 @@ above). The weights are a pickle file, so we loaded them in PyTorch's safe tenso
   (0.719 with 78 training photos, 0.765 with 310).
 - **India doesn't improve:** 0.585 [0.452, 0.722], below the untrained rule (0.671).
 - **Clinic view:** to catch 90% of anemic Ghana children it tests 74% of children, vs 64% for gradient boosting.
+- **Fine-tuned:** training all of VisionFM on Ghana photos, with the same recipe as our ViT, gives 0.785 [0.739,
+  0.829], a little above frozen. It memorizes the training photos (training AUROC 1.00) and tests 73% to catch 90%.
 
 **Answer:** a better starting model narrows the gap but doesn't close it, which fits M1: the limit is the data, not
 the model.
@@ -266,9 +269,11 @@ also has precision-recall curves against the prevalence line.
 | Population (share anemic) | Model | Tested to catch 90% | Anemic among those tested | Tested to catch 100% | PR-AUC |
 |---|---|---|---|---|---|
 | Ghana children (42.5%) | redness rule | 0.807 [0.760, 0.897] | 0.476 [0.406, 0.534] | 1.000 [0.985, 1.000] | 0.555 [0.483, 0.645] |
-| | gradient boosting | **0.644 [0.552, 0.711]** | **0.596 [0.525, 0.704]** | 0.979 [0.851, 0.990] | **0.780 [0.710, 0.845]** |
+| | gradient boosting | 0.644 [0.552, 0.711] | 0.596 [0.525, 0.704] | 0.979 [0.851, 0.990] | 0.780 [0.710, 0.845] |
 | | fine-tuned ViT | 0.776 [0.665, 0.838] | 0.495 [0.436, 0.587] | 0.979 [0.954, 0.992] | 0.637 [0.559, 0.707] |
 | | VisionFM probe | 0.742 [0.662, 0.843] | 0.517 [0.436, 0.589] | 0.982 [0.923, 0.992] | 0.693 [0.613, 0.770] |
+| | VisionFM fine-tuned | 0.729 [0.639, 0.796] | 0.530 [0.464, 0.615] | 0.982 [0.956, 0.992] | 0.729 [0.658, 0.802] |
+| | **TabPFN** | **0.500 [0.443, 0.570]** | **0.768 [0.673, 0.847]** | 0.827 [0.649, 0.861] | **0.874 [0.822, 0.923]** |
 | India (71.6%) | redness rule | 0.874 [0.800, 0.926] | 0.759 [0.663, 0.845] | 0.947 [0.895, 0.989] | 0.846 [0.759, 0.919] |
 | | random forest | 0.832 [0.758, 0.916] | 0.797 [0.678, 0.877] | 1.000 [0.947, 1.000] | 0.840 [0.751, 0.917] |
 | Italy early batch (67.7%, n = 31) | redness rule | 0.871 [0.677, 0.968] | 0.778 [0.615, 0.929] | 0.871 [0.742, 0.968] | 0.810 [0.636, 0.979] |
@@ -276,11 +281,11 @@ also has precision-recall curves against the prevalence line.
 
 **What we found:**
 - **Ghana children:**
-  - Gradient boosting catches 90% of anemic children while testing 64% of all children. That is about a quarter
-    fewer tests than testing at random.
-  - 60% of the children it sends for testing are anemic, against 42.5% overall.
-- **At recall near 1, the saving disappears.** To catch every anemic child, every model has to test 96-100% of
-  children. The last few anemic children look no paler than healthy ones.
+  - TabPFN catches 90% of anemic children while testing half of all children, about 40% fewer tests than testing
+    at random (gradient boosting: 64% tested, about a quarter fewer).
+  - 77% of the children TabPFN sends for testing are anemic, against 42.5% overall.
+- **At recall near 1, most of the saving disappears.** To catch every anemic child, most models test 96-100% of
+  children; TabPFN tests 83%. The last few anemic children look no paler than healthy ones.
 - **India and the Italy early batch are barely better than random.** Catching 90% means testing 83-87% of people, and
   precision sits only a little above prevalence.
 - **Pooled Eyes-Defy looks better** (random forest: 51% tested to catch 90%), but most of that is the country shortcut
@@ -288,13 +293,35 @@ also has precision-recall curves against the prevalence line.
 
 **Answer:**
 - An eyelid photo can help decide who to test first when tests are rationed: in Ghana children it saves about a quarter
-  of the tests at 90% sensitivity.
+  to 40% of the tests at 90% sensitivity.
 - It can't work as a rule-out test with recall near 1.
 - Which operating point matters is a clinical question we'd like your help with (Question 1).
 
-## M14: models from your email
+## M14: the models you named
 
-We'll add them to the log when the email arrives.
+**You suggested:** a list of models by email. It didn't arrive, so we used the ones named in the meeting: vision
+models trained on eye images (VisionFM, M10), the biggest model we can run (ViT, M1), and tabular foundation models
+such as TabPFN.
+
+**What we did:** TabPFN v2 (open weights; newer versions need a license sign-up) on the same 29 color numbers, same
+splits, as one more rung of the M1 ladder. It is pretrained on millions of synthetic small tables and classifies a new
+table with no tuning.
+
+| Data | Best before | TabPFN |
+|---|---|---|
+| Ghana children (388) | gradient boosting 0.846 | **0.919 [0.893, 0.945]** |
+| India (95) | rule 0.671 | 0.648 [0.514, 0.766] |
+| Italy (122) | rule 0.924 | 0.909 [0.811, 0.975] |
+| Fingernails (250) | logistic regression 0.818 | 0.823 [0.764, 0.876] |
+
+**What we found:**
+- **Ghana: the best eyelid model so far**, still rising with more photos (0.72 with 78 training photos, 0.92 with 310).
+- **India: no gain**, still at the rule's level.
+- **Fingernails: no gain** over logistic regression; under fixed lighting a simple model is already at the limit.
+- **Not checked yet:** TabPFN on the no-color numbers and with whole hospitals held out.
+
+**Answer:** the model matters for the color numbers in Ghana, where there are enough photos. It can't create signal
+where the data is too small (India).
 
 ## Questions for you
 
@@ -302,8 +329,8 @@ We'll add them to the log when the email arrives.
    table matters. Do you know a clinician we could ask?
 2. **Controlled photos.** Fingernails in a light box give a clean 0.82, and the white board in each photo adds a
    little more. Our eyelid photos have no such reference. Is it worth asking for eyelid photos with a white or color
-   card in the frame, or going after the larger Indian conjunctiva set (1,485 people) next?
-3. **Pretrained models.** VisionFM's external-eye encoder beat general image models but not color numbers (0.765 vs
-   0.846). Is there an encoder pretrained closer to our task that you'd try next, or is your email's model list the
-   next step?
-4. **Eyelid region.** The deeper fold (forniceal) did better in India. Is that consistent with what you've seen?
+   card in the frame, or finding a way into the larger Indian conjunctiva set (1,485 people, paid subscription)?
+3. **Models.** TabPFN on color numbers is now our best (0.92 in Ghana); eye-pretrained VisionFM reaches 0.79 even
+   fine-tuned. Were there other models you meant for the list?
+4. **Eyelid region.** The deeper fold (forniceal) did better in India for the rule and logistic regression, but only
+   just (95 photos). Is that consistent with what you've seen?

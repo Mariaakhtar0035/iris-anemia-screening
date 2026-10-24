@@ -1,6 +1,6 @@
 # Progress: every strategy we tried, why, and what happened
 
-*Last updated 2026-10-23, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
+*Last updated 2026-10-24, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
 why we tried it, what happened, and whether it worked. The full paper-style write-up is the [README](README.md); the
 answers for the mentors are in [`reports/mentor_followup_eyelid.md`](reports/mentor_followup_eyelid.md).*
 
@@ -10,8 +10,9 @@ We checked the two published eyelid-photo results, built our own honest baseline
 new dataset or country, built a survey model and tested it in two new countries, simulated combining the two, and
 then followed up every piece of eyelid advice from the mentor meeting. All of that is done and pushed.
 
-Since then two more are done: fingernails photographed under fixed lighting (Stage 12, F13) and the eye-pretrained
-model VisionFM (F11). See [What's next](#whats-next) for what's left.
+Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained model VisionFM, frozen and fine-tuned
+(F11), a proper check of the deeper eyelid fold (F2), and TabPFN, the model the mentors named (F14). See
+[What's next](#whats-next) for what's left.
 
 ## The story in six points
 
@@ -19,7 +20,9 @@ model VisionFM (F11). See [What's next](#whats-next) for what's left.
    versions). A clean split costs 7-8 accuracy points.
 2. **On Eyes-Defy the model mostly learns the country.** Indian photos are mostly anemic, Italian ones mostly not.
    Inside India the published model is a coin flip.
-3. **Simple beats big.** 29 color numbers beat large image models, even one pretrained on eye photos (0.85 vs 0.77), and the untrained "less red = anemic" rule is the
+3. **Color numbers beat big image models.** 29 color numbers beat every image model we tried, even one pretrained
+   on eye photos (0.85 vs 0.79). The best so far is TabPFN, a model built for small tables, on those same 29 numbers:
+   **0.92** in Ghana children (not yet checked for shortcuts). The untrained "less red = anemic" rule is still the
    only thing that keeps working on a new dataset.
 4. **Survey answers are a weak but portable signal.** AUROC 0.58 in Zimbabwe, and it holds unchanged in Malawi and
    Zambia.
@@ -66,7 +69,7 @@ model VisionFM (F11). See [What's next](#whats-next) for what's left.
 | D3 | Recalibrate on 200 local women | fix the risk levels | average fixed, Brier not | **mixed** |
 | E1 | Simulate survey + eyelid | no paired data exists | survey adds 0.01-0.02 | **informative only** |
 | F1 | Push each eyelid dataset to its limit, up to a fine-tuned ViT (M1, M2) | the mentors' "exhaust the data first" | Ghana 0.846 with color numbers, ViT 0.715 | **ViT didn't help; diagnosis worked** |
-| F2 | Deeper eyelid fold (forniceal mask) | a different region may show pallor better | India rule 0.671 -> 0.755 | **promising lead** |
+| F2 | Deeper eyelid fold (forniceal mask) | a different region may show pallor better | India rule 0.671 -> 0.755, paired change +0.08 | **real but borderline lead** |
 | F3 | Duplicate copies as extra training data (M3) | mentors said that's fine if kept out of test | 0.824 -> 0.831 | **harmless, no gain** |
 | F4 | Compare the populations (M4) | find why transfer fails | dataset obvious from pixels (0.99+) | **worked: explains it** |
 | F5 | Make images look alike (M6) | remove camera and lighting gaps | brightness scaling best, India 0.739, within the range | **mixed** |
@@ -74,10 +77,11 @@ model VisionFM (F11). See [What's next](#whats-next) for what's left.
 | F7 | Keep India, use fairness metrics (M7) | don't hide the hard case | kept in every run | done |
 | F8 | One model per country (M8) | fallback the mentors offered | no better, bigger gaps | **didn't work** |
 | F9 | Debiased models on the other dataset | does fairness help transfer? | 0.606 vs rule 0.650 | **didn't work** |
-| F10 | Clinic view: share tested, precision, PR-AUC (M13) | AUROC alone doesn't say what a clinic gains | 64% tested to catch 90% | **worked: clearer story** |
-| F11 | Eye-pretrained model, VisionFM (M10) | start from a model that has seen eyes | 0.765 in Ghana children: beats DINOv2 and our ViT, loses to color numbers (0.846) | **helps vs general models, not enough** |
+| F10 | Clinic view: share tested, precision, PR-AUC (M13) | AUROC alone doesn't say what a clinic gains | 64% tested to catch 90% (TabPFN: 50%) | **worked: clearer story** |
+| F11 | Eye-pretrained model, VisionFM (M10) | start from a model that has seen eyes | frozen 0.765, fine-tuned 0.785 in Ghana children: beats DINOv2 and our ViT, loses to color numbers (0.846) | **helps vs general models, not enough** |
 | F12 | Vision-language models (M11) | mentors said no | not pursued | skipped |
 | F13 | More data: fingernails under fixed lighting (M9, M12) | a new country and body site, without camera and batch differences | logistic regression 0.818, no shortcut, flat learning curve | **worked** |
+| F14 | TabPFN, the tabular model the mentors named (M14) | a model pretrained for small tables, on our 29 color numbers | Ghana 0.919 vs 0.846; India 0.648; nails 0.823 | **best in Ghana; no help elsewhere** |
 | F15 | Correct the nail colors: white board, or the skin next to the nail | cancel lighting and skin tone (M6) | white board: rule +0.025, models +0.00-0.03 (within noise); minus skin: -0.11 to -0.31 | **white board: small gain; minus skin: hurt** |
 
 ## Part A: checking the published eyelid results
@@ -206,11 +210,11 @@ log of every step.
   each population alone. Training vs held-out AUROC, plus learning curves at 25-100% of the training data.
 - **What happened:**
 
-| Population | Rule | Best color model | DINOv2 | Fine-tuned ViT | VisionFM (F11) | No-color control |
-|---|---|---|---|---|---|---|
-| Ghana children (388) | 0.650 | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 | 0.715 [0.661, 0.765] | 0.765 [0.716, 0.815] | 0.537 |
-| India (95) | **0.671** | random forest 0.673 | 0.658 | 0.654 | 0.585 | 0.548 |
-| Italy (122) | 0.924 | logistic regression 0.920 | 0.879 | 0.919 | 0.927 | **0.751** |
+| Population | Rule | Best color model | DINOv2 | Fine-tuned ViT | VisionFM (F11) | TabPFN (F14) | No-color control |
+|---|---|---|---|---|---|---|---|
+| Ghana children (388) | 0.650 | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 | 0.715 [0.661, 0.765] | 0.765 [0.716, 0.815] | **0.919 [0.893, 0.945]** | 0.537 |
+| India (95) | **0.671** | random forest 0.673 | 0.658 | 0.654 | 0.585 | 0.648 | 0.548 |
+| Italy (122) | 0.924 | logistic regression 0.920 | 0.879 | 0.919 | 0.927 | 0.909 | **0.751** |
 
 - **Takeaways:**
   - **The models are big enough.** Gradient boosting and the ViT fit every training set perfectly (training AUROC
@@ -218,14 +222,28 @@ log of every step.
   - **Ghana has a real signal that more photos would improve:** gradient boosting goes 0.72 -> 0.78 -> 0.83 -> 0.85
     with 78, 155, 233 and 310 training photos, still rising.
   - **The ViT did worse than 29 color numbers** (0.715 vs 0.846), so a bigger model isn't what's missing. VisionFM,
-    pretrained on eye photos, closes part of the gap (0.765) but not all of it (F11).
+    pretrained on eye photos, closes part of the gap (0.765) but not all of it (F11). TabPFN on the same color
+    numbers goes further (0.919, F14).
   - **India** is stuck at the rule's level (0.65-0.67): 76 training photos get memorized.
   - **Italy's** scores can't be trusted: the no-color control alone scores 0.75 (see F4).
 
-### F2. The deeper eyelid fold (forniceal mask). Promising lead.
+### F2. The deeper eyelid fold (forniceal mask). Real but borderline lead.
+- **Question:** does the deeper fold of the eyelid show pallor better than the front part we used?
+- **Answer:** in India, yes for the simple models, but only just. **Rule 0.671 -> 0.755.**
 - **Why:** Eyes-Defy ships two masks; we had used the front part (palpebral).
-- **What happened in India:** rule 0.671 -> **0.755**, logistic regression 0.612 -> 0.739. Small sample, so a lead to
-  check, not a result.
+- **How we checked (2026-10-24):** a paired test: both regions scored on the same resampled people, so the range is
+  on the change itself.
+
+| India (95 photos) | Front part | Deeper fold | Change [95% range] |
+|---|---|---|---|
+| Rule | 0.671 | **0.755** | +0.084 [+0.001, +0.175] |
+| Logistic regression | 0.612 | **0.739** | +0.127 [+0.029, +0.228] |
+| Random forest | 0.673 | 0.639 | -0.034, no change |
+| Both regions together, rule | 0.671 | 0.746 | +0.075 [+0.022, +0.138] |
+
+- **Italy:** no change.
+- **Worked?** Real for the rule and logistic regression, but the lower end of the range is near 0, there are only
+  95 photos and we ran many comparisons. A lead to confirm on new Indian photos, not a result.
 
 ### F3. Duplicate copies as extra training data (M3). Harmless, no gain.
 - **Why:** the mentors said copies are fine as augmentation if no copy of a test photo is in training.
@@ -300,12 +318,14 @@ India stays in every run, and is reported with the fairness metrics instead of b
 | Population (share anemic) | Model | Tested to catch 90% | Anemic among those tested | Tested to catch 100% |
 |---|---|---|---|---|
 | Ghana children (42.5%) | rule | 0.807 | 0.476 | 1.000 |
-| | **gradient boosting** | **0.644 [0.552, 0.711]** | **0.596** | 0.979 |
+| | gradient boosting | 0.644 [0.552, 0.711] | 0.596 | 0.979 |
+| | **TabPFN (F14)** | **0.500 [0.443, 0.570]** | **0.768** | 0.827 |
 | | fine-tuned ViT | 0.776 | 0.495 | 0.979 |
 | India (71.6%) | random forest | 0.832 | 0.797 | 1.000 |
 | Italy early batch (67.7%) | rule | 0.871 | 0.778 | 0.871 |
 
-- **Takeaway:** in Ghana children the best model saves about a quarter of blood tests at 90% sensitivity. To catch
+- **Takeaway:** in Ghana children gradient boosting saves about a quarter of blood tests at 90% sensitivity, and
+  TabPFN about 40% (test half the children instead of 90%). To catch
   everyone, nearly everyone gets tested. An eyelid photo can decide **who to test first**; it can't rule anyone out.
 
 ### F11. A model pretrained on eye photos (M10). Helped a little, not enough.
@@ -337,6 +357,10 @@ India stays in every run, and is reported with the fairness metrics instead of b
     country shortcuts put every model.
   - **Clinic view:** to catch 90% of anemic Ghana children, VisionFM tests 74% of children, vs 64% for gradient
     boosting, 78% for the fine-tuned ViT and 81% for the rule.
+  - **Fine-tuned (2026-10-24):** we also trained the whole VisionFM model on Ghana photos, with the same settings as
+    our ViT (30 epochs, 5 folds, 1 seed). It reaches **0.785 [0.739, 0.829]**: a bit above frozen (0.765) and our
+    ViT (0.715), still below color numbers (0.846). It memorizes the training photos (training AUROC 1.00). Clinic
+    view: tests 73% to catch 90%, vs 78% for our ViT.
   - **Answer to the mentors:** a better starting model narrows the gap but doesn't close it. The limit is the data,
     not the model.
 
@@ -351,8 +375,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Dataset | Body site | People | Access | Status |
 |---|---|---|---|---|
 | Yakimov et al. 2024, *Scientific Data* | fingernails and skin, fixed LED lighting box | 250 adults, Moscow; 69 below Hb 12 | open, CC0 on figshare (92 MB) | **done: Stage 12** |
-| Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers, India | IEEE login (1 GB) | needs Jaineel's login |
-| Asare et al. 2022, Mendeley | palms; fingernails | 710 children, Ghana | open | almost certainly the CP-AnemiC children |
+| Girija et al. 2026, IEEE DataPort | conjunctiva, palms, nail beds | 1,485 blood-camp volunteers, India | paid IEEE DataPort subscription | **skipped**: no access |
+| Asare et al. 2022, Mendeley | palms; fingernails | 710 children, Ghana | open, CC BY 4.0 | almost certainly the CP-AnemiC children; not downloaded yet |
 | Suner et al. 2021, Zenodo | conjunctiva | 344 adults, USA | open, but no photos | tables only |
 | Valles-Coral et al. 2025 | nails, palms | 909 young adults, Peru | not released | watch |
 
@@ -387,7 +411,31 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   model can't be applied to eyelids, so this compares conditions, not transfer. Report:
   [`reports/stage12_nails.md`](reports/stage12_nails.md).
 
-### F14. The mentors' list of models (M14). Waiting for their email.
+### F14. TabPFN, the tabular model the mentors named (M14). Best in Ghana; no help elsewhere.
+- **Question:** does a "foundation model for tables" get more out of our 29 color numbers?
+- **Answer:** in Ghana children, yes, a lot. In India and on fingernails, no. **Ghana 0.919 vs 0.846.**
+- **Why:** the mentors' email with a model list never came, so we used the models named in the meeting. The eye
+  models (VisionFM) and the biggest model (ViT) were done in F1 and F11. The one left was TabPFN: a model pretrained
+  on millions of made-up small tables, which classifies a new table in one pass with no tuning.
+- **What we did:** TabPFN version 2 (open weights; the newer versions need a license sign-up), on the same 29 color
+  numbers, same splits, as one more rung of the F1 ladder. Weights loaded in PyTorch's safe tensors-only mode.
+- **What happened:**
+
+| Data | Best before | TabPFN |
+|---|---|---|
+| Ghana children (388) | gradient boosting 0.846 | **0.919 [0.893, 0.945]** |
+| India (95) | rule 0.671 | 0.648 |
+| Italy (122) | rule 0.924 | 0.909 |
+| Fingernails (250) | logistic regression 0.818 | 0.823, same on held-out sessions |
+
+- **Takeaways:**
+  - **Ghana is the best eyelid result so far**, and still rising with more photos (0.72 -> 0.80 -> 0.90 -> 0.92 with
+    78, 155, 233 and 310 training photos).
+  - **Clinic view:** to catch 90% of anemic children, test 50% of children, vs 64% for gradient boosting.
+  - **India doesn't move** (0.648, at the rule's level): too few photos for any model.
+  - **Fingernails: same as logistic regression.** Under fixed lighting a simple model is already at the limit.
+- **Not checked yet:** TabPFN on the no-color numbers only, and with whole hospitals held out. If the no-color
+  version also scores well, part of the 0.92 is a shortcut. Until then, treat 0.92 as unconfirmed.
 
 ### F15. Correct the nail colors for lighting and skin tone (Stage 12b). White board: small gain. Minus skin: hurt.
 - **Why:** each nail photo has a white board behind the hand, and the data marks a patch of skin just behind each
@@ -447,9 +495,12 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - The clinic view (share tested), for explaining what a model is worth.
 - Fingernails under fixed lighting: 0.82 with no shortcut, holding on unseen photo sessions.
 - A white board in the photo as a color reference (small: the nail rule +0.025, models within noise).
+- TabPFN on the 29 color numbers in Ghana children (0.92, the best eyelid result; shortcut check pending).
 
 **Didn't work**
-- Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM) instead of color numbers.
+- Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
+  color numbers.
+- Any model, TabPFN included, inside India (stuck at the rule's 0.65-0.67).
 - Learned eyelid models on a new dataset.
 - Gray-world color correction (it erases the signal).
 - Subtracting the skin next to the nail (the skin pales too, so it erases the signal).
@@ -458,16 +509,18 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Duplicate copies as extra training data (harmless, no gain).
 
 **Still open**
-- The deeper eyelid fold (F2).
+- The deeper eyelid fold in India (F2): real but borderline, needs new Indian photos.
+- Whether TabPFN's 0.92 survives the no-color and held-out-hospital checks (F14).
 
 ## What's next
 
 | Item | Status | Who |
 |---|---|---|
+| TabPFN shortcut checks: no-color numbers, held-out hospitals | proposed, about 10 minutes | Jaineel to approve |
+| Ghana palm and fingernail photos (same children as the eyelids), eyelid + palm + nail together | open download, not downloaded | Jaineel downloads into `data/raw/ghana_palm/`, `data/raw/ghana_nails/` |
 | Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
-| Indian IEEE DataPort set | needs Jaineel's IEEE login | Jaineel |
-| Mentors' list of models | waiting for their email | mentors |
-| Comparison with Chemhaka et al. (survey) | waiting for the paper's numbers | survey side |
+| Indian IEEE DataPort set | skipped: paid subscription | - |
+| Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |
 | Paired photo + survey data, to test fusion for real | future | team |
 
 ## Where to find things
