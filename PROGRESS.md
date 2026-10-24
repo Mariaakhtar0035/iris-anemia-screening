@@ -205,18 +205,19 @@ log of every step.
   each population alone. Training vs held-out AUROC, plus learning curves at 25-100% of the training data.
 - **What happened:**
 
-| Population | Rule | Best color model | DINOv2 | Fine-tuned ViT | No-color control |
-|---|---|---|---|---|---|
-| Ghana children (388) | 0.650 | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 | 0.715 [0.661, 0.765] | 0.537 |
-| India (95) | **0.671** | random forest 0.673 | 0.658 | 0.654 | 0.548 |
-| Italy (122) | 0.924 | logistic regression 0.920 | 0.879 | 0.919 | **0.751** |
+| Population | Rule | Best color model | DINOv2 | Fine-tuned ViT | VisionFM (F11) | No-color control |
+|---|---|---|---|---|---|---|
+| Ghana children (388) | 0.650 | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 | 0.715 [0.661, 0.765] | 0.765 [0.716, 0.815] | 0.537 |
+| India (95) | **0.671** | random forest 0.673 | 0.658 | 0.654 | 0.585 | 0.548 |
+| Italy (122) | 0.924 | logistic regression 0.920 | 0.879 | 0.919 | 0.927 | **0.751** |
 
 - **Takeaways:**
   - **The models are big enough.** Gradient boosting and the ViT fit every training set perfectly (training AUROC
     1.00).
   - **Ghana has a real signal that more photos would improve:** gradient boosting goes 0.72 -> 0.78 -> 0.83 -> 0.85
     with 78, 155, 233 and 310 training photos, still rising.
-  - **The ViT did worse than 29 color numbers** (0.715 vs 0.846), so a bigger model isn't what's missing.
+  - **The ViT did worse than 29 color numbers** (0.715 vs 0.846), so a bigger model isn't what's missing. VisionFM,
+    pretrained on eye photos, closes part of the gap (0.765) but not all of it (F11).
   - **India** is stuck at the rule's level (0.65-0.67): 76 training photos get memorized.
   - **Italy's** scores can't be trusted: the no-color control alone scores 0.75 (see F4).
 
