@@ -10,8 +10,8 @@ We checked the two published eyelid-photo results, built our own honest baseline
 new dataset or country, built a survey model and tested it in two new countries, simulated combining the two, and
 then followed up every piece of eyelid advice from the mentor meeting. All of that is done and pushed.
 
-Since then: a fingernail dataset photographed under fixed lighting is done (Stage 12, F13). Still in progress: a
-pretrained eye-photo model (VisionFM, approved, waiting for its weights). See [What's next](#whats-next).
+Since then two more are done: fingernails photographed under fixed lighting (Stage 12, F13) and the eye-pretrained
+model VisionFM (F11). See [What's next](#whats-next) for what's left.
 
 ## The story in six points
 
@@ -19,7 +19,7 @@ pretrained eye-photo model (VisionFM, approved, waiting for its weights). See [W
    versions). A clean split costs 7-8 accuracy points.
 2. **On Eyes-Defy the model mostly learns the country.** Indian photos are mostly anemic, Italian ones mostly not.
    Inside India the published model is a coin flip.
-3. **Simple beats big.** 29 color numbers beat large image models, and the untrained "less red = anemic" rule is the
+3. **Simple beats big.** 29 color numbers beat large image models, even one pretrained on eye photos (0.85 vs 0.77), and the untrained "less red = anemic" rule is the
    only thing that keeps working on a new dataset.
 4. **Survey answers are a weak but portable signal.** AUROC 0.58 in Zimbabwe, and it holds unchanged in Malawi and
    Zambia.
@@ -75,7 +75,7 @@ pretrained eye-photo model (VisionFM, approved, waiting for its weights). See [W
 | F8 | One model per country (M8) | fallback the mentors offered | no better, bigger gaps | **didn't work** |
 | F9 | Debiased models on the other dataset | does fairness help transfer? | 0.606 vs rule 0.650 | **didn't work** |
 | F10 | Clinic view: share tested, precision, PR-AUC (M13) | AUROC alone doesn't say what a clinic gains | 64% tested to catch 90% | **worked: clearer story** |
-| F11 | Eyelid-pretrained model (M10) | start from a model that has seen eyes | one candidate, VisionFM | **in progress** |
+| F11 | Eye-pretrained model, VisionFM (M10) | start from a model that has seen eyes | 0.765 in Ghana children: beats DINOv2 and our ViT, loses to color numbers (0.846) | **helps vs general models, not enough** |
 | F12 | Vision-language models (M11) | mentors said no | not pursued | skipped |
 | F13 | More data: fingernails under fixed lighting (M9, M12) | a new country and body site, without camera and batch differences | logistic regression 0.818, no shortcut, flat learning curve | **worked** |
 
@@ -306,16 +306,37 @@ India stays in every run, and is reported with the fairness metrics instead of b
 - **Takeaway:** in Ghana children the best model saves about a quarter of blood tests at 90% sensitivity. To catch
   everyone, nearly everyone gets tested. An eyelid photo can decide **who to test first**; it can't rule anyone out.
 
-### F11. A model pretrained on eye photos (M10). In progress.
+### F11. A model pretrained on eye photos (M10). Helped a little, not enough.
 - **Why:** starting from a model that has seen eyes might need fewer of our photos.
 - **What we found:**
   - The one Hugging Face anemia model (`dawahealth/anemia_screeniing`) was trained on images from Ghana, Italy and
     India, almost certainly our own datasets, so it has seen our test photos. Rejected.
   - **VisionFM's external-eye encoder** (`github.com/ABILab-CUHK/VisionFM`) is the only real candidate. Research use
-    only; one 1.5 GB weights file on Google Drive.
-- **Status:** Jaineel approved the download on 2026-10-23. Waiting on the download (see What's next).
-- **Expectation:** given F1 (a fine-tuned ViT already memorizes and still loses to color numbers), probably no big
-  gain, but it answers the mentors' question directly.
+    only; one 1.4 GB weights file.
+- **What we did:** Jaineel downloaded it on 2026-10-23. The file is a pickle, so we loaded it in PyTorch's safe
+  tensors-only mode (never the unsafe loader), and all 85.8M weights matched a standard ViT-B/16. Frozen features
+  with the same probe as DINOv2, as one more rung of the F1 ladder; inputs normalized with VisionFM's own eye-photo
+  statistics.
+- **What happened:**
+
+| Population | Rule | Best color model | DINOv2 | Fine-tuned ViT | **VisionFM** |
+|---|---|---|---|---|---|
+| Ghana children (388) | 0.650 | **gradient boosting 0.846** [0.807, 0.882] | 0.672 | 0.715 | **0.765 [0.716, 0.815]** |
+| India (95) | **0.671** | random forest 0.673 | 0.658 | 0.654 | 0.585 [0.452, 0.722] |
+| Italy (122) | 0.924 | logistic regression 0.920 | 0.879 | 0.919 | 0.927 |
+| Italy + India pooled (217) | 0.835 | random forest 0.892 | 0.868 | 0.892 | 0.872 |
+
+- **Takeaways:**
+  - **Eye pretraining helps compared with general image models:** in Ghana children VisionFM beats DINOv2 (+0.09) and
+    the ViT we fine-tuned ourselves (+0.05), with no fine-tuning at all.
+  - **But 29 color numbers still win** (0.846 vs 0.765), and VisionFM improves more slowly with more photos (0.719
+    with 78 training photos, 0.765 with 310).
+  - **India doesn't improve** (0.585, below the untrained rule's 0.671). Italy and pooled sit where the batch and
+    country shortcuts put every model.
+  - **Clinic view:** to catch 90% of anemic Ghana children, VisionFM tests 74% of children, vs 64% for gradient
+    boosting, 78% for the fine-tuned ViT and 81% for the rule.
+  - **Answer to the mentors:** a better starting model narrows the gap but doesn't close it. The limit is the data,
+    not the model.
 
 ### F12. Vision-language models (M11). Skipped.
 The mentors said VLMs don't fit: the photos come with no text or metadata. We agree.
@@ -390,7 +411,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Fingernails under fixed lighting: 0.82 with no shortcut, holding on unseen photo sessions.
 
 **Didn't work**
-- Bigger image models (DINOv2, a fine-tuned ViT) instead of color numbers.
+- Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM) instead of color numbers.
 - Learned eyelid models on a new dataset.
 - Gray-world color correction (it erases the signal).
 - Debiasing, for raising accuracy inside a country.
@@ -398,21 +419,17 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Duplicate copies as extra training data (harmless, no gain).
 
 **Still open**
-- The deeper eyelid fold (F2) and the pretrained eye model (F11).
+- The deeper eyelid fold (F2).
 
 ## What's next
 
 | Item | Status | Who |
 |---|---|---|
-| VisionFM external-eye weights (1.5 GB) | approved; Claude's permission check blocked the download, and Jaineel's first try didn't produce the file | Jaineel |
 | Fingernails: a color reference from the white board in each photo | idea, not started: the light box has a white board, which could correct each photo's color the way a reference card would | team |
 | Indian IEEE DataPort set | needs Jaineel's IEEE login | Jaineel |
 | Mentors' list of models | waiting for their email | mentors |
 | Comparison with Chemhaka et al. (survey) | waiting for the paper's numbers | survey side |
 | Paired photo + survey data, to test fusion for real | future | team |
-
-**Plan once the VisionFM weights are in place:** frozen features into the same logistic-regression probe as
-DINOv2. One new row in the F1 ladder and the F10 clinic table, same splits and controls.
 
 ## Where to find things
 

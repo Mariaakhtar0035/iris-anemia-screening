@@ -20,7 +20,8 @@ side of the project. The suggestions are recorded, and every step is logged, in
 
 1. **There is a real pallor signal in Ghana children, and more photos would help.** Gradient boosting on 29 color
    numbers reaches 0.846 [0.807, 0.882] and is still rising with training size. A fine-tuned ViT-B/16 fits the
-   training photos perfectly but scores lower, 0.715 [0.661, 0.765].
+   training photos perfectly but scores lower, 0.715 [0.661, 0.765], and a model pretrained on eye
+   photos (VisionFM) reaches 0.765 [0.716, 0.815].
 2. **Within India nothing beats the untrained redness rule (0.67).** With 95 photos, every model memorizes the training
    set.
 3. **We found two data problems in Eyes-Defy Italy.**
@@ -44,12 +45,12 @@ fit one distribution, the signal isn't there.
 alone. We report training AUROC next to held-out AUROC, and learning curves at 25-100% of the training data. Report:
 [`stage9_ceiling.md`](stage9_ceiling.md).
 
-| Population | n (anemic) | Redness rule | Best color model | DINOv2 probe | Fine-tuned ViT | No-color control |
-|---|---|---|---|---|---|---|
-| Ghana children (CP-AnemiC) | 388 (42%) | 0.650 [0.597, 0.705] | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 [0.616, 0.723] | 0.715 [0.661, 0.765] | 0.537 [0.474, 0.595] |
-| India | 95 (72%) | **0.671 [0.552, 0.787]** | random forest 0.673 [0.542, 0.791] | 0.658 [0.543, 0.778] | 0.654 [0.522, 0.783] | 0.548 [0.410, 0.677] |
-| Italy | 122 (19%) | 0.924 [0.856, 0.977] | logistic regression 0.920 [0.822, 0.983] | 0.879 [0.765, 0.963] | 0.919 [0.830, 0.980] | **0.751** [0.646, 0.837] |
-| Italy + India pooled | 217 (42%) | 0.835 [0.779, 0.884] | random forest 0.892 [0.849, 0.935] | 0.868 [0.818, 0.916] | 0.892 [0.848, 0.930] | **0.742** [0.675, 0.804] |
+| Population | n (anemic) | Redness rule | Best color model | DINOv2 probe | Fine-tuned ViT | VisionFM probe (eye-pretrained) | No-color control |
+|---|---|---|---|---|---|---|---|
+| Ghana children (CP-AnemiC) | 388 (42%) | 0.650 [0.597, 0.705] | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 [0.616, 0.723] | 0.715 [0.661, 0.765] | 0.765 [0.716, 0.815] | 0.537 [0.474, 0.595] |
+| India | 95 (72%) | **0.671 [0.552, 0.787]** | random forest 0.673 [0.542, 0.791] | 0.658 [0.543, 0.778] | 0.654 [0.522, 0.783] | 0.585 [0.452, 0.722] | 0.548 [0.410, 0.677] |
+| Italy | 122 (19%) | 0.924 [0.856, 0.977] | logistic regression 0.920 [0.822, 0.983] | 0.879 [0.765, 0.963] | 0.919 [0.830, 0.980] | 0.927 [0.838, 0.986] | **0.751** [0.646, 0.837] |
+| Italy + India pooled | 217 (42%) | 0.835 [0.779, 0.884] | random forest 0.892 [0.849, 0.935] | 0.868 [0.818, 0.916] | 0.892 [0.848, 0.930] | 0.872 [0.823, 0.916] | **0.742** [0.675, 0.804] |
 
 **What we found:**
 - **Every flexible model can overfit.** Gradient boosting and the ViT reach training AUROC 1.00 in every population.
@@ -221,10 +222,21 @@ supports our reading of the eyelid results: the problem there is uncontrolled ph
   Those are almost certainly our own two datasets, so it has seen our test photos. Its own validation accuracy is
   57.7%.
 - The closest real candidate is VisionFM's external-eye encoder: research use only, and its pretraining photos aren't
-  described. Jaineel approved one run on 2026-10-23; the weights aren't downloaded yet.
+  described. We ran it.
 
-**Answer:** worth one run if we get approval. But the ViT result above suggests a better starting model won't fix a
-data limit.
+**What we did:** frozen VisionFM features with the same probe as DINOv2, as one more rung of the M1 ladder (table
+above). The weights are a pickle file, so we loaded them in PyTorch's safe tensors-only mode.
+
+**What we found:**
+- **Eye pretraining helps compared with general image models.** In Ghana children VisionFM scores 0.765 [0.716,
+  0.815], above DINOv2 (0.672) and the ViT we fine-tuned ourselves (0.715), with no fine-tuning at all.
+- **But 29 color numbers still win** (gradient boosting 0.846), and VisionFM improves more slowly with more photos
+  (0.719 with 78 training photos, 0.765 with 310).
+- **India doesn't improve:** 0.585 [0.452, 0.722], below the untrained rule (0.671).
+- **Clinic view:** to catch 90% of anemic Ghana children it tests 74% of children, vs 64% for gradient boosting.
+
+**Answer:** a better starting model narrows the gap but doesn't close it, which fits M1: the limit is the data, not
+the model.
 
 ## M11: vision-language models
 
@@ -248,6 +260,7 @@ also has precision-recall curves against the prevalence line.
 | Ghana children (42.5%) | redness rule | 0.807 [0.760, 0.897] | 0.476 [0.406, 0.534] | 1.000 [0.985, 1.000] | 0.555 [0.483, 0.645] |
 | | gradient boosting | **0.644 [0.552, 0.711]** | **0.596 [0.525, 0.704]** | 0.979 [0.851, 0.990] | **0.780 [0.710, 0.845]** |
 | | fine-tuned ViT | 0.776 [0.665, 0.838] | 0.495 [0.436, 0.587] | 0.979 [0.954, 0.992] | 0.637 [0.559, 0.707] |
+| | VisionFM probe | 0.742 [0.662, 0.843] | 0.517 [0.436, 0.589] | 0.982 [0.923, 0.992] | 0.693 [0.613, 0.770] |
 | India (71.6%) | redness rule | 0.874 [0.800, 0.926] | 0.759 [0.663, 0.845] | 0.947 [0.895, 0.989] | 0.846 [0.759, 0.919] |
 | | random forest | 0.832 [0.758, 0.916] | 0.797 [0.678, 0.877] | 1.000 [0.947, 1.000] | 0.840 [0.751, 0.917] |
 | Italy early batch (67.7%, n = 31) | redness rule | 0.871 [0.677, 0.968] | 0.778 [0.615, 0.929] | 0.871 [0.742, 0.968] | 0.810 [0.636, 0.979] |
@@ -282,5 +295,7 @@ We'll add them to the log when the email arrives.
 2. **Controlled photos.** Fingernails in a light box give a clean 0.82. Is it worth trying to correct eyelid photos
    for lighting (for example with a white or color reference in the frame), or going after the larger Indian
    conjunctiva set (1,485 people) next?
-3. **Pretrained model.** Is VisionFM's external-eye encoder worth a run, given the ViT result?
+3. **Pretrained models.** VisionFM's external-eye encoder beat general image models but not color numbers (0.765 vs
+   0.846). Is there an encoder pretrained closer to our task that you'd try next, or is your email's model list the
+   next step?
 4. **Eyelid region.** The deeper fold (forniceal) did better in India. Is that consistent with what you've seen?

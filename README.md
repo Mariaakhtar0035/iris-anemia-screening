@@ -28,7 +28,7 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 >
 > | Question | Answer |
 > |---|---|
-> | How far can each eyelid dataset be pushed on its own? | Ghana children: gradient boosting on 29 color numbers reaches **0.85**, still rising with more photos; a fine-tuned ViT fits training perfectly but scores 0.72. India: nothing beats the untrained rule (0.67) |
+> | How far can each eyelid dataset be pushed on its own? | Ghana children: gradient boosting on 29 color numbers reaches **0.85**, still rising with more photos; a fine-tuned ViT fits training perfectly but scores 0.72, and an eye-pretrained model (VisionFM) 0.77. India: nothing beats the untrained rule (0.67) |
 > | Why do populations differ? | the dataset is obvious from the pixels (AUROC 0.99-1.00); Italy's anemic photos sit almost all in one early batch, which alone predicts anemia at 0.91 |
 > | Does debiasing help? | it closes the country gaps (rank gap 0.39 -> 0.10) but doesn't raise AUROC inside any country |
 > | What would it save a clinic? | to catch 90% of anemic children, test 64% instead of 90%; to catch all, test 98% |
@@ -257,13 +257,16 @@ are bringing back to the mentors are in [`reports/mentor_followup_eyelid.md`](re
 
 ### 6.1 How far can each population be fit on its own?
 
-| Population | Redness rule | Best color model | DINOv2 probe | Fine-tuned ViT-B/16 | No-color control |
-|---|---|---|---|---|---|
-| CP-AnemiC (Ghana children, 388) | 0.650 [0.597, 0.705] | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 [0.616, 0.723] | 0.715 [0.661, 0.765] | 0.537 [0.474, 0.595] |
-| India (95) | **0.671 [0.552, 0.787]** | random forest 0.673 [0.542, 0.791] | 0.658 [0.543, 0.778] | 0.654 [0.522, 0.783] | 0.548 [0.410, 0.677] |
-| Italy (122) | 0.924 [0.856, 0.977] | logistic regression 0.920 [0.822, 0.983] | 0.879 [0.765, 0.963] | 0.919 [0.830, 0.980] | **0.751 [0.646, 0.837]** |
+| Population | Redness rule | Best color model | DINOv2 probe | Fine-tuned ViT-B/16 | VisionFM probe (eye-pretrained) | No-color control |
+|---|---|---|---|---|---|---|
+| CP-AnemiC (Ghana children, 388) | 0.650 [0.597, 0.705] | **gradient boosting 0.846 [0.807, 0.882]** | 0.672 [0.616, 0.723] | 0.715 [0.661, 0.765] | 0.765 [0.716, 0.815] | 0.537 [0.474, 0.595] |
+| India (95) | **0.671 [0.552, 0.787]** | random forest 0.673 [0.542, 0.791] | 0.658 [0.543, 0.778] | 0.654 [0.522, 0.783] | 0.585 [0.452, 0.722] | 0.548 [0.410, 0.677] |
+| Italy (122) | 0.924 [0.856, 0.977] | logistic regression 0.920 [0.822, 0.983] | 0.879 [0.765, 0.963] | 0.919 [0.830, 0.980] | 0.927 [0.838, 0.986] | **0.751 [0.646, 0.837]** |
 
 - **The models are big enough.** Gradient boosting and the ViT fit every training set perfectly (training AUROC 1.00).
+- **Pretraining on eye photos helps, but not enough.** VisionFM's external-eye encoder (frozen, same probe as DINOv2)
+  scores 0.765 in Ghana children, above DINOv2 (0.672) and the fine-tuned ViT (0.715) but below gradient boosting on
+  color numbers (0.846). In India it scores 0.585.
 - **Ghana children carry a real color signal.** Gradient boosting climbs from 0.72 to 0.85 as its training photos go
   from 78 to 310, so more photos would likely help. The ViT does worse than 29 color numbers.
 - **India is at the level of the untrained rule.** The deeper fold of the eyelid (the forniceal mask) does better than
@@ -325,6 +328,7 @@ catch 90%.
 |---|---|---|---|---|
 | CP-AnemiC (42.5%) | redness rule | 0.807 [0.760, 0.897] | 0.476 [0.406, 0.534] | 1.000 [0.985, 1.000] |
 | | gradient boosting | **0.644 [0.552, 0.711]** | 0.596 [0.525, 0.704] | 0.979 [0.851, 0.990] |
+| | VisionFM probe | 0.742 [0.662, 0.843] | 0.517 [0.436, 0.589] | 0.982 [0.923, 0.992] |
 | India (71.6%) | random forest | 0.832 [0.758, 0.916] | 0.797 [0.678, 0.877] | 1.000 [0.947, 1.000] |
 | Italy early batch (67.7%, n = 31) | redness rule | 0.871 [0.677, 0.968] | 0.778 [0.615, 0.929] | 0.871 [0.742, 0.968] |
 
@@ -339,7 +343,8 @@ Report: [`reports/clinical_eyelid.md`](reports/clinical_eyelid.md).
 
 - **Pretrained eyelid models.** No public model is pretrained on conjunctiva photos without having seen ours. The one
   Hugging Face anemia model was trained on CP-AnemiC and Eyes-Defy themselves. The closest real candidate, VisionFM's
-  external-eye encoder, was approved for one run on 2026-10-23; its weights are not downloaded yet.
+  external-eye encoder, has not seen our data; we ran it in Section 6.1 (0.765 in Ghana children, below color
+  numbers).
 - **More data.** The best candidates are:
   - an open Russian fingernail set (250 adults);
   - a large Indian conjunctiva, palm and nail set (1,485 people, IEEE DataPort login);
@@ -428,6 +433,7 @@ Raw data is **never committed** (`data/` and `results/` are gitignored). Downloa
 | CP-AnemiC | `data/raw/cp_anemic/` | Mendeley Data (academic use) |
 | Eyes-Defy-Anemia | `data/raw/eyes_defy/` (the `India/`, `Italy/` folders and the `.docx`) | IEEE DataPort, or the Kaggle mirror `harshwardhanfartale/eyes-defy-anemia` |
 | DHS Individual Recode | `data/raw/dhs/{zimbabwe,malawi,zambia}/` (the `*IR*DT` folders: ZWIR72, MWIR81, ZMIR81) | DHS Program (registration required) |
+| VisionFM external-eye weights (optional) | `data/weights/visionfm/VFM_External_weights.pth` | VisionFM GitHub README (github.com/ABILab-CUHK/VisionFM), research use only |
 | Fingernails (Yakimov et al. 2024) | `data/raw/yakimov_nails/` (`metadata.csv` and `photo/`, unzipped from `data.zip`) | figshare 10.6084/m9.figshare.c.6760179 (CC0) |
 
 Then run, in order (Section 11 lists what each file does):
@@ -447,7 +453,7 @@ python -m src.survey.train_baselines       # 5.2, ~2 min
 python -m src.survey.transfer              # 5.3, ~2 min
 python -m src.fusion_sim                   # 5.4, ~2 min
 python -m src.eyelid.finetune_vit          # 6.1, fine-tuned ViT per population, ~2 h on an M1
-python -m src.eyelid.ceiling               # 6.1, model ladder, learning curves, regions, copies (reads the ViT results)
+python -m src.eyelid.ceiling               # 6.1, model ladder, learning curves, regions, copies (reads the ViT results; VisionFM rung if its weights are present)
 python -m src.eyelid.populations           # 6.2
 python -m src.eyelid.debias                # 6.3
 python -m src.eyelid.clinical              # 6.4 (reads the ViT results)
@@ -472,6 +478,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/fusion_sim.py` | Fusion simulation |
 | `src/eyelid/ceiling.py`, `finetune_vit.py` | Part III: each population on its own, model ladder up to a fine-tuned ViT, learning curves |
 | `src/eyelid/populations.py`, `debias.py`, `clinical.py` | Part III: population comparison and Italy batches; fairness metrics and debiasing; testing load at fixed sensitivity |
+| `src/eyelid/visionfm.py` | Part III: frozen VisionFM external-eye features, loaded in PyTorch's safe weights-only mode |
 | `src/nails.py` | Part III: fingernail photos under fixed lighting (Section 6.6) |
 | `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
@@ -506,7 +513,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Comparison with Chemhaka et al. [4] | waiting for the paper's numbers |
 | Part III: the mentors' eyelid advice (ceiling, populations, debiasing, clinical view) | done; answers in `reports/mentor_followup_eyelid.md` |
 | Fingernails under fixed lighting (Section 6.6) | done |
-| Eyelid-pretrained model (VisionFM external eye) | approved 2026-10-23; weights pending |
+| Eye-pretrained model (VisionFM external eye, Section 6.1) | done |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 
