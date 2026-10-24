@@ -1,0 +1,11 @@
+# Stage 12: fingernail photos under fixed lighting. Mentor advice M9, M12 (docs/eyelid_followup.md).
+# Yakimov et al. 2024, Scientific Data; figshare 10.6084/m9.figshare.c.6760179 (CC0). 250 adults in Moscow, one photo
+# each. Seed and bootstrap from default.yaml; color models and the rule from color.yaml; gradient boosting and the
+# learning-curve fractions from ceiling.yaml.
+#
+# Anemia: Hb < 12.0 g/dL (120 g/L) for everyone. The per-patient file has no sex column, so one adult cutoff is used,
+# chosen by Jaineel on 2026-10-23: the WHO cutoff for women, so men between 12.0 and 13.0 g/dL count as not anemic.
+# HB_LEVEL_GperL is in g/L.
+data_dir: data/raw/yakimov_nails
+anemia_cutoff_g_per_l: 120
+cv: {n_splits: 5, n_repeats: 5}   # by patient: one photo per patient
