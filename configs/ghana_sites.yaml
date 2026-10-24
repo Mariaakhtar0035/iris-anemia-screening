@@ -1,0 +1,13 @@
+# Stage 13: palm and fingernail photos of Ghanaian children, each body site on its own. Mentor advice M9, M12
+# (docs/eyelid_followup.md). Asare, Appiahene, Donkoh 2022, Mendeley Data 10.17632/ccr8cm22vz.1 (palm) and
+# 10.17632/2xx4j3kjg2.1 (fingernails), CC BY 4.0. Jaineel downloaded both on 2026-10-24.
+# Seed and bootstrap from default.yaml; color models and the rule from color.yaml; gradient boosting, TabPFN and the
+# learning-curve fractions from ceiling.yaml; near-copy rule from default.yaml (cp_anemic_near_duplicate).
+#
+# Anemia: the dataset's own label, from the file name ("Anemic..." / "Non-anemic..."). The archives have no Hb, age,
+# sex or hospital, so the cutoff behind the label is not stated (the eyelid set from the same group uses Hb < 11.0 g/dL
+# for children). Nothing links a palm or nail photo to an eyelid photo of the same child.
+sites:
+  palm: data/raw/ghana_palm/Palm
+  fingernails: data/raw/ghana_nails/Fingernails
+cv: {n_splits: 5, n_repeats: 5}   # by photo: one row per distinct photo, after merging copies and rotations
