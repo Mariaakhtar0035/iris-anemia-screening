@@ -279,6 +279,13 @@ are bringing back to the mentors are in [`reports/mentor_followup_eyelid.md`](re
   Ghana and applied unchanged to the Eyes-Defy adults it scores 0.602 [0.528, 0.676] (untrained rule 0.835), and
   0.595 [0.538, 0.649] in the reverse direction (rule 0.650). Report:
   [`reports/tabpfn_transfer.md`](reports/tabpfn_transfer.md).
+- **One model for Ghana, India and Italy together is as good as one per country, and can be made fair.** Trained on
+  all 605 photos (cutoffs mixed by design: Ghana children Hb < 11.0 g/dL, adults WHO by sex) and scored inside each
+  country, TabPFN reaches Ghana 0.903 [0.874, 0.931], India 0.644 and Italy 0.906 (its per-country models: 0.919,
+  0.660, 0.917). Standardizing each country's color numbers on its own mean and SD halves how far apart the
+  countries' healthy people are scored (rank spread 0.52 -> 0.27) at no cost inside a country. It still doesn't beat
+  the untrained rule in India (0.671) or Italy (0.924), and trained on two countries it is no better than the rule
+  on the third. Report: [`reports/stage14_three_countries.md`](reports/stage14_three_countries.md).
 - **Ghana children carry a real color signal.** Gradient boosting climbs from 0.72 to 0.85 as its training photos go
   from 78 to 310, so more photos would likely help. The ViT does worse than 29 color numbers.
 - **India is at the level of the untrained rule.** The deeper fold of the eyelid (the forniceal mask) does better than
@@ -518,11 +525,12 @@ python -m src.nails                        # 6.6, fingernails
 python -m src.ghana_sites                  # 6.7, Ghana palm and fingernails
 python -m src.eyelid.tabpfn_checks         # 6.1, TabPFN shortcut checks (no color, leave one hospital out)
 python -m src.eyelid.tabpfn_transfer       # 6.1, TabPFN across datasets (Ghana <-> Eyes-Defy)
+python -m src.eyelid.three_countries       # 6.1, one model for Ghana, India and Italy; train on two, test on the third
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 

@@ -25,6 +25,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Does a bigger image model help? (M1, M10) | **No** | fine-tuned ViT 0.72, eye-pretrained VisionFM 0.79, vs 0.85 for 29 color numbers |
 | Does TabPFN, the model you named, help? (M14) | **Yes in Ghana, not elsewhere** | Ghana 0.92 vs 0.85; India 0.65; fingernails 0.82 |
 | Does TabPFN still work on a new dataset? | **No**, only the simple rule carries over | Ghana -> Eyes-Defy 0.60 (rule 0.84); reverse 0.60 (rule 0.65) |
+| Can one model learn all three countries? (M8) | **Yes, as well as separate models, and it can be made fair**; still no better than the rule in India or Italy | Ghana 0.90, India 0.64, Italy 0.91 (rule 0.65, 0.67, 0.92); country gap 0.52 -> 0.27 |
 | Can any model learn more than the simple rule in India? | **No**, too few photos | rule 0.67, best model 0.67 |
 | Is the deeper eyelid fold better in India? | **Maybe**, borderline | rule 0.67 -> 0.76 (change +0.08 [+0.00, +0.18]) |
 | Can Italy's score be trusted? | **No**, one early photo batch holds the anemic patients | the batch alone predicts anemia at 0.91 |
@@ -169,7 +170,16 @@ small within-country data doesn't contain.
 **What we found:** a separate random forest per country scores 0.676 inside India and 0.710 in the Italy early batch.
 One pooled model scores 0.687 and 0.752. Separate models are no better, and they widen the gaps (FPR gap 0.91).
 
-**Answer:** with this much data, per-country models aren't worth it.
+**Update, all three countries (Stage 14, report: [`stage14_three_countries.md`](stage14_three_countries.md)):** one
+TabPFN trained on Ghana, India and Italy together (cutoffs mixed by design: children Hb < 11.0 g/dL, adults WHO by
+sex) scores 0.903 [0.874, 0.931] in Ghana, 0.644 in India and 0.906 in Italy, against 0.919, 0.660 and 0.917 for a
+model per country on the same folds. Standardizing each country's color numbers on its own mean and SD halves the
+gap between countries' healthy people (rank spread 0.52 -> 0.27) at no cost inside a country. Trained on two
+countries and tested on the third, it is no better than the rule (Ghana 0.61 vs 0.65, India 0.70 vs 0.67, Italy
+0.90 vs 0.92).
+
+**Answer:** with this much data, per-country models aren't worth it. One mixed, standardized model is as good and
+fairer, but diverse training data doesn't add pallor signal at our size.
 
 ## M9 and M12: more data, including fingernails and palms
 

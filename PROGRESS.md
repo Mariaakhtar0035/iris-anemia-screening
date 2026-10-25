@@ -85,6 +85,7 @@ fingernail photos of Ghanaian children (F16). See
 | F14 | TabPFN, the tabular model the mentors named (M14) | a model pretrained for small tables, on our 29 color numbers | Ghana 0.919 vs 0.846 (0.913 with hospitals held out); India 0.648; nails 0.823 | **best in Ghana, passes the shortcut checks; no help elsewhere** |
 | F16 | Palm and fingernail photos of Ghana children (M9, M12) | other body sites, same country and age group as the eyelids | palm 0.912, nails 0.798 (TabPFN); no shortcut in palm | **palm as good as eyelid; nails weaker** |
 | F15 | Correct the nail colors: white board, or the skin next to the nail | cancel lighting and skin tone (M6) | white board: rule +0.025, models +0.00-0.03 (within noise); minus skin: -0.11 to -0.31 | **white board: small gain; minus skin: hurt** |
+| F17 | One model for Ghana, India and Italy, with shortcuts taken out (M5, M8, M9) | can mixed training learn every country without guessing the country? | mixed TabPFN Ghana 0.90, India 0.64, Italy 0.91 (own-country models 0.92, 0.66, 0.92); standardizing per country halves the country gap (0.52 -> 0.27); train on two, test on the third: no better than the rule | **fair and as good as separate models; no new signal** |
 
 ## Part A: checking the published eyelid results
 
@@ -532,6 +533,41 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Caveats:** the label's cutoff isn't stated in the files; the eyelid comparison uses different photos and maybe
   different children. Report: [`reports/stage13_ghana_sites.md`](reports/stage13_ghana_sites.md).
 
+### F17. One model for Ghana, India and Italy (Stage 14). As good as separate models, and fair; no new signal.
+- **Question:** if we train one model on all three countries and take the cheating out (guessing the country, the
+  lighting, the photo batch), does it find anemia inside each country?
+- **Answer:** it matches a separate model per country, and per-country standardization makes it treat the three
+  countries alike. But it still doesn't beat the simple rule in India or Italy. **TabPFN mixed: Ghana 0.90, India
+  0.64, Italy 0.91; rule 0.65, 0.67, 0.92.**
+- **What we did:** 605 photos, 29 color numbers of the inner eyelid only (no skin). Cutoffs mixed by design: Ghana
+  children Hb < 11.0 g/dL, adults WHO by sex (women < 12.0, men < 13.0). 5x5 CV by photo, stratified by country x
+  anemia, scored inside each country. Controls: country only, no color, the rule, the Italy early batch. Fixes:
+  per-country standardization, reweighing, both, brightness scaling, lighting jitter. Then train on two countries,
+  test on the third.
+- **What happened:**
+
+| Model | Ghana | India | Italy | Italy early batch | Healthy rank spread |
+|---|---|---|---|---|---|
+| Rule (no training) | 0.650 | 0.671 | 0.924 | 0.752 | 0.43 |
+| TabPFN, one model per country | 0.919 | 0.660 | 0.917 | 0.695 | 0.54 |
+| TabPFN, one mixed model | 0.903 | 0.644 | 0.906 | 0.800 | 0.52 |
+| TabPFN, mixed + per-country standardized | 0.906 | 0.668 | 0.922 | 0.705 | **0.27** |
+| Random forest, mixed + standardized + reweighing | 0.767 | 0.693 | 0.920 | 0.624 | **0.02** |
+| Country only (control) | 0.49 | 0.45 | 0.43 | 0.31 | 0.82 |
+| No color (control) | 0.58 | 0.50 | **0.69** | 0.50 | 0.29 |
+
+- **Takeaways:**
+  - **Mixing doesn't hurt** inside any country. The pooled AUROC (0.895) is inflated: the country alone gives 0.651.
+  - **Per-country standardization is the fix that works:** the country gap among healthy people halves for TabPFN
+    and almost vanishes for a reweighed random forest, with no loss inside Ghana, India or Italy. Only the Italy
+    early batch drops (0.80 -> 0.70, wide ranges).
+  - **Lighting fixes (brightness, jitter) change nothing.**
+  - **No-color check:** image size and shape give away Italy's early batch (0.69); inside the batch it's 0.50.
+  - **Train on two, test on the third** is still no better than the rule: Ghana 0.61 (rule 0.65), India 0.70 (0.67),
+    Italy 0.90 (0.92).
+- **Caveats:** cutoffs differ between children and adults; India and Italy have few photos, so their ranges are wide
+  (India about +-0.12). Report: [`reports/stage14_three_countries.md`](reports/stage14_three_countries.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -558,13 +594,14 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - A white board in the photo as a color reference (small: the nail rule +0.025, models within noise).
 - TabPFN on the 29 color numbers in Ghana children (0.92, the best eyelid result; 0.91 with hospitals held out).
 - Palm photos of Ghana children (0.91 with TabPFN, no shortcut found).
+- One model for all three countries: as good as a model per country, and fair after per-country standardization.
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
   color numbers.
 - Any model, TabPFN included, inside India (stuck at the rule's 0.65-0.67).
 - The untrained rule on Ghana fingernail cut-outs (chance).
-- Learned eyelid models on a new dataset.
+- Learned eyelid models on a new dataset, also when trained on two countries and tested on the third.
 - Gray-world color correction (it erases the signal).
 - Subtracting the skin next to the nail (the skin pales too, so it erases the signal).
 - Debiasing, for raising accuracy inside a country.

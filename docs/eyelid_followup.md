@@ -495,3 +495,54 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   directions, and never beats the untrained rule. To catch 90% of anemic Eyes-Defy adults it tests 76% of them, the
   rule 63%. What TabPFN learns in Ghana is tied to Ghana's photos (camera, lighting, children); only the pallor rule
   itself carries over.
+
+### Step 16 (Stage 14): one model for Ghana, India and Italy (M5, M8, M9)
+- **Why:** Jaineel asked whether one model trained on a mix of all three countries can find anemia in each of them,
+  with the cheating taken out (guessing the country, the lighting or the photo batch). The mentors said big models
+  trained on diverse data can learn every population (M8), and that each country brings its own shortcut (M9).
+- **What we did:** with Jaineel's go-ahead (2026-10-25), `src/eyelid/three_countries.py` and
+  `configs/three_countries.yaml`. 605 photos (Ghana 388, India 95, Italy 122), the 29 color numbers of the palpebral
+  conjunctiva only (no skin). **Cutoffs mixed by design** (Jaineel's choice): Ghana children Hb < 11.0 g/dL, adults
+  WHO by sex (women < 12.0, men < 13.0). 5x5 CV by photo, stratified by country x anemia; every model scored inside
+  each country, where knowing the country can't help. Controls: a country-only model, TabPFN on size and shape (no
+  color), the rule, the Italy early batch. Fixes: per-country standardization (own mean and SD, no labels),
+  reweighing, both, brightness scaling, lighting jitter (TabPFN skips reweighing and jitter: no sample weights, and
+  > 1000 training rows is refused on CPU). One model per country on the same folds is the reference. Then train on
+  two countries, test on the third. Pass rule fixed before running: inside every country beat the rule, match the
+  country's own model, and shrink the healthy rank spread. Run at commit `f891de1` (results recorded clean). Report:
+  `reports/stage14_three_countries.md`.
+- **Results** (AUROC inside each country; rank spread = how far apart the three countries' healthy people are scored,
+  0 = not at all):
+
+| Model | Ghana | India | Italy | Italy early batch | Rank spread, healthy |
+|---|---|---|---|---|---|
+| Rule (no training) | 0.650 | 0.671 | 0.924 | 0.752 | 0.426 |
+| TabPFN, one model per country | 0.919 | 0.660 | 0.917 | 0.695 | 0.538 |
+| TabPFN, one mixed model | 0.903 [0.874, 0.931] | 0.644 | 0.906 | 0.800 [0.610, 0.948] | 0.518 |
+| TabPFN, mixed + per-country standardized | 0.906 | 0.668 | 0.922 | 0.705 | **0.271** [0.211, 0.353] |
+| Random forest, mixed + standardized + reweighing | 0.767 | 0.693 | 0.920 | 0.624 | **0.018** [0.009, 0.123] |
+| Random forest, mixed + brightness scaled | 0.775 | **0.721** [0.612, 0.827] | 0.927 | 0.814 | 0.554 |
+| Country only (control) | 0.493 | 0.449 | 0.427 | 0.305 | 0.824 |
+| No color: size and shape (control) | 0.578 | 0.497 | **0.690** | 0.500 | 0.291 |
+
+| Train on two -> test on the third | Best model | TabPFN | Rule |
+|---|---|---|---|
+| India + Italy -> Ghana | 0.608 (gradient boosting, standardized) | 0.595 | **0.650** |
+| Ghana + Italy -> India | 0.704 (random forest) | 0.667 | 0.671 |
+| Ghana + India -> Italy | 0.898 (logistic regression, standardized) | 0.702 | **0.924** |
+| Ghana + India -> Italy early batch | 0.814 (logistic regression) | 0.705 | 0.752 |
+
+- **What it means:**
+  - **Mixing works.** One model for all three does about as well as a separate model per country (TabPFN Ghana 0.90
+    vs 0.92, India 0.64 vs 0.66, Italy 0.91 vs 0.92). The pooled AUROC (0.895) is inflated: the country alone gives
+    0.651.
+  - **Per-country standardization takes the country out without costing accuracy** inside Ghana, India or Italy:
+    the gap between countries' healthy people halves for TabPFN (0.52 -> 0.27) and almost vanishes for a reweighed
+    random forest (0.02). Only the Italy early batch drops (TabPFN 0.80 -> 0.70, wide ranges).
+  - **The lighting fixes change nothing.**
+  - **The no-color check flags Italy (0.69):** image size and shape give away Italy's early batch; inside that batch
+    it is 0.50. Ghana 0.58, as in Step 14.
+  - **Pass rule not met.** No model beats the rule inside India (best 0.72 vs 0.67, ranges overlap) or Italy (0.93
+    vs 0.92). Mixing and debiasing make the model fair; they don't add pallor signal.
+  - **Train on two countries, test on the third: still no better than the rule** (Ghana 0.61 vs 0.65, India 0.70 vs
+    0.67, Italy 0.90 vs 0.92).
