@@ -448,6 +448,18 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 
   - **Verdict: the 0.92 is real color signal.** It is our headline eyelid number.
   - Report: [`reports/tabpfn_checks.md`](reports/tabpfn_checks.md).
+- **Across datasets (run 2026-10-24, Jaineel's go-ahead): it doesn't hold.** Trained on all Ghana eyelids and
+  applied unchanged to the Eyes-Defy adults, and the reverse (Stage 5 setup):
+
+| Train -> test | TabPFN | Untrained rule |
+|---|---|---|
+| Ghana -> Eyes-Defy (217) | 0.602 [0.53, 0.68] | **0.835** |
+| Ghana -> India / Italy / Italy early batch | 0.658 / 0.651 / 0.629 | 0.671 / **0.924** / 0.752 |
+| Eyes-Defy -> Ghana (388) | 0.595 [0.54, 0.65] | 0.650 |
+
+  - **Verdict:** 0.92 within Ghana drops to about 0.60 on a new dataset and never beats the rule. The model learns
+    Ghana's photos, not pallor in general; only the rule carries over. Report:
+    [`reports/tabpfn_transfer.md`](reports/tabpfn_transfer.md).
 
 ### F15. Correct the nail colors for lighting and skin tone (Stage 12b). White board: small gain. Minus skin: hurt.
 - **Why:** each nail photo has a white board behind the hand, and the data marks a patch of skin just behind each

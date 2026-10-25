@@ -24,6 +24,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Would more photos help? | **Yes, in Ghana** | still rising: 0.72 -> 0.92 from 78 to 310 training photos |
 | Does a bigger image model help? (M1, M10) | **No** | fine-tuned ViT 0.72, eye-pretrained VisionFM 0.79, vs 0.85 for 29 color numbers |
 | Does TabPFN, the model you named, help? (M14) | **Yes in Ghana, not elsewhere** | Ghana 0.92 vs 0.85; India 0.65; fingernails 0.82 |
+| Does TabPFN still work on a new dataset? | **No**, only the simple rule carries over | Ghana -> Eyes-Defy 0.60 (rule 0.84); reverse 0.60 (rule 0.65) |
 | Can any model learn more than the simple rule in India? | **No**, too few photos | rule 0.67, best model 0.67 |
 | Is the deeper eyelid fold better in India? | **Maybe**, borderline | rule 0.67 -> 0.76 (change +0.08 [+0.00, +0.18]) |
 | Can Italy's score be trusted? | **No**, one early photo batch holds the anemic patients | the batch alone predicts anemia at 0.91 |
@@ -339,9 +340,13 @@ table with no tuning.
 - **Fingernails: no gain** over logistic regression; under fixed lighting a simple model is already at the limit.
 - **Shortcut checks pass** (report: [`tabpfn_checks.md`](tabpfn_checks.md)): leave one hospital out 0.913 [0.885,
   0.940] (gradient boosting 0.819); size and shape only, no color, 0.565 [0.507, 0.622]; hospital alone 0.549.
+- **Across datasets it doesn't hold** (report: [`tabpfn_transfer.md`](tabpfn_transfer.md)): trained on Ghana
+  children and applied unchanged to the Eyes-Defy adults it scores 0.602 [0.528, 0.676], against 0.835 for the
+  untrained rule; Italy 0.651 (rule 0.924), India 0.658 (rule 0.671). The reverse gives 0.595 [0.538, 0.649] (rule
+  0.650).
 
 **Answer:** the model matters for the color numbers in Ghana, where there are enough photos. It can't create signal
-where the data is too small (India).
+where the data is too small (India), and what it learns in one dataset doesn't carry over to another.
 
 ## Questions for you
 

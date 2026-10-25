@@ -473,3 +473,25 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **What it means:** the 0.92 is color signal. It barely moves when the scored hospital is unseen, and without color
   TabPFN finds only a small shortcut (0.57, similar to the random-forest control's 0.54). The palm has none; the nails
   keep the same small one (0.57, as in Stage 13).
+
+### Step 15: TabPFN across datasets (follow-up to Steps 12 and 14)
+- **Why:** the project asks whether a model works across populations. Stage 5 showed every trained model collapsing
+  across datasets while the untrained rule held; TabPFN is now the best model within Ghana (0.919), so does it carry over?
+- **What we did:** with Jaineel's go-ahead (2026-10-24), `src/eyelid/tabpfn_transfer.py`: the Stage 5 setup (fit on all
+  of one dataset, score all of the other unchanged, 29 color numbers of the palpebral conjunctiva), with TabPFN and
+  gradient boosting added. Italy's early batch (folders 1-31) scored on its own. Run at commit `a9390db` (results
+  recorded clean). Report: `reports/tabpfn_transfer.md`.
+- **Results** (AUROC):
+
+| Train -> test | TabPFN | Gradient boosting | Untrained rule |
+|---|---|---|---|
+| Ghana -> Eyes-Defy, all (217) | 0.602 [0.528, 0.676] | 0.515 | **0.835** [0.779, 0.884] |
+| Ghana -> India (95) | 0.658 [0.522, 0.782] | 0.648 | 0.671 [0.552, 0.787] |
+| Ghana -> Italy (122) | 0.651 [0.543, 0.747] | 0.685 | **0.924** [0.856, 0.977] |
+| Ghana -> Italy early batch (31) | 0.629 [0.381, 0.857] | 0.548 | 0.752 [0.517, 0.937] |
+| Eyes-Defy -> Ghana (388) | 0.595 [0.538, 0.649] | 0.593 | 0.650 [0.597, 0.705] |
+
+- **What it means:** it doesn't hold. TabPFN falls from 0.92 within Ghana to about 0.60 on a new dataset, in both
+  directions, and never beats the untrained rule. To catch 90% of anemic Eyes-Defy adults it tests 76% of them, the
+  rule 63%. What TabPFN learns in Ghana is tied to Ghana's photos (camera, lighting, children); only the pallor rule
+  itself carries over.

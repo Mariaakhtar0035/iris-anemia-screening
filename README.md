@@ -275,7 +275,10 @@ are bringing back to the mentors are in [`reports/mentor_followup_eyelid.md`](re
   310). It doesn't help in India (0.648) or Italy (0.909). **It passes the shortcut checks:** trained on 9 hospitals and
   scored on the 10th it still reaches 0.913 [0.885, 0.940] (gradient boosting 0.819), and on image size and shape
   alone, no color, it scores 0.565 [0.507, 0.622]; the hospital alone predicts anemia at 0.549. Report:
-  [`reports/tabpfn_checks.md`](reports/tabpfn_checks.md).
+  [`reports/tabpfn_checks.md`](reports/tabpfn_checks.md). **But it doesn't carry over to a new dataset:** trained on
+  Ghana and applied unchanged to the Eyes-Defy adults it scores 0.602 [0.528, 0.676] (untrained rule 0.835), and
+  0.595 [0.538, 0.649] in the reverse direction (rule 0.650). Report:
+  [`reports/tabpfn_transfer.md`](reports/tabpfn_transfer.md).
 - **Ghana children carry a real color signal.** Gradient boosting climbs from 0.72 to 0.85 as its training photos go
   from 78 to 310, so more photos would likely help. The ViT does worse than 29 color numbers.
 - **India is at the level of the untrained rule.** The deeper fold of the eyelid (the forniceal mask) does better than
@@ -514,11 +517,12 @@ python -m src.eyelid.clinical              # 6.4 (reads the ViT results)
 python -m src.nails                        # 6.6, fingernails
 python -m src.ghana_sites                  # 6.7, Ghana palm and fingernails
 python -m src.eyelid.tabpfn_checks         # 6.1, TabPFN shortcut checks (no color, leave one hospital out)
+python -m src.eyelid.tabpfn_transfer       # 6.1, TabPFN across datasets (Ghana <-> Eyes-Defy)
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
