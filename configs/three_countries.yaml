@@ -1,0 +1,21 @@
+# Stage 14: one eyelid model trained on Ghana, India and Italy together and scored inside each country, with the
+# country/lighting shortcuts checked and taken out; then train on two countries, test on the third.
+# Plan approved by Jaineel 2026-10-25.
+#
+# Anemia cutoffs are MIXED in training, by design (each group's own WHO definition, Jaineel 2026-10-25):
+#   Ghana (CP-AnemiC, children 6-59 months): Hb < 11.0 g/dL (default.yaml).
+#   India and Italy (Eyes-Defy, adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml).
+#   Pregnancy is not recorded; we assume not pregnant.
+# Photos: CP-AnemiC's 388 with no copy (ceiling.yaml cp_anemic_subset) and Eyes-Defy's 217 with Hb; one per person.
+# Input: the 29 color numbers of the hand-segmented palpebral conjunctiva (no skin, no background).
+# Brightness scaling, lighting jitter, the Italy early batch and the 90% referral point come from debias.yaml.
+#
+# Shortcut checks and success, fixed before running:
+#   country only: a model that knows only the country; what the country gives for free on the pooled score.
+#   no color: TabPFN on image size and cut-out shape; should sit near 0.5 inside each country.
+#   AUROC inside Ghana, India, Italy and the Italy early batch, where knowing the country (or the batch) is useless.
+#   rank spread: largest minus smallest mean percentile rank across the three countries, among people with the same
+#   anemia status. 0 = once anemia status is fixed, the score doesn't depend on the country.
+#   A mixed model passes if, inside every country, it beats the rule and matches that country's own model (same
+#   folds), with a smaller rank spread among healthy people than the plain mixed model.
+cv: {n_splits: 5, n_repeats: 5}   # by photo, stratified by country x anemia (6 cells)
