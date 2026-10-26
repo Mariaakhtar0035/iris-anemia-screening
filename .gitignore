@@ -218,3 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Team IRIS (DHS survey): DHS data can't be shared, so raw and processed data never get committed
+data/
+*.dta
+*.DTA
+*.sav
+*.parquet
+
+# Personal Claude Code instructions: never committed or pushed
+CLAUDE.md
