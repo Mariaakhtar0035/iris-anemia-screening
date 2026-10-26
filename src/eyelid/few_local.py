@@ -89,7 +89,7 @@ def main():
         return max((r for r in rows if r["test set"] == subset and r["trained on"] == how and r["local photos"] == k),
                    key=lambda r: r["auroc"]["estimate"], default=None)
 
-    answer, first = [], {}
+    answer, gains, first = [], [], {}
     for subset in subsets:
         rule_row = next(r for r in rows if r["test set"] == subset and r["model"] == "rule_low_redness")
         for k in ks:
@@ -100,8 +100,11 @@ def main():
                 first[subset] = k
             answer.append(f"| {subset} | {k} | {fmt(a['auroc'])} ({a['model']}) | "
                           + (f"{fmt(b['auroc'])} ({b['model']})" if b else "-")
-                          + f" | {fmt(a['vs_local']) if 'vs_local' in a else '-'} | {fmt(rule_row['auroc'])} | "
-                          + (", ".join(beats) or "none") + " |")
+                          + f" | {fmt(rule_row['auroc'])} | " + (", ".join(beats) or "none") + " |")
+            if k != 0:
+                gains.append(f"| {subset} | {k} | " + " | ".join(
+                    fmt(next(r["vs_local"] for r in rows if r["test set"] == subset and r["local photos"] == k
+                             and r["trained on"] == MIXED and r["model"] == name)) for name in models) + " |")
     found = "; ".join(f"{sub}: {first[sub] if sub in first else 'no k'}" for sub in subsets)
     report = (
         "# Stage 15: how many local photos does a new country need?\n\n"
@@ -126,8 +129,16 @@ def main():
         "and whether the other two countries help at the same k.\n\n"
         f"**Smallest k that beats the rule:** {found}.\n\n"
         "## Best model at each k (AUROC)\n\n"
-        f"| test set | k | best, {MIXED} | best, {LOCAL} | change from adding the other two (same model) | rule | "
-        "beats the rule (CI above 0) |\n|---|---|---|---|---|---|---|\n" + "\n".join(answer) + "\n\n"
+        f"| test set | k | best, {MIXED} | best, {LOCAL} | rule | beats the rule (CI above 0) |\n"
+        "|---|---|---|---|---|---|\n" + "\n".join(answer) + "\n\n"
+        "## Do the other two countries help? (paired AUROC change, same model)\n\n"
+        f"`{MIXED}` minus `{LOCAL}`, same model, same folds, same k photos. Random forest (leaves of at least "
+        f"{color_cfg['models']['random_forest']['min_samples_leaf']} photos) and gradient boosting (at least "
+        f"{ceiling_cfg['hist_gradient_boosting']['min_samples_leaf']}) can barely learn from 10-20 photos alone; "
+        "gradient boosting scores a flat 0.5 at k = 10. Their gains at small k say more about them than about the "
+        "other countries.\n\n"
+        "| test set | k | " + " | ".join(models) + " |\n|" + "---|" * (2 + len(models)) + "\n" + "\n".join(gains)
+        + "\n\n"
         "## All results\n\n"
         + markdown_table(rows, ["test set", "n", "anemic", "local photos", "trained on", "model"],
                          COLUMNS | {"vs_rule": "AUROC change vs rule", "vs_local": f"AUROC change vs {LOCAL}"}) + "\n"
