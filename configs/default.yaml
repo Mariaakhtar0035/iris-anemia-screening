@@ -1,0 +1,14 @@
+seed: 42
+
+bootstrap:
+  n_resamples: 2000
+  ci: 0.95
+
+# g/dL. Adult WHO cutoffs get added at the Eyes-Defy stage, once we know whether sex is recorded.
+anemia_cutoff_g_dl:
+  child_6_59_months: 11.0
+
+# Images count as the same photo (re-saved or slightly re-cropped) when both hold. Checked by eye in Stage 3.
+cp_anemic_near_duplicate:
+  dhash_max_bits: 20    # of 256 bits, 16x16 difference hash
+  max_size_diff: 0.05   # width and height within 5%
