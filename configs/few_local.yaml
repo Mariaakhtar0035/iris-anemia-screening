@@ -1,0 +1,19 @@
+# Stage 15: how many labelled local photos does a new country need before an eyelid model beats the redness rule?
+# Plan approved by Jaineel 2026-10-26.
+#
+# Same photos and labels as Stage 14 (three_countries.yaml), so the anemia cutoffs are MIXED by design (Jaineel's choice):
+#   Ghana (CP-AnemiC, children 6-59 months): Hb < 11.0 g/dL (default.yaml).
+#   India and Italy (Eyes-Defy, adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml).
+#   Pregnancy is not recorded; we assume not pregnant.
+# Input: the 29 color numbers of the hand-segmented palpebral conjunctiva (no skin, no background).
+#
+# For each target country: its photos split 5x5 by photo, stratified by anemia; k labelled photos drawn at random from
+# the training part, stratified by anemia. Two ways to train, both tested on the held-out photos of the target:
+#   (a) the other two countries + the k photos, each country standardized with its own mean and SD (the target's from
+#       its unlabelled training photos, never the test photos);
+#   (b) the k photos alone.
+# Answer, fixed before running: the smallest k at which a model beats the rule inside the target country (paired
+# bootstrap CI of the AUROC change above 0), and whether (a) beats (b) for the same model at the same k.
+# Italy is also scored on its early batch (folders 1-31, debias.yaml), because local Italy photos can teach the batch.
+cv: {n_splits: 5, n_repeats: 5}
+local_photos: [0, 10, 20, 40, all]   # all = the whole training part of the target country

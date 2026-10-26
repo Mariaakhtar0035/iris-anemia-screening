@@ -43,12 +43,9 @@ def rank_spread(label):
     return f
 
 
-def main():
-    base, cfg, debias_cfg = load_config("default"), load_config("three_countries"), load_config("debias")
-    color_cfg, probe_cfg, ceiling_cfg = load_config("color"), load_config("probe"), load_config("ceiling")
-    seed, boot = base["seed"], base["bootstrap"]
-    n_boot, ci = boot["n_resamples"], boot["ci"]
-
+def load_photos(ceiling_cfg, debias_cfg):
+    """Ghana (CP-AnemiC photos with no copy) plus Eyes-Defy India and Italy, one photo per person; returns the table,
+    labels, country, country code and the Italy early batch flag."""
     cp = load_cp_anemic(ceiling_cfg["cp_anemic_subset"]).assign(country="Ghana")
     ed = load_eyes_defy(load_config("cross_dataset"))
     df = pd.concat([cp, ed])[["id", "image_path", "country", "anemic"]].reset_index(drop=True)
@@ -57,6 +54,16 @@ def main():
     italy = country == "Italy"
     early = italy.copy()
     early[italy] = (df.id[italy].str.split("_").str[1].astype(int) <= debias_cfg["italy_early_batch_last_folder"]).to_numpy()
+    return df, y, country, code, early
+
+
+def main():
+    base, cfg, debias_cfg = load_config("default"), load_config("three_countries"), load_config("debias")
+    color_cfg, probe_cfg, ceiling_cfg = load_config("color"), load_config("probe"), load_config("ceiling")
+    seed, boot = base["seed"], base["bootstrap"]
+    n_boot, ci = boot["n_resamples"], boot["ci"]
+
+    df, y, country, code, early = load_photos(ceiling_cfg, debias_cfg)
 
     paths = [ROOT / p for p in df.image_path]
     feats = color_variants(paths, debias_cfg, color_cfg["roi"]["alpha_threshold"], seed)
