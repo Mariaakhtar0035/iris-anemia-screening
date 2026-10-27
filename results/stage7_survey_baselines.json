@@ -1,0 +1,441 @@
+{
+  "name": "stage7_survey_baselines",
+  "created_utc": "2026-10-27T02:35:31+00:00",
+  "git": {
+    "commit": "b7ecc4f7e18968164b7e6cee6236d003251484df",
+    "dirty": false
+  },
+  "configs": {
+    "default": {
+      "seed": 42,
+      "bootstrap": {
+        "n_resamples": 2000,
+        "ci": 0.95
+      },
+      "anemia_cutoff_g_dl": {
+        "child_6_59_months": 11.0
+      },
+      "cp_anemic_near_duplicate": {
+        "dhash_max_bits": 20,
+        "max_size_diff": 0.05
+      }
+    },
+    "survey": {
+      "countries": {
+        "zimbabwe": "data/raw/dhs/zimbabwe/ZWIR72DT/ZWIR72FL.DTA",
+        "malawi": "data/raw/dhs/malawi/MWIR81DT/MWIR81FL.dta",
+        "zambia": "data/raw/dhs/zambia/ZMIR81DT/ZMIR81FL.dta"
+      },
+      "train_country": "zimbabwe",
+      "variables": {
+        "age": "v012",
+        "pregnant": "v213",
+        "wealth": "v190",
+        "contraception": "v312",
+        "residence": "v025",
+        "education": "v106",
+        "cluster": "v001",
+        "weight": "v005",
+        "region": "v024",
+        "hb_adjusted": "v456",
+        "anemia_level": "v457"
+      },
+      "anemic_levels": [
+        1,
+        2,
+        3
+      ],
+      "weight_divisor": 1000000,
+      "features": {
+        "numeric": [
+          "age",
+          "pregnant"
+        ],
+        "ordinal": [
+          "wealth",
+          "education"
+        ],
+        "categorical": [
+          "contraception",
+          "residence"
+        ]
+      },
+      "cv": {
+        "n_splits": 5,
+        "n_repeats": 5
+      },
+      "top_fraction": 0.3,
+      "onehot_min_frequency": 0.01,
+      "logistic_regression": {
+        "C": 1.0,
+        "max_iter": 2000
+      },
+      "hist_gradient_boosting": {
+        "max_iter": 200,
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 15,
+        "min_samples_leaf": 50
+      },
+      "calibration_bins": 10,
+      "budget_curve": [
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "transfer_models": [
+        "logistic_regression",
+        "hist_gradient_boosting"
+      ],
+      "recalibration": {
+        "n_women": 200,
+        "n_repeats": 20
+      }
+    }
+  },
+  "results": {
+    "n": 9265,
+    "anemic_share": 0.2731786292498651,
+    "rows": [
+      {
+        "model": "rule: random",
+        "weights": "-",
+        "auroc": {
+          "estimate": 0.4933153811067679,
+          "lo": 0.48000811468043614,
+          "hi": 0.5069628303629196,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.2697402725654209,
+          "lo": 0.25576034884482535,
+          "hi": 0.28529698938191406,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.10075069142631371,
+          "lo": 0.08776483956105492,
+          "hi": 0.11687625329177839,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.29395495851442116,
+          "lo": 0.27895879886006675,
+          "hi": 0.3090180775900414,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.4962527856245755,
+          "sd": 0.0055221367217930094
+        }
+      },
+      {
+        "model": "rule: pregnant_first",
+        "weights": "-",
+        "auroc": {
+          "estimate": 0.5042088145604542,
+          "lo": 0.4904081282508173,
+          "hi": 0.5170130692750641,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.27991124356760855,
+          "lo": 0.2658663701485618,
+          "hi": 0.2957640395743287,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.11576451995258791,
+          "lo": 0.10027024207691958,
+          "hi": 0.1294298340234903,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.30343737653101543,
+          "lo": 0.2886353557875794,
+          "hi": 0.3187721139482051,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.5056659935364005,
+          "sd": 0.004037021632657095
+        }
+      },
+      {
+        "model": "dummy",
+        "weights": "none",
+        "auroc": {
+          "estimate": 0.49010593558203197,
+          "lo": 0.4743882361367048,
+          "hi": 0.5068645213551641,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.2733588063911743,
+          "lo": 0.25887090161700416,
+          "hi": 0.28893346944153003,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.1035163966811537,
+          "lo": 0.08707387588415602,
+          "hi": 0.12189057261592567,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.2915843540102726,
+          "lo": 0.2747687393665351,
+          "hi": 0.3139827830996779,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.19855368666335566,
+          "lo": 0.19291714729979334,
+          "hi": 0.20386064041748933,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.4976411358671335,
+          "sd": 0.0006423051769809801
+        }
+      },
+      {
+        "model": "dummy",
+        "weights": "survey",
+        "auroc": {
+          "estimate": 0.4980234401411801,
+          "lo": 0.4803816990557355,
+          "hi": 0.5157312844155271,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.27069806469282465,
+          "lo": 0.25506420078229897,
+          "hi": 0.2877792887932537,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.09956538917423943,
+          "lo": 0.07879222184829103,
+          "hi": 0.11535773194422905,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.29620079436045665,
+          "lo": 0.27603132203527964,
+          "hi": 0.3186020061452548,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.1985830058999972,
+          "lo": 0.19279964046836853,
+          "hi": 0.20402708331494435,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.49931462869036947,
+          "sd": 0.0006238155365653655
+        }
+      },
+      {
+        "model": "logistic_regression",
+        "weights": "none",
+        "auroc": {
+          "estimate": 0.5797318478077071,
+          "lo": 0.5662374745013197,
+          "hi": 0.5927607943058102,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.32315398750277313,
+          "lo": 0.3065853145803477,
+          "hi": 0.3405157416249618,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.14618727775582774,
+          "lo": 0.1227714203363688,
+          "hi": 0.1625648728701693,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.37929672066376924,
+          "lo": 0.3625057414254233,
+          "hi": 0.3944815080146861,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.195696605944915,
+          "lo": 0.19010587994318623,
+          "hi": 0.20104056586396252,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.5792364287820628,
+          "sd": 0.002077007218173192
+        }
+      },
+      {
+        "model": "logistic_regression",
+        "weights": "survey",
+        "auroc": {
+          "estimate": 0.5794498676758653,
+          "lo": 0.5659011856929855,
+          "hi": 0.592720547272208,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.32371819550592656,
+          "lo": 0.30697432413098213,
+          "hi": 0.34283117520451567,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.14816278150928486,
+          "lo": 0.13181470336916185,
+          "hi": 0.1657288970408199,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.37574081390754643,
+          "lo": 0.3594049505539777,
+          "hi": 0.3927082832435004,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.19585283389758476,
+          "lo": 0.1901895416174082,
+          "hi": 0.20132954512947812,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.5789435590304812,
+          "sd": 0.0014170494907618063
+        }
+      },
+      {
+        "model": "hist_gradient_boosting",
+        "weights": "none",
+        "auroc": {
+          "estimate": 0.5696082564909116,
+          "lo": 0.555777453888602,
+          "hi": 0.5831570719331998,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.32007268756887597,
+          "lo": 0.3034681578538894,
+          "hi": 0.33805300841251806,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.1457921770051363,
+          "lo": 0.128670303908943,
+          "hi": 0.1634231343371299,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.3575661793757408,
+          "lo": 0.3409660453314886,
+          "hi": 0.3749505978921768,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.1973412951620882,
+          "lo": 0.1917212203348467,
+          "hi": 0.2029420327567901,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.566483774642605,
+          "sd": 0.003948057113748931
+        }
+      },
+      {
+        "model": "hist_gradient_boosting",
+        "weights": "survey",
+        "auroc": {
+          "estimate": 0.5655898929308649,
+          "lo": 0.5521361776869572,
+          "hi": 0.5792446426401663,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.3148920246121497,
+          "lo": 0.29923004360825245,
+          "hi": 0.3320364820890993,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.14460687475306203,
+          "lo": 0.1257037583487501,
+          "hi": 0.16243130036425998,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.3571710786250494,
+          "lo": 0.33900237787471876,
+          "hi": 0.3726144721054864,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.1985121681707545,
+          "lo": 0.1926909767161385,
+          "hi": 0.20413179536492942,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "auroc_per_repeat": {
+          "mean": 0.5618710115154208,
+          "sd": 0.0028966776762163015
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,613 @@
+{
+  "name": "stage8_survey_transfer",
+  "created_utc": "2026-10-27T03:19:47+00:00",
+  "git": {
+    "commit": "7b9667bf7fcab0248fa8fd589f0837773f9b8669",
+    "dirty": false
+  },
+  "configs": {
+    "default": {
+      "seed": 42,
+      "bootstrap": {
+        "n_resamples": 2000,
+        "ci": 0.95
+      },
+      "anemia_cutoff_g_dl": {
+        "child_6_59_months": 11.0
+      },
+      "cp_anemic_near_duplicate": {
+        "dhash_max_bits": 20,
+        "max_size_diff": 0.05
+      }
+    },
+    "survey": {
+      "countries": {
+        "zimbabwe": "data/raw/dhs/zimbabwe/ZWIR72DT/ZWIR72FL.DTA",
+        "malawi": "data/raw/dhs/malawi/MWIR81DT/MWIR81FL.dta",
+        "zambia": "data/raw/dhs/zambia/ZMIR81DT/ZMIR81FL.dta"
+      },
+      "train_country": "zimbabwe",
+      "variables": {
+        "age": "v012",
+        "pregnant": "v213",
+        "wealth": "v190",
+        "contraception": "v312",
+        "residence": "v025",
+        "education": "v106",
+        "cluster": "v001",
+        "weight": "v005",
+        "region": "v024",
+        "hb_adjusted": "v456",
+        "anemia_level": "v457"
+      },
+      "anemic_levels": [
+        1,
+        2,
+        3
+      ],
+      "weight_divisor": 1000000,
+      "features": {
+        "numeric": [
+          "age",
+          "pregnant"
+        ],
+        "ordinal": [
+          "wealth",
+          "education"
+        ],
+        "categorical": [
+          "contraception",
+          "residence"
+        ]
+      },
+      "cv": {
+        "n_splits": 5,
+        "n_repeats": 5
+      },
+      "top_fraction": 0.3,
+      "onehot_min_frequency": 0.01,
+      "logistic_regression": {
+        "C": 1.0,
+        "max_iter": 2000
+      },
+      "hist_gradient_boosting": {
+        "max_iter": 200,
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 15,
+        "min_samples_leaf": 50
+      },
+      "calibration_bins": 10,
+      "budget_curve": [
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "transfer_models": [
+        "logistic_regression",
+        "hist_gradient_boosting"
+      ],
+      "recalibration": {
+        "n_women": 200,
+        "n_repeats": 20
+      }
+    }
+  },
+  "results": {
+    "rows": [
+      {
+        "model": "logistic_regression",
+        "country": "zimbabwe (cross-validated)",
+        "n": 9265,
+        "prevalence": "27.3%",
+        "auroc": {
+          "estimate": 0.5797318478077071,
+          "lo": 0.5662374745013197,
+          "hi": 0.5927607943058102,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.32315398750277313,
+          "lo": 0.3065853145803477,
+          "hi": 0.3405157416249618,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.14618727775582774,
+          "lo": 0.1227714203363688,
+          "hi": 0.1625648728701693,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.37929672066376924,
+          "lo": 0.3625057414254233,
+          "hi": 0.3944815080146861,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.195696605944915,
+          "lo": 0.19010587994318623,
+          "hi": 0.20104056586396252,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_slope": {
+          "estimate": 0.9315443208271498,
+          "lo": 0.7692813148252389,
+          "hi": 1.0953351305183077,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_intercept": {
+          "estimate": -0.06610648843922821,
+          "lo": -0.23408913876736795,
+          "hi": 0.09936222148134635,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        }
+      },
+      {
+        "model": "logistic_regression",
+        "country": "malawi (untouched)",
+        "n": 10000,
+        "prevalence": "26.1%",
+        "auroc": {
+          "estimate": 0.5679516452365213,
+          "lo": 0.555310478068384,
+          "hi": 0.5805258358424698,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.29489435239347017,
+          "lo": 0.2805528539285788,
+          "hi": 0.31033412542316957,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.12159570387418489,
+          "lo": 0.10546977498686971,
+          "hi": 0.13531914868807043,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.35116992711929423,
+          "lo": 0.33525788153783875,
+          "hi": 0.3666126196478712,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.19169246042439922,
+          "lo": 0.18710813149298477,
+          "hi": 0.19611352437157403,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_slope": {
+          "estimate": 0.9032171981903379,
+          "lo": 0.7379380012149733,
+          "hi": 1.0689402125528737,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_intercept": {
+          "estimate": -0.23575077651968113,
+          "lo": -0.39493024716287367,
+          "hi": -0.07747702646826239,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        }
+      },
+      {
+        "model": "logistic_regression",
+        "country": "zambia (untouched)",
+        "n": 6829,
+        "prevalence": "31.1%",
+        "auroc": {
+          "estimate": 0.564765309627029,
+          "lo": 0.549460337991235,
+          "hi": 0.5796458520865313,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.3562441906280733,
+          "lo": 0.33645368670376796,
+          "hi": 0.37648084808726656,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.13687676387582315,
+          "lo": 0.11664815601623812,
+          "hi": 0.1572264410957962,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.34854186265286924,
+          "lo": 0.33146609346680816,
+          "hi": 0.3647864451741726,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.21212608319312412,
+          "lo": 0.2068706937716099,
+          "hi": 0.21749768725820073,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_slope": {
+          "estimate": 0.9974081153461942,
+          "lo": 0.7829419941521056,
+          "hi": 1.2167782011221282,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_intercept": {
+          "estimate": 0.08695322053973896,
+          "lo": -0.11396221774948784,
+          "hi": 0.28692278116692754,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        }
+      },
+      {
+        "model": "hist_gradient_boosting",
+        "country": "zimbabwe (cross-validated)",
+        "n": 9265,
+        "prevalence": "27.3%",
+        "auroc": {
+          "estimate": 0.5696082564909116,
+          "lo": 0.555777453888602,
+          "hi": 0.5831570719331998,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.32007268756887597,
+          "lo": 0.3034681578538894,
+          "hi": 0.33805300841251806,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.1457921770051363,
+          "lo": 0.128670303908943,
+          "hi": 0.1634231343371299,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.3575661793757408,
+          "lo": 0.3409660453314886,
+          "hi": 0.3749505978921768,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.1973412951620882,
+          "lo": 0.1917212203348467,
+          "hi": 0.2029420327567901,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_slope": {
+          "estimate": 0.5899558315100399,
+          "lo": 0.4666563818639255,
+          "hi": 0.713841729144914,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_intercept": {
+          "estimate": -0.39185249211215273,
+          "lo": -0.5206347374249907,
+          "hi": -0.2623391682966545,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        }
+      },
+      {
+        "model": "hist_gradient_boosting",
+        "country": "malawi (untouched)",
+        "n": 10000,
+        "prevalence": "26.1%",
+        "auroc": {
+          "estimate": 0.5477484403367081,
+          "lo": 0.5342413688138964,
+          "hi": 0.5613678498656943,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.28397419965886983,
+          "lo": 0.2699478129699916,
+          "hi": 0.2994823422630841,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.11775987725354814,
+          "lo": 0.10322482745117235,
+          "hi": 0.13158983162881221,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.3352512466436517,
+          "lo": 0.3189849905254697,
+          "hi": 0.3525362450590224,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.19852116480531057,
+          "lo": 0.19396560079044797,
+          "hi": 0.20318346648353258,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_slope": {
+          "estimate": 0.3235788225631157,
+          "lo": 0.229303170680921,
+          "hi": 0.4165205025944168,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_intercept": {
+          "estimate": -0.7604281868088107,
+          "lo": -0.8586145903027894,
+          "hi": -0.662801691337094,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        }
+      },
+      {
+        "model": "hist_gradient_boosting",
+        "country": "zambia (untouched)",
+        "n": 6829,
+        "prevalence": "31.1%",
+        "auroc": {
+          "estimate": 0.5446546498912145,
+          "lo": 0.5294561823217028,
+          "hi": 0.5588404811728128,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "pr_auc": {
+          "estimate": 0.33901105982160196,
+          "lo": 0.3215424506728943,
+          "hi": 0.3586668899121339,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "sens_at_90_spec": {
+          "estimate": 0.12276575729068674,
+          "lo": 0.10391074223214758,
+          "hi": 0.13727469200768197,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "recall_top": {
+          "estimate": 0.32883871642103063,
+          "lo": 0.3114297837226297,
+          "hi": 0.34410917914166644,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "brier": {
+          "estimate": 0.21603815887228972,
+          "lo": 0.21050051888140392,
+          "hi": 0.22168076374768805,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_slope": {
+          "estimate": 0.4003393648360344,
+          "lo": 0.2725895848144219,
+          "hi": 0.523487854150812,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        },
+        "cal_intercept": {
+          "estimate": -0.43149964628650533,
+          "lo": -0.5619773132785775,
+          "hi": -0.3040736822822279,
+          "n_resamples": 2000,
+          "n_skipped": 0
+        }
+      }
+    ],
+    "recalibration": {
+      "logistic_regression/malawi": {
+        "brier_before": {
+          "mean": 0.19170034756604976,
+          "lo": 0.1911760351669127,
+          "hi": 0.1922840517738025
+        },
+        "cal_slope_before": {
+          "mean": 0.9006913546758646,
+          "lo": 0.8783678098451472,
+          "hi": 0.9218652334476686
+        },
+        "cal_intercept_before": {
+          "mean": -0.23816203562318802,
+          "lo": -0.2635504140706005,
+          "hi": -0.2219084693665055
+        },
+        "mean_risk_before": {
+          "mean": 0.2903589310505894,
+          "lo": 0.2902409295966678,
+          "hi": 0.2904765328387787
+        },
+        "brier_after": {
+          "mean": 0.193171568856141,
+          "lo": 0.1908972872289487,
+          "hi": 0.20046951458797727
+        },
+        "cal_slope_after": {
+          "mean": 1.1620622508087692,
+          "lo": -2.525718917079716,
+          "hi": 6.23892965996322
+        },
+        "cal_intercept_after": {
+          "mean": 0.1910109741126642,
+          "lo": -3.4079047781346405,
+          "hi": 5.265087421267749
+        },
+        "mean_risk_after": {
+          "mean": 0.26185363248555554,
+          "lo": 0.1983136969550633,
+          "hi": 0.32798015885771914
+        },
+        "prevalence": 0.2606836734693878
+      },
+      "logistic_regression/zambia": {
+        "brier_before": {
+          "mean": 0.2121811528070856,
+          "lo": 0.21159308577107677,
+          "hi": 0.21277345340058018
+        },
+        "cal_slope_before": {
+          "mean": 0.9980415343921593,
+          "lo": 0.9548307615351522,
+          "hi": 1.040080406039457
+        },
+        "cal_intercept_before": {
+          "mean": 0.0879830778791382,
+          "lo": 0.04860135603096075,
+          "hi": 0.12720561000042074
+        },
+        "mean_risk_before": {
+          "mean": 0.2927446202986264,
+          "lo": 0.29258835627891766,
+          "hi": 0.2928680269844916
+        },
+        "brier_after": {
+          "mean": 0.21454960235315088,
+          "lo": 0.21183153989672387,
+          "hi": 0.22135474480503015
+        },
+        "cal_slope_after": {
+          "mean": 1.4747333876516897,
+          "lo": -0.613986090923487,
+          "hi": 4.58751027938403
+        },
+        "cal_intercept_after": {
+          "mean": 0.3652103534366728,
+          "lo": -1.4141933525988908,
+          "hi": 2.7929353310214413
+        },
+        "mean_risk_after": {
+          "mean": 0.30680887491761627,
+          "lo": 0.25550199787554073,
+          "hi": 0.34851583300227723
+        },
+        "prevalence": 0.3114496907527531
+      },
+      "hist_gradient_boosting/malawi": {
+        "brier_before": {
+          "mean": 0.19852718819511084,
+          "lo": 0.1979518545962452,
+          "hi": 0.19923184412801836
+        },
+        "cal_slope_before": {
+          "mean": 0.32281888845117834,
+          "lo": 0.31260038588046296,
+          "hi": 0.33409809629843623
+        },
+        "cal_intercept_before": {
+          "mean": -0.7611444010884431,
+          "lo": -0.7719972841474664,
+          "hi": -0.7530293283147866
+        },
+        "mean_risk_before": {
+          "mean": 0.3003188817371108,
+          "lo": 0.29999137250337776,
+          "hi": 0.3006022205680944
+        },
+        "brier_after": {
+          "mean": 0.19382748778186584,
+          "lo": 0.19184852150657433,
+          "hi": 0.20014531890837894
+        },
+        "cal_slope_after": {
+          "mean": 0.9557985724369964,
+          "lo": -0.6672724729852348,
+          "hi": 2.7357752618799664
+        },
+        "cal_intercept_after": {
+          "mean": -0.028573903827934576,
+          "lo": -1.5791842463098305,
+          "hi": 1.5911373737515646
+        },
+        "mean_risk_after": {
+          "mean": 0.2612797901614705,
+          "lo": 0.19808936909058658,
+          "hi": 0.32718116654305934
+        },
+        "prevalence": 0.2606836734693878
+      },
+      "hist_gradient_boosting/zambia": {
+        "brier_before": {
+          "mean": 0.21605366113993182,
+          "lo": 0.21551937331614648,
+          "hi": 0.2166686412248264
+        },
+        "cal_slope_before": {
+          "mean": 0.40300454464232754,
+          "lo": 0.3830818110379883,
+          "hi": 0.423754683525978
+        },
+        "cal_intercept_before": {
+          "mean": -0.42869230681100146,
+          "lo": -0.4443191107585467,
+          "hi": -0.40736419227679793
+        },
+        "mean_risk_before": {
+          "mean": 0.29226124884071014,
+          "lo": 0.2920426513888936,
+          "hi": 0.2925785257493916
+        },
+        "brier_after": {
+          "mean": 0.21527373092880367,
+          "lo": 0.21327577548338517,
+          "hi": 0.21914362379169064
+        },
+        "cal_slope_after": {
+          "mean": 0.544275139478989,
+          "lo": -7.25476927167559,
+          "hi": 4.063878356867773
+        },
+        "cal_intercept_after": {
+          "mean": -0.5257605704324058,
+          "lo": -8.084580540592748,
+          "hi": 2.399532868812327
+        },
+        "mean_risk_after": {
+          "mean": 0.30670553933411426,
+          "lo": 0.25450580798222133,
+          "hi": 0.3494817040635575
+        },
+        "prevalence": 0.3114496907527531
+      }
+    }
+  }
+}
