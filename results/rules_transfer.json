@@ -1,0 +1,952 @@
+{
+  "name": "rules_transfer",
+  "created_utc": "2026-10-27T05:58:41+00:00",
+  "git": {
+    "commit": "285b44e9645356d303cf6dfc3faafd6cb6807e65",
+    "dirty": true
+  },
+  "configs": {
+    "default": {
+      "seed": 42,
+      "bootstrap": {
+        "n_resamples": 2000,
+        "ci": 0.95
+      },
+      "anemia_cutoff_g_dl": {
+        "child_6_59_months": 11.0
+      },
+      "cp_anemic_near_duplicate": {
+        "dhash_max_bits": 20,
+        "max_size_diff": 0.05
+      }
+    },
+    "survey": {
+      "countries": {
+        "zimbabwe": "data/raw/dhs/zimbabwe/ZWIR72DT/ZWIR72FL.DTA",
+        "malawi": "data/raw/dhs/malawi/MWIR81DT/MWIR81FL.dta",
+        "zambia": "data/raw/dhs/zambia/ZMIR81DT/ZMIR81FL.dta"
+      },
+      "train_country": "zimbabwe",
+      "variables": {
+        "age": "v012",
+        "pregnant": "v213",
+        "wealth": "v190",
+        "contraception": "v312",
+        "residence": "v025",
+        "education": "v106",
+        "cluster": "v001",
+        "weight": "v005",
+        "region": "v024",
+        "hb_adjusted": "v456",
+        "anemia_level": "v457"
+      },
+      "anemic_levels": [
+        1,
+        2,
+        3
+      ],
+      "weight_divisor": 1000000,
+      "features": {
+        "numeric": [
+          "age",
+          "pregnant"
+        ],
+        "ordinal": [
+          "wealth",
+          "education"
+        ],
+        "categorical": [
+          "contraception",
+          "residence"
+        ]
+      },
+      "cv": {
+        "n_splits": 5,
+        "n_repeats": 5
+      },
+      "top_fraction": 0.3,
+      "onehot_min_frequency": 0.01,
+      "logistic_regression": {
+        "C": 1.0,
+        "max_iter": 2000
+      },
+      "hist_gradient_boosting": {
+        "max_iter": 200,
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 15,
+        "min_samples_leaf": 50
+      },
+      "calibration_bins": 10,
+      "budget_curve": [
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0
+      ],
+      "transfer_models": [
+        "logistic_regression",
+        "hist_gradient_boosting"
+      ],
+      "recalibration": {
+        "n_women": 200,
+        "n_repeats": 20
+      },
+      "huge_model": {
+        "max_iter": 200,
+        "learning_rate": 0.1,
+        "max_leaf_nodes": null,
+        "min_samples_leaf": 1,
+        "l2_regularization": 0.0,
+        "early_stopping": false
+      },
+      "triage_sensitivity": 0.9
+    }
+  },
+  "results": {
+    "directions": {
+      "age": 1,
+      "wealth": 1
+    },
+    "rows": [
+      {
+        "country": "Zimbabwe (cross-validated)",
+        "contestant": "rule: random",
+        "kind": "rule",
+        "n": 9265,
+        "summary": {
+          "auroc": {
+            "estimate": 0.4933153811067679,
+            "lo": 0.48000811468043614,
+            "hi": 0.5069628303629196,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.2697402725654209,
+            "lo": 0.25576034884482535,
+            "hi": 0.28529698938191406,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.10075069142631371,
+            "lo": 0.08776483956105492,
+            "hi": 0.11687625329177839,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.29395495851442116,
+            "lo": 0.27895879886006675,
+            "hi": 0.3090180775900414,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.9147328656233136,
+            "lo": 0.9071486609651407,
+            "hi": 0.9219253173722463,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.4962527856245755,
+            "sd": 0.0055221367217930094
+          }
+        }
+      },
+      {
+        "country": "Zimbabwe (cross-validated)",
+        "contestant": "rule: pregnant_first",
+        "kind": "rule",
+        "n": 9265,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5042088145604542,
+            "lo": 0.4904081282508173,
+            "hi": 0.5170130692750641,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.27991124356760855,
+            "lo": 0.2658663701485618,
+            "hi": 0.2957640395743287,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.11576451995258791,
+            "lo": 0.10027024207691958,
+            "hi": 0.1294298340234903,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.30343737653101543,
+            "lo": 0.2886353557875794,
+            "hi": 0.3187721139482051,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.9147328656233136,
+            "lo": 0.9042065044852154,
+            "hi": 0.921092433271654,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.5056659935364005,
+            "sd": 0.004037021632657095
+          }
+        }
+      },
+      {
+        "country": "Zimbabwe (cross-validated)",
+        "contestant": "rule: age (higher first)",
+        "kind": "rule",
+        "n": 9265,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5166920386201302,
+            "lo": 0.5028935138922642,
+            "hi": 0.5301561082333033,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.28854714393086744,
+            "lo": 0.2734919075914603,
+            "hi": 0.30596225615729516,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.11536941920189649,
+            "lo": 0.10054731623458482,
+            "hi": 0.13000218714340053,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.32793362307388385,
+            "lo": 0.31242687423089704,
+            "hi": 0.3442777261175163,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8900161899622234,
+            "lo": 0.8801306609579694,
+            "hi": 0.8998698443828009,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.5167880385976,
+            "sd": 0.00013613219012875922
+          }
+        }
+      },
+      {
+        "country": "Zimbabwe (cross-validated)",
+        "contestant": "rule: wealth (higher first)",
+        "kind": "rule",
+        "n": 9265,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5056421842277236,
+            "lo": 0.4896704731717389,
+            "hi": 0.5215443143080699,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.2774133104867172,
+            "lo": 0.26301958125108327,
+            "hi": 0.2934223962212078,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.10391149743184512,
+            "lo": 0.08907799872678179,
+            "hi": 0.11857979401189826,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.30225207427894113,
+            "lo": 0.28425103476567765,
+            "hi": 0.32016520112722624,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.905342687533729,
+            "lo": 0.8930621299590336,
+            "hi": 0.9186439553148296,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.505883774196694,
+            "sd": 0.0011922908996689213
+          }
+        }
+      },
+      {
+        "country": "Zimbabwe (cross-validated)",
+        "contestant": "logistic_regression",
+        "kind": "model",
+        "n": 9265,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5797318478077071,
+            "lo": 0.5662374745013197,
+            "hi": 0.5927607943058102,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.32315398750277313,
+            "lo": 0.3065853145803477,
+            "hi": 0.3405157416249618,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.14618727775582774,
+            "lo": 0.1227714203363688,
+            "hi": 0.1625648728701693,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.37929672066376924,
+            "lo": 0.3625057414254233,
+            "hi": 0.3944815080146861,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.862277388019428,
+            "lo": 0.8497308192621543,
+            "hi": 0.878960194992635,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.5792364287820628,
+            "sd": 0.002077007218173192
+          }
+        }
+      },
+      {
+        "country": "Zimbabwe (cross-validated)",
+        "contestant": "hist_gradient_boosting",
+        "kind": "model",
+        "n": 9265,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5696082564909116,
+            "lo": 0.555777453888602,
+            "hi": 0.5831570719331998,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.32007268756887597,
+            "lo": 0.3034681578538894,
+            "hi": 0.33805300841251806,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.1457921770051363,
+            "lo": 0.128670303908943,
+            "hi": 0.1634231343371299,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.3575661793757408,
+            "lo": 0.3409660453314886,
+            "hi": 0.3749505978921768,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8621694549379385,
+            "lo": 0.8480849985160449,
+            "hi": 0.8756867948814946,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.566483774642605,
+            "sd": 0.003948057113748931
+          }
+        }
+      },
+      {
+        "country": "Malawi (untouched)",
+        "contestant": "rule: random",
+        "kind": "rule",
+        "n": 10000,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5019868938526171,
+            "lo": 0.4894135240119676,
+            "hi": 0.5146523564044287,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.2601866551895826,
+            "lo": 0.24707074637153995,
+            "hi": 0.2742577561068868,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.09896432681242807,
+            "lo": 0.08482764033947524,
+            "hi": 0.11360778201413697,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.300728807057921,
+            "lo": 0.28592917276429586,
+            "hi": 0.3160001525203996,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8962,
+            "lo": 0.8843157808653368,
+            "hi": 0.904681860645506,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.5004781007921166,
+            "sd": 0.0036797966673627596
+          }
+        }
+      },
+      {
+        "country": "Malawi (untouched)",
+        "contestant": "rule: pregnant_first",
+        "kind": "rule",
+        "n": 10000,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5154816567014557,
+            "lo": 0.5026164896966935,
+            "hi": 0.528041911771544,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.2828671529671683,
+            "lo": 0.26774391058440977,
+            "hi": 0.29841867879923084,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.12696586114307634,
+            "lo": 0.1134156062259398,
+            "hi": 0.1411550925925926,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.31683927886459534,
+            "lo": 0.3023428628769546,
+            "hi": 0.3319179165665918,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8944,
+            "lo": 0.8806220592814614,
+            "hi": 0.9030183059035733,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.5155060632054779,
+            "sd": 0.0031488096480210156
+          }
+        }
+      },
+      {
+        "country": "Malawi (untouched)",
+        "contestant": "rule: age (higher first)",
+        "kind": "rule",
+        "n": 10000,
+        "summary": {
+          "auroc": {
+            "estimate": 0.4835152588124524,
+            "lo": 0.4706597110128921,
+            "hi": 0.49663136614242576,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.2601134703095572,
+            "lo": 0.24677220375470862,
+            "hi": 0.27512358340489795,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.11162255466052934,
+            "lo": 0.09861843949070948,
+            "hi": 0.12524336291171434,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.3095512082853855,
+            "lo": 0.29344770201075,
+            "hi": 0.3249641744382696,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.9148,
+            "lo": 0.9087746583167343,
+            "hi": 0.9232918792008339,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.48343834511865513,
+            "sd": 0.00012653203768924046
+          }
+        }
+      },
+      {
+        "country": "Malawi (untouched)",
+        "contestant": "rule: wealth (higher first)",
+        "kind": "rule",
+        "n": 10000,
+        "summary": {
+          "auroc": {
+            "estimate": 0.48828848404738706,
+            "lo": 0.47476229655308577,
+            "hi": 0.5025198458080263,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.25628747343565117,
+            "lo": 0.2431048380067197,
+            "hi": 0.27116813502009196,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.09742999616417337,
+            "lo": 0.08518498418274023,
+            "hi": 0.11090743936449313,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.2869198312236287,
+            "lo": 0.2696074589710492,
+            "hi": 0.3021200730696269,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.9073,
+            "lo": 0.8960586859164081,
+            "hi": 0.9186316475071488,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.487978255797284,
+            "sd": 0.0008016023578136436
+          }
+        }
+      },
+      {
+        "country": "Malawi (untouched)",
+        "contestant": "logistic_regression",
+        "kind": "model",
+        "n": 10000,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5679516452365213,
+            "lo": 0.555310478068384,
+            "hi": 0.5805258358424698,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.29489435239347017,
+            "lo": 0.2805528539285788,
+            "hi": 0.31033412542316957,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.12159570387418489,
+            "lo": 0.10546977498686971,
+            "hi": 0.13531914868807043,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.35116992711929423,
+            "lo": 0.33525788153783875,
+            "hi": 0.3666126196478712,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8729,
+            "lo": 0.8554268601368529,
+            "hi": 0.8868580206657629,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          }
+        }
+      },
+      {
+        "country": "Malawi (untouched)",
+        "contestant": "hist_gradient_boosting",
+        "kind": "model",
+        "n": 10000,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5477484403367081,
+            "lo": 0.5342413688138964,
+            "hi": 0.5613678498656943,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.28397419965886983,
+            "lo": 0.2699478129699916,
+            "hi": 0.2994823422630841,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.11775987725354814,
+            "lo": 0.10322482745117235,
+            "hi": 0.13158983162881221,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.3352512466436517,
+            "lo": 0.3189849905254697,
+            "hi": 0.3525362450590224,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8623,
+            "lo": 0.8483830530097874,
+            "hi": 0.8772685305896831,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          }
+        }
+      },
+      {
+        "country": "Zambia (untouched)",
+        "contestant": "rule: random",
+        "kind": "rule",
+        "n": 6829,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5018188586416988,
+            "lo": 0.48670722431820856,
+            "hi": 0.516475518268212,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.31016423443713514,
+            "lo": 0.29310214164955034,
+            "hi": 0.32808533967451775,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.09454374412041393,
+            "lo": 0.07829234706025671,
+            "hi": 0.10859376581590856,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.29868297271872063,
+            "lo": 0.2825567866993069,
+            "hi": 0.3148760349111056,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8936886806267389,
+            "lo": 0.8838037648312722,
+            "hi": 0.9047976835264129,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.500895167292789,
+            "sd": 0.009191783292237802
+          }
+        }
+      },
+      {
+        "country": "Zambia (untouched)",
+        "contestant": "rule: pregnant_first",
+        "kind": "rule",
+        "n": 6829,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5124364684658158,
+            "lo": 0.4973008714811589,
+            "hi": 0.5269972036755465,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.3246977124473032,
+            "lo": 0.30619738831189813,
+            "hi": 0.34480236972317074,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.11665098777046096,
+            "lo": 0.10157826048712078,
+            "hi": 0.13247820368347402,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.3090310442144873,
+            "lo": 0.29279528425617135,
+            "hi": 0.32507015902712816,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8920779030604774,
+            "lo": 0.8816237300224058,
+            "hi": 0.9035106104658475,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.5112174951278072,
+            "sd": 0.008598692904826627
+          }
+        }
+      },
+      {
+        "country": "Zambia (untouched)",
+        "contestant": "rule: age (higher first)",
+        "kind": "rule",
+        "n": 6829,
+        "summary": {
+          "auroc": {
+            "estimate": 0.4826211287245046,
+            "lo": 0.46649075855387284,
+            "hi": 0.49853710356847325,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.3160916074503334,
+            "lo": 0.2994887385673141,
+            "hi": 0.3349335490371704,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.11618062088428975,
+            "lo": 0.09999524714828899,
+            "hi": 0.13598140567318248,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.312793979303857,
+            "lo": 0.2955366487479162,
+            "hi": 0.3287333954988537,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.916386000878606,
+            "lo": 0.9049825886184185,
+            "hi": 0.9251631626790614,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.48265911412602874,
+            "sd": 0.00027858518307793294
+          }
+        }
+      },
+      {
+        "country": "Zambia (untouched)",
+        "contestant": "rule: wealth (higher first)",
+        "kind": "rule",
+        "n": 6829,
+        "summary": {
+          "auroc": {
+            "estimate": 0.48268693808259533,
+            "lo": 0.4659513120736221,
+            "hi": 0.4992915363999347,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.3049220436961205,
+            "lo": 0.2881760206410307,
+            "hi": 0.32325376490094593,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.10301034807149577,
+            "lo": 0.08610756302521011,
+            "hi": 0.11854702941786266,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.2779868297271872,
+            "lo": 0.2574109724332537,
+            "hi": 0.2941189968415085,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8986674476497291,
+            "lo": 0.88953662412371,
+            "hi": 0.9093309310682651,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "auroc_per_repeat": {
+            "mean": 0.4824497843593358,
+            "sd": 0.0019010908215364136
+          }
+        }
+      },
+      {
+        "country": "Zambia (untouched)",
+        "contestant": "logistic_regression",
+        "kind": "model",
+        "n": 6829,
+        "summary": {
+          "auroc": {
+            "estimate": 0.564765309627029,
+            "lo": 0.549460337991235,
+            "hi": 0.5796458520865313,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.3562441906280733,
+            "lo": 0.33645368670376796,
+            "hi": 0.37648084808726656,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.13687676387582315,
+            "lo": 0.11664815601623812,
+            "hi": 0.1572264410957962,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.34854186265286924,
+            "lo": 0.33146609346680816,
+            "hi": 0.3647864451741726,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8726021379411334,
+            "lo": 0.8608504983440718,
+            "hi": 0.8878032675677202,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          }
+        }
+      },
+      {
+        "country": "Zambia (untouched)",
+        "contestant": "hist_gradient_boosting",
+        "kind": "model",
+        "n": 6829,
+        "summary": {
+          "auroc": {
+            "estimate": 0.5446546498912145,
+            "lo": 0.5294561823217028,
+            "hi": 0.5588404811728128,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "pr_auc": {
+            "estimate": 0.33901105982160196,
+            "lo": 0.3215424506728943,
+            "hi": 0.3586668899121339,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "sens_at_90_spec": {
+            "estimate": 0.12276575729068674,
+            "lo": 0.10391074223214758,
+            "hi": 0.13727469200768197,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "recall_top": {
+            "estimate": 0.32883871642103063,
+            "lo": 0.3114297837226297,
+            "hi": 0.34410917914166644,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          },
+          "share_tested": {
+            "estimate": 0.8683555425391711,
+            "lo": 0.8530047392356842,
+            "hi": 0.8919636644635703,
+            "n_resamples": 2000,
+            "n_skipped": 0
+          }
+        }
+      }
+    ]
+  }
+}
