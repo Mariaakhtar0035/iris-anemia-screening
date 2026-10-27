@@ -1,0 +1,10 @@
+country,step,n,pct_of_file,dropped
+zimbabwe,in file,9955,1.0,0
+zimbabwe,Hb result,9265,0.9306880964339528,690
+zimbabwe,no missing feature,9265,0.9306880964339528,0
+malawi,in file,21587,1.0,0
+malawi,Hb result,10000,0.4632417658776115,11587
+malawi,no missing feature,9592,0.444341501829805,408
+zambia,in file,13951,1.0,0
+zambia,Hb result,6829,0.4894989606479822,7122
+zambia,no missing feature,6829,0.4894989606479822,0
