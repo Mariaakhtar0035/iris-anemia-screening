@@ -26,6 +26,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Does TabPFN, the model you named, help? (M14) | **Yes in Ghana, not elsewhere** | Ghana 0.92 vs 0.85; India 0.65; fingernails 0.82 |
 | Does TabPFN still work on a new dataset? | **No**, only the simple rule carries over | Ghana -> Eyes-Defy 0.60 (rule 0.84); reverse 0.60 (rule 0.65) |
 | Can one model learn all three countries? (M8) | **Yes, as well as separate models, and it can be made fair**; still no better than the rule in India or Italy | Ghana 0.90, India 0.64, Italy 0.91 (rule 0.65, 0.67, 0.92); country gap 0.52 -> 0.27 |
+| Can a new country get by with a few labelled photos? | **No**: 10-40 photos never beat the rule; Ghana needs about 80 | best at 40 photos: Ghana 0.68, India 0.68, Italy 0.93 (rule 0.65, 0.67, 0.92) |
 | Can any model learn more than the simple rule in India? | **No**, too few photos | rule 0.67, best model 0.67 |
 | Is the deeper eyelid fold better in India? | **Maybe**, borderline | rule 0.67 -> 0.76 (change +0.08 [+0.00, +0.18]) |
 | Can Italy's score be trusted? | **No**, one early photo batch holds the anemic patients | the batch alone predicts anemia at 0.91 |
@@ -180,6 +181,13 @@ countries and tested on the third, it is no better than the rule (Ghana 0.61 vs 
 
 **Answer:** with this much data, per-country models aren't worth it. One mixed, standardized model is as good and
 fairer, but diverse training data doesn't add pallor signal at our size.
+
+**And a new country with a few labelled photos? (Stage 15, report: [`stage15_few_local.md`](stage15_few_local.md))**
+Same photos and mixed cutoffs. Given 10, 20 or 40 labelled photos from the new country, trained with or without the
+other two countries, no model beats the rule in any country (best at 40: Ghana 0.680 [0.629, 0.731] vs 0.650, India
+0.682 vs 0.671, Italy 0.929 vs 0.924). Ghana passes the rule at about 80 photos (Stage 9 curve: TabPFN 0.72 at 78)
+and reaches 0.92 at 310; India (76) and Italy (98) never pass it. The other two countries keep a small-k model near
+the rule's level (India, 20 photos: 0.69 with them, 0.59 without) but add no signal of their own.
 
 ## M9 and M12: more data, including fingernails and palms
 

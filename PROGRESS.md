@@ -86,6 +86,7 @@ fingernail photos of Ghanaian children (F16). See
 | F16 | Palm and fingernail photos of Ghana children (M9, M12) | other body sites, same country and age group as the eyelids | palm 0.912, nails 0.798 (TabPFN); no shortcut in palm | **palm as good as eyelid; nails weaker** |
 | F15 | Correct the nail colors: white board, or the skin next to the nail | cancel lighting and skin tone (M6) | white board: rule +0.025, models +0.00-0.03 (within noise); minus skin: -0.11 to -0.31 | **white board: small gain; minus skin: hurt** |
 | F17 | One model for Ghana, India and Italy, with shortcuts taken out (M5, M8, M9) | can mixed training learn every country without guessing the country? | mixed TabPFN Ghana 0.90, India 0.64, Italy 0.91 (own-country models 0.92, 0.66, 0.92); standardizing per country halves the country gap (0.52 -> 0.27); train on two, test on the third: no better than the rule | **fair and as good as separate models; no new signal** |
+| F18 | A few labelled local photos for a new country (M8, M9) | how many photos must a new clinic label before a model beats the rule? | 10-40 photos: no model beats the rule anywhere; Ghana needs ~80 (0.92 at 310); India and Italy never beat it, even with all their photos; the other two countries only keep small-k models at the rule's level | **a few photos aren't enough** |
 
 ## Part A: checking the published eyelid results
 
@@ -568,6 +569,36 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Caveats:** cutoffs differ between children and adults; India and Italy have few photos, so their ranges are wide
   (India about +-0.12). Report: [`reports/stage14_three_countries.md`](reports/stage14_three_countries.md).
 
+### F18. A few local photos for a new country (Stage 15). Not enough; Ghana needs about 80.
+- **Question:** a model trained on two countries doesn't work on the third (F17). If a clinic in the new country
+  blood-tests a few people and labels their photos, how many does it take to beat the simple rule? Do the other two
+  countries' photos help?
+- **Answer:** 10 to 40 local photos are not enough anywhere. Ghana needs about 80 to beat the rule and 200+ for 0.90.
+  India and Italy never beat it, even with all their photos. **Best model at 40 photos: Ghana 0.68, India 0.68,
+  Italy 0.93; rule 0.65, 0.67, 0.92.**
+- **What we did:** same 605 photos and mixed cutoffs as F17. For each country, 5x5 CV by photo; k = 0, 10, 20, 40 or
+  all labelled local photos drawn from the training part. Trained on the other two countries + the k photos (each
+  country standardized), or on the k photos alone; tested on that country's held-out photos.
+- **What happened** (best AUROC at each k):
+
+| Local photos | Ghana | India | Italy | Italy early batch |
+|---|---|---|---|---|
+| 0 | 0.61 | 0.67 | 0.89 | 0.68 |
+| 10 | 0.63 | 0.68 | 0.93 | 0.71 |
+| 20 | 0.65 | 0.69 | 0.93 | 0.73 |
+| 40 | 0.68 | 0.68 | 0.93 | 0.74 |
+| all (310 / 76 / 98) | **0.92** | 0.70 | 0.93 | 0.71 |
+| Rule | 0.65 | 0.67 | 0.92 | 0.75 |
+
+- **Takeaways:**
+  - **No k from 10 to 40 beats the rule** (no paired change has its CI above 0).
+  - **Ghana:** Stage 9's learning curve fills the gap between 40 and 310: TabPFN 0.72 at 78, 0.80 at 155, 0.90 at 233.
+  - **The other two countries are a safety net, not extra signal:** with 20 Indian photos a model reaches 0.69 with
+    them and 0.59 without. For TabPFN no gain is clear; with all Ghana photos they cost a little (-0.016).
+  - The large gains for tree models at 10 photos (up to +0.34) only mean they can't learn from 10 photos alone.
+- **Caveats:** India and Italy have few photos (ranges about +-0.11); the Ghana "about 80" comes from Stage 9's folds,
+  not a paired test. Report: [`reports/stage15_few_local.md`](reports/stage15_few_local.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -602,6 +633,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Any model, TabPFN included, inside India (stuck at the rule's 0.65-0.67).
 - The untrained rule on Ghana fingernail cut-outs (chance).
 - Learned eyelid models on a new dataset, also when trained on two countries and tested on the third.
+- A few (10-40) labelled photos from a new country: not enough to beat the rule anywhere.
 - Gray-world color correction (it erases the signal).
 - Subtracting the skin next to the nail (the skin pales too, so it erases the signal).
 - Debiasing, for raising accuracy inside a country.

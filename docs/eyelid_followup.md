@@ -546,3 +546,46 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
     vs 0.92). Mixing and debiasing make the model fair; they don't add pallor signal.
   - **Train on two countries, test on the third: still no better than the rule** (Ghana 0.61 vs 0.65, India 0.70 vs
     0.67, Italy 0.90 vs 0.92).
+
+### Step 17 (Stage 15): how many local photos a new country needs (M8, M9)
+- **Why:** trained on two countries, no model beats the rule on the third (Step 16). A clinic in a new country could
+  blood-test a few people and label their photos. How many does it take, and do the other two countries' photos
+  help when local photos are few?
+- **What we did:** with Jaineel's go-ahead (2026-10-26), `src/eyelid/few_local.py` and `configs/few_local.yaml`. Same
+  605 photos and **mixed cutoffs** as Step 16 (Ghana children Hb < 11.0 g/dL, adults WHO by sex). For each target
+  country: 5x5 CV by photo, stratified by anemia; from the training part, k = 0, 10, 20, 40 or all (about 310 in
+  Ghana, 76 in India, 98 in Italy) labelled photos drawn at random, stratified. Trained (a) on the other two countries
+  plus the k photos, each country standardized (the new country's mean and SD from its unlabelled training photos,
+  never the test photos), or (b) on the k photos alone. LR, RF, gradient boosting and TabPFN, next to the rule and
+  the dummy; paired bootstrap AUROC change against the rule and between (a) and (b). Answer fixed before running: the
+  smallest k at which a model beats the rule (CI above 0), and whether (a) beats (b). Run at commit `974267c`
+  (results recorded clean). Report: `reports/stage15_few_local.md`.
+- **Results** (best AUROC over all models and both ways of training, inside the target country):
+
+| Labelled local photos | Ghana | India | Italy | Italy early batch |
+|---|---|---|---|---|
+| 0 (train on two, test on the third) | 0.607 | 0.674 | 0.894 | 0.676 |
+| 10 | 0.628 | 0.675 | 0.928 | 0.705 |
+| 20 | 0.653 | 0.686 | 0.929 | 0.733 |
+| 40 | 0.680 | 0.682 | 0.929 | 0.738 |
+| all (310 / 76 / 98) | **0.919** (TabPFN, local only) | 0.702 | 0.934 | 0.714 |
+| Rule (no training) | 0.650 | 0.671 | 0.924 | 0.752 |
+
+| Does adding the other two countries help? (TabPFN, paired change) | k = 10 | k = 20 | k = 40 | all |
+|---|---|---|---|---|
+| Ghana | +0.035 [-0.027, 0.096] | +0.017 | +0.004 | **-0.016** [-0.027, -0.004] |
+| India | +0.038 [-0.093, 0.172] | +0.112 [-0.024, 0.256] | +0.066 | +0.047 |
+| Italy | -0.061 [-0.142, 0.025] | -0.031 | -0.013 | +0.002 |
+
+- **What it means:**
+  - **A few local photos aren't enough.** With 10 to 40 labelled photos, no model beats the rule in any country
+    (no change vs the rule has its CI above 0).
+  - **Ghana beats the rule only with many photos:** 0.68 at 40, 0.92 at 310. Stage 9's learning curve (other folds)
+    fills the gap: TabPFN 0.72 [0.67, 0.77] at 78 photos, 0.80 at 155, 0.90 at 233. So roughly 80 to beat the rule
+    and over 200 for 0.90.
+  - **India and Italy never beat the rule,** even with every local photo we have (India best 0.70 vs 0.67, Italy 0.93
+    vs 0.92, Italy early batch 0.71 vs 0.75).
+  - **The other two countries are a safety net, not extra signal.** With very few local photos they keep a model near
+    the rule's level (India at k = 20: 0.69 with them, 0.59 without). The big gains in the report (gradient boosting
+    +0.13 to +0.34 at k = 10) come from tree models that can't learn from 10 photos alone. For TabPFN every change's
+    CI crosses 0, except Ghana with all photos, where the other countries cost a little (-0.016).

@@ -286,6 +286,13 @@ are bringing back to the mentors are in [`reports/mentor_followup_eyelid.md`](re
   countries' healthy people are scored (rank spread 0.52 -> 0.27) at no cost inside a country. It still doesn't beat
   the untrained rule in India (0.671) or Italy (0.924), and trained on two countries it is no better than the rule
   on the third. Report: [`reports/stage14_three_countries.md`](reports/stage14_three_countries.md).
+- **A few labelled photos from a new country don't fix it.** Same 605 photos and mixed cutoffs (Ghana children Hb
+  < 11.0 g/dL, adults WHO by sex). Given 10, 20 or 40 labelled photos from the new country, with or without the other
+  two countries' photos, no model beats the untrained rule anywhere (best at 40: Ghana 0.680 [0.629, 0.731] vs rule
+  0.650, India 0.682 vs 0.671, Italy 0.929 vs 0.924). Ghana needs about 80 photos to pass the rule (TabPFN 0.72 at 78
+  in the Stage 9 learning curve) and 0.92 takes all 310; India (76) and Italy (98) never pass it. The other two
+  countries only keep a small-k model near the rule's level. Report:
+  [`reports/stage15_few_local.md`](reports/stage15_few_local.md).
 - **Ghana children carry a real color signal.** Gradient boosting climbs from 0.72 to 0.85 as its training photos go
   from 78 to 310, so more photos would likely help. The ViT does worse than 29 color numbers.
 - **India is at the level of the untrained rule.** The deeper fold of the eyelid (the forniceal mask) does better than
@@ -526,11 +533,12 @@ python -m src.ghana_sites                  # 6.7, Ghana palm and fingernails
 python -m src.eyelid.tabpfn_checks         # 6.1, TabPFN shortcut checks (no color, leave one hospital out)
 python -m src.eyelid.tabpfn_transfer       # 6.1, TabPFN across datasets (Ghana <-> Eyes-Defy)
 python -m src.eyelid.three_countries       # 6.1, one model for Ghana, India and Italy; train on two, test on the third
+python -m src.eyelid.few_local             # 6.1, how many labelled local photos a new country needs
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -587,6 +595,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Deeper eyelid fold, paired check (Section 6.1) | done: borderline lead in India |
 | TabPFN, the model named at the mentor meeting (Section 6.1) | done; passes the shortcut checks (0.913 with hospitals held out) |
 | Ghana palm and fingernail photos (Section 6.7) | done; can't be paired with the eyelids |
+| One model for three countries; a few local photos for a new one (Section 6.1) | done: fair, but no better than the rule outside Ghana |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 
