@@ -1,0 +1,25 @@
+# Stage 16: predict the Hb value from eyelid color, then apply the anemia cutoff (mentor advice, meeting of 2026-10-31:
+# "if you have the Hb, measure both" the classification and how well Hb is estimated). Starts with Ghana, the one
+# population whose eyelid signal passed the shortcut checks. scikit-learn only; TabPFN can be added later.
+#
+# Anemia: CP-AnemiC children 6-59 months, Hb < 11.0 g/dL (default.yaml, anemia_cutoff_g_dl.child_6_59_months).
+# Seed and bootstrap from default.yaml; color features and the rule from color.yaml.
+#
+# Moscow fingernails (Yakimov et al. 2024, 250 adults, fixed light box): Hb in the file is g/L and is converted to g/dL.
+# Anemia: Hb < 12.0 g/dL for everyone (nails.yaml: the file has no sex column; Jaineel chose the WHO cutoff for women on
+# 2026-10-23, so men between 12.0 and 13.0 g/dL count as not anemic). Input: color numbers of the three nail boxes as
+# photographed (no white balance), as in Stage 12. Splits: 5x5 CV by patient and leave one photo session out.
+datasets: [cp_anemic, moscow_nails]
+cp_anemic_subset: singletons   # the 388 photos with no copy: copies carry conflicting Hb values, so they can't be used
+cv: {n_splits: 5, n_repeats: 5}  # by photo (one photo per person), stratified on the anemia label
+
+regressors:
+  ridge: {alpha: 1.0}
+  random_forest: {n_estimators: 500, min_samples_leaf: 5, max_features: sqrt}
+  hist_gradient_boosting: {max_iter: 200, learning_rate: 0.05, max_leaf_nodes: 15, min_samples_leaf: 10}  # as ceiling.yaml
+
+# Compared against the same three model families trained to say anemic yes/no directly.
+classifiers:
+  logistic_regression: {C: 1.0, max_iter: 5000}
+  random_forest: {n_estimators: 500, min_samples_leaf: 5, max_features: sqrt}
+  hist_gradient_boosting: {max_iter: 200, learning_rate: 0.05, max_leaf_nodes: 15, min_samples_leaf: 10}

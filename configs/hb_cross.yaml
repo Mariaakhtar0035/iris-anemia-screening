@@ -1,0 +1,16 @@
+# Stage 17: does an Hb model trained on one eyelid dataset work on the other, each with its own anemia cutoff?
+# Mentor advice (2026-10-31): estimate Hb, then apply the local cutoff, so datasets with different cutoffs can share one
+# model. Regressors and classifiers from hb_regression.yaml; seed and bootstrap from default.yaml; color numbers and the
+# rule from color.yaml.
+#
+# Cutoffs, each applied only to its own dataset:
+#   CP-AnemiC (Ghana, children 6-59 months): Hb < 11.0 g/dL (default.yaml).
+#   Eyes-Defy (India and Italy, adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml); pregnancy is
+#   not recorded, so assumed not pregnant.
+# Italy's anemic patients sit almost all in one early photo batch (21 of 23 in folders 1-31, Stage 10), so Italy
+# results are reported but can't be trusted on their own.
+cp_anemic_subset: singletons
+directions: [[cp_anemic, eyes_defy], [eyes_defy, cp_anemic]]
+# "as photographed": color numbers unchanged. "standardized per dataset": each dataset's color numbers scaled to mean 0,
+# sd 1 using that dataset's own photos (no labels used), as in Stage 14's per-country scaling.
+feature_versions: [as photographed, standardized per dataset]

@@ -1,0 +1,16 @@
+# Stage 18: correct a Ghana-trained Hb model with a few local Hb measurements at the new site.
+# Stage 17: the Ghana model's Hb estimates are shifted at Eyes-Defy (about -2.9 g/dL in Italy, about 0 in India), so
+# applying the local cutoff flags nearly everyone. Here k people at the new site have a lab Hb; a correction is fit on
+# them and scored on everyone else at that site. Repeated over random draws of the k people.
+#
+# Cutoffs: Ghana training labels aren't used (the model predicts Hb). Eyes-Defy: WHO by sex, women < 12.0, men < 13.0
+# g/dL (cross_dataset.yaml); each person is judged against their own cutoff. Italy's anemic patients sit almost all in
+# one early photo batch (Stage 10), so Italy results can't be trusted on their own.
+sites: [India, Italy]
+k_local: [5, 10, 20, 40]
+n_draws: 200
+models: [random_forest, hist_gradient_boosting]   # regressors from hb_regression.yaml, trained on all 388 Ghana photos
+corrections:
+  shift: mean of (lab Hb - estimate) over the k people, added to every estimate
+  shift and scale: least-squares line from estimate to lab Hb over the k people (can flip the ranking if the slope < 0)
+local_only_model: random_forest   # the comparison from Stage 15: a regressor trained on the k local people alone
