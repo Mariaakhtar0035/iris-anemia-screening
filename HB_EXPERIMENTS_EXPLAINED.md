@@ -1,6 +1,6 @@
-# Predicting the Hb number instead of "anemic or not"
+# Predicting Hb, and testing whether models cross sites
 
-*Follow-up to the mentor meeting of 2026-10-31. Written for students new to machine learning; terms are explained as they come up. Research notes only, not a medical tool.*
+*Follow-up to the mentor meeting of 2026-10-31 (Stages 16-19). Written for students new to machine learning; terms are explained as they come up. Research notes only, not a medical tool.*
 
 ---
 
@@ -13,13 +13,15 @@ So far our models answered a yes/no question: **is this person anemic?** That cr
 | CP-AnemiC (Ghana) | children 6-59 months | hemoglobin (Hb) below **11.0** g/dL |
 | Eyes-Defy (India and Italy) | adults | Hb below **12.0** (women) or **13.0** (men) |
 | Moscow fingernails | adults | Hb below **12.0** for everyone (the file doesn't record sex) |
+| Ghana fingernails | children under 6 | the dataset's own label from the file names (no Hb, so the cutoff isn't stated) |
 
-The mentors suggested: **if you have the Hb value, predict the number itself** and report how well you estimate it. Then each place can apply its own cutoff afterwards. In principle, one model could then serve datasets with different definitions.
+The mentors suggested: **if you have the Hb value, predict the number itself** and report how well you estimate it. Then each place can apply its own cutoff afterwards. In principle, one model could then serve datasets with different definitions. They also suggested trying **both cross-country and per-region** models.
 
-We tested this in three steps:
+We tested this in four steps:
 - **Stage 16:** within one dataset at a time (Ghana eyelids, Moscow nails). Can a model estimate Hb at all?
 - **Stage 17:** across datasets (Ghana eyelids ↔ Eyes-Defy eyelids). Does the Hb estimate carry over?
 - **Stage 18:** if it doesn't, can a few local Hb measurements at the new site correct it?
+- **Stage 19:** do fingernail models carry over between Ghana and Moscow, where one side was photographed under fixed lighting?
 
 Everything uses the same 29 color numbers measured on the eyelid (or nail), scikit-learn models only, and the usual checks: held-out data, a dummy baseline, a no-color control, and 95% ranges from 2,000 bootstrap resamples.
 
@@ -99,28 +101,7 @@ When each person is judged against their own cutoff (12 for women, 13 for men), 
 
 ---
 
-## 4. Take-aways
-
-1. **Eyelid and nail color do estimate Hb** within one dataset, with an error of about 1.4-1.7 g/dL, and it holds on unseen hospitals and photo sessions.
-2. **Ranking by the estimate works almost as well as a yes/no model,** so Hb is a fine shared target.
-3. **Don't read the Hb number at face value.** Estimates shrink toward the average, so low values are overestimated and anemic people get missed at the cutoff.
-4. **Across datasets, the Hb estimate fails** in the same way the yes/no models did: the colors map to Hb differently in each population and camera. The untrained redness rule is still the best cross-dataset option.
-5. **Watch for hidden shortcuts in the scoring rule itself,** not only in the data (the sex-cutoff trap).
-6. **A few local Hb measurements fix the average but not the decisions** (Stage 18, section 6). A model that can't tell a new site's people apart can't be rescued by recalibrating its number. For a clinic, **rank people and refer the lowest-ranked group** rather than reading off an estimated Hb value.
-
----
-
-## 5. Limits
-
-- **Small datasets:** 388 Ghana photos, 250 Moscow, 217 Eyes-Defy (95 India, 122 Italy).
-- **Children vs adults:** the cross-dataset test mixes age groups with cameras, so we can't tell how much of the failure is each.
-- **Italy's photo batch** makes its numbers unreliable.
-- **Moscow uses one cutoff for everyone**, so men with Hb between 12.0 and 13.0 count as not anemic.
-- **scikit-learn only.** We didn't use TabPFN (the branch's best model, 0.92 on Ghana yes/no), because it needs PyTorch.
-
----
-
-## 6. Stage 18: can a few local Hb measurements fix it?
+## 4. Stage 18: can a few local Hb measurements fix it?
 
 Since the Ghana model's estimates were *shifted* at the new site (almost 3 g/dL too low in Italy), we tried correcting them. Suppose the new site measures Hb on **k** people (5, 10, 20 or 40). We fit a simple correction on those k people and score everyone else at the site. We repeated this with 200 random draws of the k people and report the average, with the range across draws.
 
@@ -157,12 +138,60 @@ Since the Ghana model's estimates were *shifted* at the new site (almost 3 g/dL 
 
 ---
 
-## 7. Where things are
+## 5. Stage 19: do fingernail models cross sites?
+
+The mentors suggested trying cross-country for nails too. This is the one test where **one side was photographed under fixed lighting**: the Moscow nails were all taken in the same light box with a white board, while the Ghana nails were not. If fixed lighting were enough, transfer might work here even though it failed for eyelids.
+
+We trained on all of one nail dataset and applied the model **unchanged** to the other, both as photographed and with each dataset's colors scaled separately. This is yes/no only, because the Ghana nails have no Hb values. **The two datasets define anemia differently** (Ghana: children, a label from the file names; Moscow: adults, Hb < 12.0 g/dL), so part of any failure could come from that.
+
+| AUROC | Rule: less red = anemic | Logistic regression | Random forest | Gradient boosting |
+|---|---|---|---|---|
+| **Within Moscow** (cross-validated) | 0.70 | **0.82** | 0.81 | 0.79 |
+| **Within Ghana** (cross-validated) | **0.50** | 0.65 | **0.71** | 0.68 |
+| **Ghana → Moscow** | 0.70 | 0.58 | **0.38** | **0.42** |
+| **Moscow → Ghana** | 0.50 | **0.44** | **0.43** | **0.42** |
+
+Scaling each dataset's colors separately didn't help: every model stayed between 0.41 and 0.53.
+
+### What this shows
+
+- **Transfer fails in both directions.** Several models score *below* a coin flip, with ranges that exclude 0.5: what they learned on one dataset points the wrong way on the other.
+- **Fixed lighting on one side isn't enough.** It makes the Moscow results clean within Moscow, but a model still breaks when the other site photographed differently. For transfer to have a chance, photos probably need to be taken the **same way at every site**, which is what a color reference card or standard light box would do.
+- **The redness rule works for nails only where it works locally.** It scores 0.70 on Moscow nails but 0.50 (chance) on Ghana nails, so within Ghana, nail redness doesn't track the anemia label. Darker skin under the nail bed, children's nails, or the unstated label definition could explain this; the data can't tell which.
+- **Caveat:** in the branch's Stage 13, a model that couldn't see color scored 0.57 on Ghana nails, a small hint of a shortcut in that dataset.
+
+---
+
+## 6. Take-aways
+
+1. **Eyelid and nail color do estimate Hb** within one dataset, with an error of about 1.4-1.7 g/dL, and it holds on unseen hospitals and photo sessions.
+2. **Ranking by the estimate works almost as well as a yes/no model,** so Hb is a fine shared target.
+3. **Don't read the Hb number at face value.** Estimates shrink toward the average, so low values are overestimated and anemic people get missed at the cutoff.
+4. **Across datasets, the Hb estimate fails** in the same way the yes/no models did: the colors map to Hb differently in each population and camera. The untrained redness rule is still the best cross-dataset option.
+5. **Watch for hidden shortcuts in the scoring rule itself,** not only in the data (the sex-cutoff trap).
+6. **A few local Hb measurements fix the average but not the decisions** (Stage 18). A model that can't tell a new site's people apart can't be rescued by recalibrating its number. For a clinic, **rank people and refer the lowest-ranked group** rather than reading off an estimated Hb value.
+7. **Nails don't cross sites either, even with fixed lighting on one side** (Stage 19). Every cross-site test so far has failed for trained models: eyelids as yes/no and as Hb, with colors scaled per dataset, with a local Hb correction, and now fingernails. **Train per site, with photos taken the same way everywhere (a color card or light box); otherwise use the simple rule where it works locally.**
+
+---
+
+## 7. Limits
+
+- **Small datasets:** 388 Ghana eyelid photos, 526 Ghana nail photos, 250 Moscow, 217 Eyes-Defy (95 India, 122 Italy).
+- **Children vs adults:** the cross-dataset tests mix age groups with cameras, so we can't tell how much of the failure is each.
+- **Different label definitions** in the nail test (a file-name label vs a lab cutoff).
+- **Italy's photo batch** makes its numbers unreliable.
+- **Moscow uses one cutoff for everyone**, so men with Hb between 12.0 and 13.0 count as not anemic.
+- **scikit-learn only.** We didn't use TabPFN (the branch's best model, 0.92 on Ghana yes/no), because it needs PyTorch.
+
+---
+
+## 8. Where things are
 
 | What | Where |
 |---|---|
 | Stage 16 code, settings, report | `src/eyelid/hb_regression.py`, `configs/hb_regression.yaml`, `reports/stage16_hb_regression.md` |
 | Stage 17 code, settings, report | `src/eyelid/hb_cross.py`, `configs/hb_cross.yaml`, `reports/stage17_hb_cross.md` |
 | Stage 18 code, settings, report | `src/eyelid/hb_local.py`, `configs/hb_local.yaml`, `reports/stage18_hb_local.md` |
-| Tests | `tests/test_hb_regression.py` |
-| Raw results with every number and range | `results/stage16_hb_regression.json`, `stage17_hb_cross.json`, `stage18_hb_local.json` (not committed) |
+| Stage 19 code, settings, report | `src/nails_cross.py`, `configs/nails_cross.yaml`, `reports/stage19_nails_cross.md` |
+| Tests | `tests/test_hb_regression.py`, `tests/test_nails_cross.py` |
+| Raw results with every number and range | `results/stage16_hb_regression.json`, `stage17_hb_cross.json`, `stage18_hb_local.json`, `stage19_nails_cross.json` (not committed) |

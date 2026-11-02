@@ -1,0 +1,14 @@
+# Stage 19: fingernail models across sites, Ghana children <-> Moscow adults (mentor advice 2026-10-31: try both
+# cross-country and per-region). Moscow is the one dataset photographed under fixed lighting.
+# Classifiers from hb_regression.yaml; seed and bootstrap from default.yaml; color numbers and the rule from color.yaml;
+# near-copy rule from default.yaml (cp_anemic_near_duplicate), as in Stage 13.
+#
+# Anemia definitions differ between the two datasets, by design, and are never mixed within one:
+#   Ghana fingernails (Asare et al. 2022, children under 6): the dataset's own label, read from the file name. No Hb, so
+#   the cutoff behind it is not stated (the group's eyelid set uses Hb < 11.0 g/dL).
+#   Moscow fingernails (Yakimov et al. 2024, adults): Hb < 12.0 g/dL for everyone (nails.yaml; no sex column).
+# So a model trained on one is judged against the other's own definition. Yes/no only (Ghana has no Hb).
+ghana_nails_dir: data/raw/ghana_nails/Fingernails
+directions: [[ghana_nails, moscow_nails], [moscow_nails, ghana_nails]]
+feature_versions: [as photographed, standardized per dataset]   # standardized = each dataset on its own photos, no labels
+cv: {n_splits: 5, n_repeats: 5}   # within-dataset reference, by photo (one photo per person)
