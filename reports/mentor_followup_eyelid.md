@@ -34,6 +34,8 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | What would it save a clinic? (M13) | **Who to test first, not a rule-out** | test 50% of children to catch 90% (random: 90%) |
 | Does fixed lighting help? (M9, M12) | **Yes**: a clean signal on fingernails | 0.82, no shortcut, same on unseen sessions |
 | Do palm or fingernail photos work in Ghana children? (M12) | **Palm yes, as well as the eyelid; nails weaker** | palm 0.91, nails 0.80, eyelid 0.92 |
+| Does adding age and sex to the photo help? (2026-11-03) | **Not for yes/no; yes for the Hb number in adults** | Ghana 0.919 -> 0.918; India Hb error 1.45 -> 1.29 g/dL |
+| Does screening out bad photos help? (2026-10-31) | **No gain, but glare flags Italy's anemic batch** | best-model change +0.00 to +0.02; Italy glare alone 0.89 |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak.
@@ -366,6 +368,25 @@ table with no tuning.
 **Answer:** the model matters for the color numbers in Ghana, where there are enough photos. It can't create signal
 where the data is too small (India), and what it learns in one dataset doesn't carry over to another.
 
+## Since 2026-11-03: per location, with metadata and a quality check
+
+You said to focus on per-location models and asked where the metadata goes in. Both stages stay inside one dataset
+and one cutoff (Ghana Hb < 11.0; India and Italy WHO by sex).
+
+**Age and sex next to the photo** (report: [`stage20_metadata.md`](stage20_metadata.md))
+- Yes/no: no gain anywhere. Ghana TabPFN 0.919 -> 0.918, India 0.673 -> 0.666, Italy 0.920 -> 0.914.
+- The Hb number improves in the adults: India error 1.45 -> 1.29 g/dL, Italy 1.14 -> 1.06. Men's Hb runs higher.
+- In India age and sex alone estimate Hb as well as photo + age + sex.
+
+**Photo quality and glare** (report: [`stage21_quality.md`](stage21_quality.md))
+- Dropping the worst 10-20% of photos, or removing glare, doesn't raise the best model's AUROC.
+- Glare alone separates anemic from healthy in Italy at 0.89, but not inside the early batch (0.53). It marks the photo
+  batch, which is a shortcut check, not a fix.
+- In Italy the filter would reject anemic patients' photos more often (31-40% of rejected vs 19% overall).
+
+**Answer:** age and sex belong in the Hb-number model for adults, not the yes/no. A quality filter adds nothing on
+these curated cut-outs. It may matter for raw phone photos, which we don't have.
+
 ## Questions for you
 
 1. **Clinical target.** Which miss rate would a clinic accept: 10%, 5% or none? That decides which row of the M13
@@ -376,4 +397,5 @@ where the data is too small (India), and what it learns in one dataset doesn't c
 3. **Models.** TabPFN on color numbers is now our best (0.92 in Ghana); eye-pretrained VisionFM reaches 0.79 even
    fine-tuned. Were there other models you meant for the list?
 4. **Eyelid region.** The deeper fold (forniceal) did better in India for the rule and logistic regression, but only
-   just (95 photos). Is that consistent with what you've seen?
+   just (95 photos). Is that consistent with what you've seen?5. **Metadata.** Age and sex help the Hb number in adults but not the anemic yes/no. Should the main output be the Hb
+   estimate (with age and sex), turned into yes/no with each population's cutoff afterwards?

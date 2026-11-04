@@ -22,6 +22,8 @@ column); Ghana palms and nails: the dataset's own label (no Hb).
 | 12 | Fingernails in Moscow (fixed light box)? | Work inside the site | logistic regression 0.818, rule 0.703 | [nails](stage12_nails.md) |
 | 13 | Palms and nails in Ghana? | Palms work as well as eyelids; nails less | palm 0.912, nails 0.798 | [Ghana sites](stage13_ghana_sites.md) |
 | 16 | Can the photo estimate the Hb number? | Yes, better than guessing the mean | Ghana error 1.38 g/dL (mean guess 1.71); Moscow nails 1.65 (1.98) | [Hb number](stage16_hb_regression.md) |
+| 20 | Does adding age and sex to the photo help? | Not for yes/no anywhere; yes for the Hb number in adults (India, Italy) | Ghana TabPFN 0.919 -> 0.918; India Hb error 1.45 -> 1.29 g/dL | [age and sex](stage20_metadata.md) |
+| 21 | Does a photo-quality filter or glare removal help? | No gain; but glare alone flags Italy's anemic photo batch | best-model change +0.00 to +0.02; Italy glare alone 0.89 | [quality](stage21_quality.md) |
 
 ## Across sites (closed: explains why per-location models)
 

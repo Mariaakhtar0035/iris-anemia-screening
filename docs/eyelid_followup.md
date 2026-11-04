@@ -28,6 +28,9 @@ Paraphrased from the meeting, without names.
 | M12 | Look for fingernail or palm datasets that include metadata (age, sex). | Step 7: data search | fingernail set run as Stage 12 (Step 9): logistic regression 0.818, no shortcut; Ghana palm and nails as Stage 13 (Step 13): palm 0.912, nails 0.798 |
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
 | M14 | The mentors will email a list of models to try. | The email never came, so Step 12 runs the models named in the meeting | done (Step 12): TabPFN 0.919 in Ghana children, the best eyelid model; no gain in India or on nails |
+| M15 | (2026-10-31) Split the experiments into within one site and across sites so they can be followed. | `reports/README.md`: two tables, across-site marked closed after M17 | done |
+| M16 | (2026-10-31) Put a step in the pipeline that screens out bad-quality photos and crops the region. | Step 19 (Stage 21): quality numbers, glare removal, retake gate | done: no gain; glare flags Italy's batch. Automatic cropping not started (only Eyes-Defy has full photos) |
+| M17 | (2026-11-03) Don't set the goal at transfer for the image data; focus on per-location models. Where does the metadata go into the model? | Step 18 (Stage 20): age and sex next to the photo, per location | done: no gain for yes/no; helps the Hb number in adults |
 
 ## Part 2. Step log
 
@@ -589,3 +592,52 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
     the rule's level (India at k = 20: 0.69 with them, 0.59 without). The big gains in the report (gradient boosting
     +0.13 to +0.34 at k = 10) come from tree models that can't learn from 10 photos alone. For TabPFN every change's
     CI crosses 0, except Ghana with all photos, where the other countries cost a little (-0.016).
+
+### Step 18 (Stage 20): age and sex next to the photo (M17)
+- **Why:** the mentors asked (2026-11-03) where the metadata goes into the model. It went nowhere: every model saw only
+  the eyelid. They also said to stay per location.
+- **What we ran:** `python -m src.eyelid.metadata` (settings `configs/metadata.yaml`, results at clean commit
+  `7c9682a`).
+  - Data: Ghana 388 photos (Hb < 11.0 g/dL), India 95 and Italy 122 (WHO by sex: women < 12.0, men < 13.0).
+  - Inputs: photo only, age + sex only, or both.
+  - Models: color models, TabPFN, the DINOv2 probe, and Stage 16's Hb regressors.
+  - Splits: 5x5 CV by photo, plus leave one hospital out in Ghana. The hospital is never an input.
+  - Report: `reports/stage20_metadata.md`.
+- **Results:**
+
+| | Ghana | India | Italy |
+|---|---|---|---|
+| Best AUROC, photo | 0.919 | 0.673 | 0.920 |
+| Best AUROC, photo + age + sex | 0.918 | 0.666 | 0.914 |
+| Age + sex alone | 0.591 | 0.603 | 0.813 |
+| Hb error (g/dL, ridge), photo -> + age + sex | 1.60 -> 1.58 | 1.45 -> 1.29 | 1.14 -> 1.06 |
+
+- **What it means:**
+  - **Yes/no: no gain** (no paired change with its CI above 0, apart from the weak DINOv2 probe with a hospital held
+    out, 0.652 -> 0.674).
+  - **The Hb number improves in the adults:** India -0.157 [-0.310, -0.005], Italy -0.082 [-0.154, -0.008]. No cutoff
+    enters here; men's Hb runs higher.
+  - In India the photo adds nothing to the Hb number beyond age and sex.
+  - Italy's 0.81 from age + sex alone: anemic patients are older (median 65 vs 46) and more often women (32% vs 12%).
+    There sex also sets the cutoff, so part of it is the definition.
+
+### Step 19 (Stage 21): photo quality and glare (M16)
+- **Why:** the mentors advised (2026-10-31) screening out bad-quality photos in the pipeline.
+- **What we ran:** `python -m src.eyelid.quality` (settings `configs/quality.yaml`, thresholds fixed before running,
+  results at clean commit `7c9682a`).
+  - Data: Ghana eyelids, palms and nails; India and Italy eyelids.
+  - Per photo, from the pixels inside the cut-out: glare, dark and blown-out shares, blur, size.
+  - (a) Each quality number on its own as a score.
+  - (b) Glare removed before the 29 color numbers.
+  - (c) Retake gate: drop the worst 10% or 20% at test time, chosen without labels.
+  - Report: `reports/stage21_quality.md`.
+- **Results:**
+  - (a) Italy: glare alone 0.889 [0.787, 0.970], blown-out 0.869. Inside the early batch glare is 0.533, so glare
+    marks the batch, not anemia. Ghana eyelids: mild (glare 0.445, blur 0.400, size 0.415). Palms: glare 0.548.
+  - (b) No change. Median glare is 0% everywhere except Italy's early batch (2%). Only two cells have their CI above
+    0: the Ghana rule (+0.003) and the early-batch random forest (+0.086, 31 photos).
+  - (c) The best model changes by -0.003 to +0.017 (no CI above 0). Weaker models gain about +0.03 on Ghana nails at
+    20% and gradient boosting +0.030 in India at 10%. In Italy 31-40% of the rejected photos are anemic, vs 19%
+    overall.
+- **What it means:** on these curated cut-outs a quality filter doesn't raise accuracy, and it would ask anemic
+  Italians to retake more often. The quality numbers belong in the shortcut checks, next to the no-color control.

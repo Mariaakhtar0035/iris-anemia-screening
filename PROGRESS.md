@@ -599,6 +599,55 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Caveats:** India and Italy have few photos (ranges about +-0.11); the Ghana "about 80" comes from Stage 9's folds,
   not a paired test. Report: [`reports/stage15_few_local.md`](reports/stage15_few_local.md).
 
+### F19. The Hb number (Stages 16-19, Maria). Works inside a dataset; doesn't carry over.
+- Inside Ghana the photo estimates Hb better than guessing the mean: error 1.38 g/dL vs 1.71.
+- Across datasets the Hb scale shifts: Italy's estimates come out 2.9 g/dL too low.
+- A few local Hb values fix that average shift, but not the ranking.
+- Fingernail models don't carry between Ghana and Moscow (0.38-0.58).
+- Explained in [`HB_EXPERIMENTS_EXPLAINED.md`](HB_EXPERIMENTS_EXPLAINED.md). Reports regenerated at a clean commit:
+  [`stage16`](reports/stage16_hb_regression.md) to [`stage19`](reports/stage19_nails_cross.md).
+
+### F20. Age and sex next to the photo (Stage 20). Yes/no: no gain. Hb number in adults: helps.
+- **Question:** the mentors asked (2026-11-03) where the metadata goes into the model. Until now it went nowhere. Does
+  adding age and sex help inside each location?
+- **Answer:** not for anemic yes/no in any country. For the Hb number in the adults (India, Italy) it does: men's Hb
+  runs higher. **Ghana TabPFN 0.919 -> 0.918; India Hb error 1.45 -> 1.29 g/dL.**
+- **What we did:**
+  - Data: Ghana 388 photos (Hb < 11.0), India 95 and Italy 122 (WHO by sex: women < 12.0, men < 13.0 g/dL).
+  - Inputs: photo only, age + sex only, or both.
+  - Models: the color models, TabPFN, the DINOv2 probe, and Stage 16's Hb regressors.
+  - Splits: 5x5 CV by photo, plus leave one hospital out in Ghana. Changes are paired, same model. The hospital is
+    never an input.
+- **Takeaways:**
+  - No yes/no change has its CI above 0. The one exception is the weak DINOv2 probe with a hospital held out
+    (0.652 -> 0.674).
+  - Hb number: India ridge -0.157 [-0.310, -0.005] g/dL; Italy ridge -0.082 [-0.154, -0.008]; Ghana no change.
+  - In India the photo adds nothing to the Hb number: age + sex alone do as well as both together (1.28 vs 1.29).
+  - Italy's 0.81 from age + sex alone means the anemic patients are older (median 65 vs 46) and more often women.
+- **Caveats:** in India and Italy sex also sets the cutoff, so a yes/no gain from sex would be partly definition.
+  Report: [`reports/stage20_metadata.md`](reports/stage20_metadata.md).
+
+### F21. Photo quality and glare (Stage 21). No gain; it caught Italy's batch again.
+- **Question:** the mentors advised (2026-10-31) screening out bad photos in the pipeline. Does a quality filter or
+  glare removal help?
+- **Answer:** no, these sets are already curated cut-outs. But the quality numbers are a useful shortcut check:
+  **in Italy, glare alone separates anemic from healthy at 0.89.** Inside the early batch it is 0.53, so glare marks
+  the batch.
+- **What we did:**
+  - Data: Ghana eyelids, palms and nails; India and Italy eyelids.
+  - Per photo, from the pixels inside the cut-out: glare share, dark share, blown-out share, blur and size.
+    Thresholds fixed before running.
+  - (a) Each quality number on its own as a score.
+  - (b) Glare removed before the 29 color numbers.
+  - (c) Retake gate: drop the worst 10% or 20% at test time. No labels are used to pick them.
+- **Takeaways:**
+  - Retake gate: the best model changes by -0.003 to +0.017, no CI above 0. Weaker models gain about +0.03 on Ghana
+    nails at 20%.
+  - Glare removal: no change. The median glare share is 0% in every set except Italy's early batch (2%).
+  - The gate is not neutral in Italy: 31-40% of the photos it rejects are anemic, vs 19% overall.
+- **Caveats:** on palms and nails near-white can be the nail tip or pale skin, not only glare. Report:
+  [`reports/stage21_quality.md`](reports/stage21_quality.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -626,6 +675,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - TabPFN on the 29 color numbers in Ghana children (0.92, the best eyelid result; 0.91 with hospitals held out).
 - Palm photos of Ghana children (0.91 with TabPFN, no shortcut found).
 - One model for all three countries: as good as a model per country, and fair after per-country standardization.
+- The Hb number inside a dataset (Ghana error 1.38 g/dL vs 1.71 for the mean), with age and sex helping in adults.
+- Photo-quality numbers as a shortcut check (glare flags Italy's anemic batch at 0.89).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
@@ -639,6 +690,9 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Debiasing, for raising accuracy inside a country.
 - One model per country.
 - Duplicate copies as extra training data (harmless, no gain).
+- Age and sex next to the photo, for the anemic yes/no.
+- A retake gate on photo quality, or removing glare (no gain on these curated cut-outs).
+- The Hb number across datasets (the scale shifts).
 
 **Still open**
 - The deeper eyelid fold in India (F2): real but borderline, needs new Indian photos.
@@ -652,6 +706,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |
 | Paired photo + survey data, to test fusion for real | future | team |
+| TabPFN for the Hb number (extends Stage 16) | needs the TabPFN v2 regressor weights (44 MB, Hugging Face); waiting for Jaineel's OK | Jaineel |
+| Automatic cut-out from the full photo | only if wanted; only Eyes-Defy has full photos | - |
 
 ## Where to find things
 

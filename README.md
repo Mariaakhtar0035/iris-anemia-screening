@@ -448,6 +448,53 @@ Hb < 11.0 g/dL). Same 29 color numbers and models, 5x5 CV by photo, plus a model
 
 Report: [`reports/stage13_ghana_sites.md`](reports/stage13_ghana_sites.md).
 
+### 6.8 Age and sex next to the photo, and photo quality (per location)
+
+After the 2026-11-03 meeting the mentors asked us to focus on per-location models, not transfer. They also asked
+where the metadata goes in. Until now it went nowhere: every model saw only the eyelid. Both stages stay inside one
+dataset and one cutoff: **Ghana children Hb < 11.0 g/dL**; **India and Italy adults WHO by sex (women < 12.0, men
+< 13.0 g/dL)**; Ghana palms and nails use the dataset's own label (no Hb). Splits are 5x5 CV by photo, plus leave one
+hospital out in Ghana for Stage 20. The hospital is never an input.
+
+**Age and sex (Stage 20).** Inputs: photo only, age + sex only, or both. Models: the color models, TabPFN and the
+DINOv2 probe. For the Hb number we reuse Stage 16's regressors.
+
+| | Ghana | India | Italy |
+|---|---|---|---|
+| Best yes/no AUROC, photo | 0.919 (TabPFN) | 0.673 | 0.920 |
+| Best yes/no AUROC, photo + age + sex | 0.918 | 0.666 | 0.914 |
+| Age + sex alone | 0.591 | 0.603 | 0.813 |
+| Hb error (MAE, g/dL), photo -> photo + age + sex, ridge | 1.60 -> 1.58 | **1.45 -> 1.29** | **1.14 -> 1.06** |
+
+- **The yes/no answer doesn't improve anywhere.** For the same model, no paired change has its CI above 0, apart
+  from the weak DINOv2 probe with a hospital held out (0.652 -> 0.674).
+- **The Hb number improves in the adults.** India ridge changes by -0.157 [-0.310, -0.005] g/dL and Italy ridge by
+  -0.082 [-0.154, -0.008]. The cutoff plays no part here, so this gain is biology: men's Hb runs higher.
+- **In India the photo adds nothing to the Hb number:** age + sex alone (1.28) do as well as photo + age + sex (1.29).
+- **Italy's 0.81 from age + sex alone is mostly who was anemic.** Anemic patients are older (median 65 vs 46) and
+  more often women (32% vs 12% of men). There, sex also sets the cutoff, so part of that number is the definition.
+
+**Photo quality and glare (Stage 21).** From the pixels inside each cut-out we measured:
+- glare: bright, nearly colorless pixels;
+- dark and blown-out shares;
+- blur: Laplacian variance;
+- size.
+
+All thresholds were fixed before running.
+- **A quality filter doesn't help.** Dropping the worst 10% or 20% of photos at test time changes the best model's
+  AUROC by -0.003 to +0.017, with no CI above 0. A few weaker models gain about +0.03 on Ghana nails.
+- **Removing glare doesn't help.** Glare is rare: the median share is 0% everywhere except Italy's early batch (2%).
+- **The quality numbers are a shortcut check.**
+  - In Italy, glare alone separates anemic from healthy photos at 0.889 [0.787, 0.970]. Inside the early batch it
+    drops to 0.53. So glare marks the photo batch that holds the anemic patients (Section 6.2), not anemia.
+  - In Ghana the quality numbers are only mildly different (0.40-0.45).
+  - The filter isn't neutral. In Italy it rejects anemic photos more often than healthy ones: 31-40% of the
+    rejected are anemic, vs 19% overall. India and Ghana palms show the same at 10% rejected.
+
+Reports: [`reports/stage20_metadata.md`](reports/stage20_metadata.md),
+[`reports/stage21_quality.md`](reports/stage21_quality.md). Within-site and across-site stages are indexed in
+[`reports/README.md`](reports/README.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -534,11 +581,17 @@ python -m src.eyelid.tabpfn_checks         # 6.1, TabPFN shortcut checks (no col
 python -m src.eyelid.tabpfn_transfer       # 6.1, TabPFN across datasets (Ghana <-> Eyes-Defy)
 python -m src.eyelid.three_countries       # 6.1, one model for Ghana, India and Italy; train on two, test on the third
 python -m src.eyelid.few_local             # 6.1, how many labelled local photos a new country needs
+python -m src.eyelid.hb_regression         # Stage 16, the Hb number inside each dataset
+python -m src.eyelid.hb_cross              # Stage 17, the Hb number across datasets
+python -m src.eyelid.hb_local              # Stage 18, a few local Hb values to correct it
+python -m src.nails_cross                  # Stage 19, fingernails between Ghana and Moscow
+python -m src.eyelid.metadata              # 6.8, Stage 20, age and sex next to the photo
+python -m src.eyelid.quality               # 6.8, Stage 21, photo quality and glare
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -557,6 +610,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/eyelid/visionfm.py` | Part III: frozen VisionFM external-eye features, loaded in PyTorch's safe weights-only mode |
 | `src/nails.py` | Part III: fingernail photos under fixed lighting (Section 6.6) |
 | `src/ghana_sites.py` | Part III: Ghana palm and fingernail photos, copies and rotations merged (Section 6.7) |
+| `src/eyelid/hb_regression.py`, `hb_cross.py`, `hb_local.py`, `src/nails_cross.py` | Stages 16-19: the Hb number within and across datasets, local correction, nails across sites |
+| `src/eyelid/metadata.py`, `quality.py` | Section 6.8: age and sex next to the photo; photo quality, glare and the retake gate |
 | `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
 | `src/summary.py`, `src/figures.py` | Build `reports/summary.md` and the figures from `results/*.json` |
@@ -596,6 +651,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | TabPFN, the model named at the mentor meeting (Section 6.1) | done; passes the shortcut checks (0.913 with hospitals held out) |
 | Ghana palm and fingernail photos (Section 6.7) | done; can't be paired with the eyelids |
 | One model for three countries; a few local photos for a new one (Section 6.1) | done: fair, but no better than the rule outside Ghana |
+| The Hb number within and across datasets, nails across sites (Stages 16-19) | done; see `HB_EXPERIMENTS_EXPLAINED.md` |
+| Age and sex next to the photo; photo quality and glare (Section 6.8) | done: no gain for yes/no; age + sex help the Hb number in adults |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 
