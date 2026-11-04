@@ -1,0 +1,19 @@
+# Stage 20: does adding age and sex to the eyelid photo help inside each location?
+# Plan approved by Jaineel 2026-11-03 ("after the transcript fully plan it out and do each step"). Mentor question at
+# the 2026-11-03 meeting: DINOv2 gives a representation of the photo; where does the metadata go? Until now nowhere.
+#
+# Per location only: mentor advice 2026-11-03, don't aim for transfer with these small, very different datasets.
+# Anemia cutoffs, one per dataset, as in Stage 9 (they differ by design; no model is carried between datasets):
+#   Ghana (CP-AnemiC, the 388 photos with no copy, children 6-59 months): Hb < 11.0 g/dL for both sexes (default.yaml).
+#   India and Italy (Eyes-Defy, adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml); pregnancy is
+#   not recorded, we assume not pregnant. In Eyes-Defy sex also sets the cutoff, so part of any gain from sex there is
+#   the definition of anemia, not biology. Ghana has one cutoff for both sexes.
+# Metadata: age (Ghana in months, Eyes-Defy in years) and sex (1 = male), both complete for every photo used.
+# The hospital is never an input (it is a shortcut, not biology); Ghana is also scored leaving one hospital out.
+# Inputs: the photo (29 color numbers of the palpebral conjunctiva, or the DINOv2 embedding), age + sex alone, both.
+# Answer, fixed before running: age and sex help in a location if, for the same model, photo + age + sex beats the
+# photo alone (paired bootstrap CI of the AUROC change above 0) and also beats age + sex alone.
+# Hb number (mentor advice 2026-10-31, measure both): Stage 16's regressors with the same three inputs, MAE vs lab Hb.
+populations: [cp_anemic, eyes_defy_india, eyes_defy_italy]
+cv: {n_splits: 5, n_repeats: 5}   # by photo (one photo per person), stratified on anemia
+hb_regressors: [ridge, random_forest, hist_gradient_boosting]   # settings in hb_regression.yaml

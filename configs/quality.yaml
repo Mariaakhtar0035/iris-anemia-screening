@@ -1,0 +1,34 @@
+# Stage 21: photo quality and glare, per location. Plan approved by Jaineel 2026-11-03.
+# Mentor advice 2026-10-31: put a step in the data pipeline that screens out bad-quality photos. Teammates 2026-11-03:
+# how well and how consistently a picture is taken caps what any model can do.
+#
+# Per location only (mentor advice 2026-11-03). Anemia labels, one per dataset (not mixed inside any experiment):
+#   Ghana eyelids (CP-AnemiC, 388 photos with no copy, children 6-59 months): Hb < 11.0 g/dL (default.yaml).
+#   India and Italy eyelids (Eyes-Defy, adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml);
+#   pregnancy not recorded.
+#   Ghana palms and fingernails (Asare et al. 2022): the dataset's own label from the file name; no Hb, so the cutoff
+#   behind it is not stated (the eyelid set from the same group uses Hb < 11.0 g/dL).
+#
+# Quality numbers per photo, from the pixels inside the cut-out, thresholds fixed before running:
+#   glare: bright and nearly colorless pixels (HSV value >= min_value and saturation <= max_saturation) are light
+#     reflected off the wet surface, not tissue color; they make the region look paler. On palms and fingernails
+#     near-white can also be the nail tip or pale skin (checked on 40 unlabelled photos each: median 0%, but the
+#     top tenth of photos reach 10% (palms) and 23% (nails) vs 0.7% Ghana eyelids, 3% Italy), so read (b) there
+#     as "near-white pixels removed".
+#   dark: share with value < dark_max_value; blown-out: share with any channel >= blown_min (clipped).
+#   blur: variance of the Laplacian inside the region, eroded by blur_erode_px so the cut-out edge doesn't count.
+#   size: pixels inside the region.
+# Experiments, answers fixed before running:
+#   (a) does a quality number differ between anemic and healthy photos (AUROC CI excludes 0.5 = a warning sign);
+#   (b) glare removed before the 29 color numbers: helps if the paired AUROC change has CI above 0;
+#   (c) retake gate: drop the worst reject_share of photos at test time (worst = highest percentile rank on any of
+#       glare, dark, blown-out, or lowest on blur, within the location, no labels used); helps if AUROC on the kept
+#       photos minus all photos (paired bootstrap) has CI above 0. Training uses every photo.
+locations: [cp_anemic, eyes_defy_india, eyes_defy_italy, palm, fingernails]
+glare: {min_value: 0.90, max_saturation: 0.20}
+dark_max_value: 0.15
+blown_min: 0.99
+blur_erode_px: 5
+min_pixels: 50          # if glare removal would leave fewer pixels, the photo keeps all its pixels
+reject_share: [0.10, 0.20]
+cv: {n_splits: 5, n_repeats: 5}   # by photo (one photo per person), stratified on anemia
