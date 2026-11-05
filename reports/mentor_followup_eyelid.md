@@ -36,6 +36,8 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Do palm or fingernail photos work in Ghana children? (M12) | **Palm yes, as well as the eyelid; nails weaker** | palm 0.91, nails 0.80, eyelid 0.92 |
 | Does adding age and sex to the photo help? (2026-11-03) | **Not for yes/no; yes for the Hb number in adults** | Ghana 0.919 -> 0.918; India Hb error 1.45 -> 1.29 g/dL |
 | Does screening out bad photos help? (2026-10-31) | **No gain, but glare flags Italy's anemic batch** | best-model change +0.00 to +0.02; Italy glare alone 0.89 |
+| Can a vision model crop the eyelid itself? (2026-10-31) | **Yes in Italy, looser in India** | overlap with the hand mask 0.75 / 0.66; Italy TabPFN 0.902 vs 0.909 |
+| Does TabPFN estimate the Hb number better? | **Only on the Moscow nails** | error 1.65 -> 1.59 g/dL; Ghana level (1.44 vs 1.38) |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak.
@@ -368,9 +370,9 @@ table with no tuning.
 **Answer:** the model matters for the color numbers in Ghana, where there are enough photos. It can't create signal
 where the data is too small (India), and what it learns in one dataset doesn't carry over to another.
 
-## Since 2026-11-03: per location, with metadata and a quality check
+## Since 2026-11-03: per location, with metadata, a quality check and an automatic crop
 
-You said to focus on per-location models and asked where the metadata goes in. Both stages stay inside one dataset
+You said to focus on per-location models and asked where the metadata goes in. Every stage here stays inside one dataset
 and one cutoff (Ghana Hb < 11.0; India and Italy WHO by sex).
 
 **Age and sex next to the photo** (report: [`stage20_metadata.md`](stage20_metadata.md))
@@ -384,8 +386,21 @@ and one cutoff (Ghana Hb < 11.0; India and Italy WHO by sex).
   batch, which is a shortcut check, not a fix.
 - In Italy the filter would reject anemic patients' photos more often (31-40% of rejected vs 19% overall).
 
+**A vision model that crops the eyelid** (report: [`stage23_auto_crop.md`](stage23_auto_crop.md))
+- Frozen DINOv2 learns from the hand masks which patches are eyelid, then crops photos it never saw (Eyes-Defy full
+  photos only).
+- Overlap with the hand mask (Dice): Italy 0.75, India 0.66.
+- Anemia on its crop is close in Italy (TabPFN 0.902 vs 0.909, rule 0.910 vs 0.925) and looser in India (TabPFN 0.603
+  vs 0.680).
+- Its confidence is a weak quality score (Italy Spearman 0.26 with crop quality, India 0.07).
+
+**TabPFN for the Hb number** (report: [`stage22_hb_tabpfn.md`](stage22_hb_tabpfn.md))
+- Closer than Stage 16's best regressor only on the Moscow nails (1.65 -> 1.59 g/dL).
+- Ghana is level (1.44 vs 1.38). India and Italy are within +-0.03.
+
 **Answer:** age and sex belong in the Hb-number model for adults, not the yes/no. A quality filter adds nothing on
-these curated cut-outs. It may matter for raw phone photos, which we don't have.
+these curated cut-outs. A cropping model can stand in for the hand cut-out, at least in Italy. Both may matter more for
+raw phone photos, which we don't have.
 
 ## Questions for you
 

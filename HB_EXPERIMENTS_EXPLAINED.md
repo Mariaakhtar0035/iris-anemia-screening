@@ -93,7 +93,7 @@ We trained on all of one dataset and applied the model **unchanged** to the othe
 
 1. **The Hb scale doesn't carry over.** A model trained on Ghana children reads Italian adults as having child-level Hb, almost 3 g/dL too low. Applying the adults' cutoffs then calls **nearly everyone anemic** (catches 90-100% of anemic people but clears almost none of the healthy). Two differences are mixed together here, children vs adults and one camera vs another, and our data can't separate them.
 2. **Ranking doesn't beat the rule.** The best cross-dataset Hb ranking (0.66 in India) only ties the untrained rule (0.67).
-3. **So predicting Hb solves the "different cutoffs" problem on paper, but not the "different cameras and populations" problem.** This matches the branch's finding that the region shifts eyelid redness about four times more than anemia does.
+3. **So predicting Hb solves the "different cutoffs" problem on paper, but not the "different cameras and populations" problem.** This matches the branch's finding that the region shifts eyelid redness about 3.4 times more than anemia does (Stage 10: healthy Ghana vs Italy a* gap 12.0, anemic vs healthy inside Ghana 3.5).
 
 ### A trap worth knowing about
 

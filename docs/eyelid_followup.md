@@ -29,7 +29,7 @@ Paraphrased from the meeting, without names.
 | M13 | AUROC alone isn't enough. Use PR-AUC when the classes are imbalanced, and look at precision and recall at specific thresholds. The cost of a false positive vs a false negative has to come from clinicians, who might want recall near 1. Put that discussion in the paper. | Step 4: "share tested to catch X% of anemic people" table and PR curves | done |
 | M14 | The mentors will email a list of models to try. | The email never came, so Step 12 runs the models named in the meeting | done (Step 12): TabPFN 0.919 in Ghana children, the best eyelid model; no gain in India or on nails |
 | M15 | (2026-10-31) Split the experiments into within one site and across sites so they can be followed. | `reports/README.md`: two tables, across-site marked closed after M17 | done |
-| M16 | (2026-10-31) Put a step in the pipeline that screens out bad-quality photos and crops the region. | Step 19 (Stage 21): quality numbers, glare removal, retake gate | done: no gain; glare flags Italy's batch. Automatic cropping not started (only Eyes-Defy has full photos) |
+| M16 | (2026-10-31) Put a step in the pipeline that screens out bad-quality photos and crops the region. | Step 19 (Stage 21): quality numbers, glare removal, retake gate; Step 21 (Stage 23): DINOv2 crops the eyelid and scores its confidence | done: no gain from the quality filter; glare flags Italy's batch. Automatic crop on Eyes-Defy: Dice 0.75 Italy, 0.66 India; anemia close to the hand mask in Italy |
 | M17 | (2026-11-03) Don't set the goal at transfer for the image data; focus on per-location models. Where does the metadata go into the model? | Step 18 (Stage 20): age and sex next to the photo, per location | done: no gain for yes/no; helps the Hb number in adults |
 
 ## Part 2. Step log
@@ -641,3 +641,50 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
     overall.
 - **What it means:** on these curated cut-outs a quality filter doesn't raise accuracy, and it would ask anemic
   Italians to retake more often. The quality numbers belong in the shortcut checks, next to the no-color control.
+
+### Step 20 (Stage 22): TabPFN for the Hb number (follow-up to Stage 16)
+- **Why:** TabPFN is our best yes/no model in Ghana; Stage 16 estimated the Hb number with scikit-learn regressors only.
+  The 44 MB regressor download was approved by Jaineel on 2026-11-04.
+- **What we ran:** `python -m src.eyelid.hb_tabpfn` (settings `configs/hb_tabpfn.yaml`, results at clean commit
+  `2ff204e`).
+  - Data and cutoffs: Ghana, India and Italy eyelids, and the Moscow nails (Hb < 12.0 for everyone).
+  - Inputs: photo, or photo + age + sex.
+  - Splits: 5x5 CV; Ghana also leave one hospital out; Moscow also leave one session out.
+  - Compared, paired, with the best of Stage 16's three regressors.
+  - Report: `reports/stage22_hb_tabpfn.md`.
+- **Results:**
+
+| Location | Best Stage 16 MAE | TabPFN MAE | Change |
+|---|---|---|---|
+| Ghana eyelids | 1.378 (gradient boosting) | 1.441 | +0.062 [-0.002, 0.127] |
+| India eyelids (+ age + sex) | 1.288 (ridge) | 1.272 | -0.016 [-0.114, 0.083] |
+| Italy eyelids (+ age + sex) | 1.058 (ridge) | 1.030 | -0.028 [-0.120, 0.064] |
+| Moscow fingernails | 1.651 (random forest) | 1.586 | **-0.065 [-0.125, -0.004]** |
+
+- **What it means:** TabPFN helps the Hb number only on the Moscow nails (fixed light box). In Ghana it ranks a little
+  better (0.821 vs 0.802) but isn't closer, and ranking by the Hb estimate stays below TabPFN's yes/no model (0.919).
+
+### Step 21 (Stage 23): a vision model that crops the eyelid (M16)
+- **Why:** the mentors suggested (2026-10-31) a vision model that crops the region and flags bad photos. Every result
+  so far used the hand-drawn cut-outs.
+- **What we ran:** `python -m src.eyelid.auto_crop` (settings `configs/auto_crop.yaml`, results at clean commit
+  `2ff204e`).
+  - Data: Eyes-Defy only, the one set with the full photos: India 94, Italy 121 (2 broken masks left out).
+  - Model: frozen DINOv2-small patch tokens plus a logistic regression learned from the hand masks. 5-fold CV by
+    photo, no anemia labels.
+  - Confidence = mean probability inside its crop.
+  - Report: `reports/stage23_auto_crop.md`.
+- **Results:**
+  - Crop overlap with the hand mask (median Dice): Italy 0.754 [0.729, 0.778], India 0.660 [0.611, 0.696]. It never
+    failed to find an eyelid.
+  - Anemia, automatic crop vs hand mask:
+    - Italy: rule 0.910 vs 0.925, TabPFN 0.902 vs 0.909.
+    - India: rule 0.658 vs 0.667, TabPFN 0.603 vs 0.680 (CI crosses 0).
+    - Only gradient boosting in Italy is clearly worse (-0.046 [-0.101, -0.002]).
+  - Confidence vs crop quality (Spearman): Italy 0.264 [0.083, 0.433], India 0.066 [-0.142, 0.265]. Confidence alone
+    doesn't separate anemic photos.
+  - Retake gate on confidence: India +0.03 to +0.09 for the learned models, but the 10 photos it drops at 10% are all
+    from anemic patients. Italy: no change.
+- **What it means:** a cropping model can replace the hand cut-out in Italy at almost no cost. In India the crops are
+  looser and the learned models lose some. The confidence score is a weak quality check. Real phone photos, not these
+  curated ones, would be the real test.

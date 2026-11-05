@@ -648,6 +648,47 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Caveats:** on palms and nails near-white can be the nail tip or pale skin, not only glare. Report:
   [`reports/stage21_quality.md`](reports/stage21_quality.md).
 
+### F22. TabPFN for the Hb number (Stage 22). Closer only on Moscow nails.
+- **Question:** TabPFN is the best yes/no model in Ghana (0.92). Does its regressor also estimate the Hb number better
+  than Stage 16's models?
+- **Answer:** only on the Moscow fingernails. Elsewhere it is level with the best Stage 16 regressor.
+  **Moscow error 1.65 -> 1.59 g/dL; Ghana 1.44 vs 1.38 for gradient boosting.**
+- **What we did:**
+  - Data and cutoffs: Ghana eyelids, India and Italy eyelids, and the Moscow nails (Hb < 12.0 for everyone).
+  - Inputs: the 29 color numbers, plus age + sex for the eyelid sets.
+  - Splits: 5x5 CV; Ghana also leave one hospital out; Moscow also leave one session out.
+  - Compared, paired, with the best of ridge, random forest and gradient boosting.
+- **Takeaways:**
+  - Moscow: -0.065 [-0.125, -0.004] g/dL, and about the same with a photo session held out (-0.072, CI just
+    crosses 0).
+  - Ghana: TabPFN ranks a little better (0.821 vs 0.802) but its error isn't lower. Ranking by its Hb estimate is still
+    far below TabPFN's yes/no model (0.919).
+  - India and Italy: changes from -0.03 to +0.03, every CI crosses 0.
+- **Caveats:** the weights are an extra 44 MB download (approved 2026-11-04). Report:
+  [`reports/stage22_hb_tabpfn.md`](reports/stage22_hb_tabpfn.md).
+
+### F23. A vision model that crops the eyelid (Stage 23). Close in Italy, looser in India.
+- **Question:** the mentors suggested (2026-10-31) a vision model that crops the region and one that flags bad photos.
+  Can a model find the eyelid in the full photo, and does anemia scoring hold on its crop?
+- **Answer:** yes in Italy, roughly in India. **Overlap with the hand mask (Dice) 0.75 Italy, 0.66 India; Italy
+  TabPFN 0.902 on its crop vs 0.909 on the hand mask.**
+- **What we did:**
+  - Data: Eyes-Defy only, the one set with the full photos (India 94, Italy 121; Italy_15 and India_2 left out, broken
+    masks).
+  - Model: frozen DINOv2-small patch tokens plus a logistic regression that learns from the hand masks which patches
+    are eyelid. 5-fold CV by photo, so no photo is cropped by a model that saw its mask. No anemia labels.
+  - Scoring: the same 29 color numbers and models on its crop vs the hand mask.
+  - Confidence (mean probability inside the crop) used as a retake flag.
+- **Takeaways:**
+  - It always found an eyelid. 67% of Italy's crops and 38% of India's reach Dice 0.7.
+  - Anemia: only gradient boosting in Italy is clearly worse on the automatic crop (-0.046). The rule and TabPFN lose
+    at most 0.015 in Italy. TabPFN in India drops 0.680 -> 0.603 (CI crosses 0).
+  - Confidence tracks crop quality a little in Italy (Spearman 0.26 [0.08, 0.43]), not in India (0.07).
+  - Retake gate: in India it lifts the learned models (+0.05). But all 10 photos it drops at 10% belong to anemic
+    patients, so it isn't neutral. No gain in Italy.
+- **Caveats:** the masks it learns from are the same hand masks it is judged against. Raw phone photos would be
+  harder. Report: [`reports/stage23_auto_crop.md`](reports/stage23_auto_crop.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -677,6 +718,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - One model for all three countries: as good as a model per country, and fair after per-country standardization.
 - The Hb number inside a dataset (Ghana error 1.38 g/dL vs 1.71 for the mean), with age and sex helping in adults.
 - Photo-quality numbers as a shortcut check (glare flags Italy's anemic batch at 0.89).
+- A vision model (DINOv2) cropping the eyelid from the full photo: nearly as good as the hand mask in Italy.
+- TabPFN for the Hb number on the Moscow nails (error 1.65 -> 1.59 g/dL).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
@@ -706,8 +749,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |
 | Paired photo + survey data, to test fusion for real | future | team |
-| TabPFN for the Hb number (extends Stage 16) | needs the TabPFN v2 regressor weights (44 MB, Hugging Face); waiting for Jaineel's OK | Jaineel |
-| Automatic cut-out from the full photo | only if wanted; only Eyes-Defy has full photos | - |
+| TabPFN for the Hb number (extends Stage 16) | done (F22) | - |
+| Automatic cut-out from the full photo | done on Eyes-Defy (F23); raw phone photos would be the real test | team |
 
 ## Where to find things
 

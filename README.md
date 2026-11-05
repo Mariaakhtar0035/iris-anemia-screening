@@ -448,11 +448,11 @@ Hb < 11.0 g/dL). Same 29 color numbers and models, 5x5 CV by photo, plus a model
 
 Report: [`reports/stage13_ghana_sites.md`](reports/stage13_ghana_sites.md).
 
-### 6.8 Age and sex next to the photo, and photo quality (per location)
+### 6.8 Age and sex, photo quality, TabPFN for Hb, and automatic cropping (per location)
 
 After the 2026-11-03 meeting the mentors asked us to focus on per-location models, not transfer. They also asked
-where the metadata goes in. Until now it went nowhere: every model saw only the eyelid. Both stages stay inside one
-dataset and one cutoff: **Ghana children Hb < 11.0 g/dL**; **India and Italy adults WHO by sex (women < 12.0, men
+where the metadata goes in. Until now it went nowhere: every model saw only the eyelid. All four stages below stay
+inside one dataset and one cutoff: **Ghana children Hb < 11.0 g/dL**; **India and Italy adults WHO by sex (women < 12.0, men
 < 13.0 g/dL)**; Ghana palms and nails use the dataset's own label (no Hb). Splits are 5x5 CV by photo, plus leave one
 hospital out in Ghana for Stage 20. The hospital is never an input.
 
@@ -491,8 +491,29 @@ All thresholds were fixed before running.
   - The filter isn't neutral. In Italy it rejects anemic photos more often than healthy ones: 31-40% of the
     rejected are anemic, vs 19% overall. India and Ghana palms show the same at 10% rejected.
 
+**TabPFN for the Hb number (Stage 22).** Same locations and cutoffs, plus the Moscow fingernails (Hb < 12.0 g/dL for
+everyone, no sex column). TabPFN's regressor is compared with Stage 16's regressors and a mean-Hb dummy.
+- **Only the Moscow nails get closer:** error 1.65 -> 1.59 g/dL, a change of -0.065 [-0.125, -0.004].
+- **Elsewhere it ties the best Stage 16 regressor.** In Ghana it is 1.44 vs 1.38 for gradient boosting, but it ranks
+  a little better (0.821 vs 0.802). That is still well below TabPFN's yes/no model (0.919).
+- So for Ghana the yes/no model stays the better screen; the Hb number is the portable output.
+
+**A vision model that crops the eyelid (Stage 23).** The datasets come with the eyelid already cut out by hand. Only
+Eyes-Defy also has the full photos (India 94, Italy 121; 2 broken masks left out).
+- **How it works:** a frozen DINOv2 learns from the hand masks which 14 px patches are eyelid. It then crops each
+  held-out photo itself (5-fold CV by photo, no anemia labels). Its confidence is the mean probability inside its crop.
+- **How close the crop is:** median Dice against the hand mask is 0.75 in Italy and 0.66 in India (1 = same pixels). It
+  always found an eyelid.
+- **Anemia on its crop:** close to the hand mask in Italy (rule 0.910 vs 0.925, TabPFN 0.902 vs 0.909). Looser in India
+  (TabPFN 0.603 vs 0.680, CI crosses 0). Only gradient boosting in Italy is clearly worse (-0.046).
+- **Confidence as a retake flag:**
+  - In Italy confidence tracks crop quality a little (Spearman 0.26 [0.08, 0.43]); in India it doesn't (0.07).
+  - Dropping the least confident 10-20% helps the learned models in India (+0.05). But all 10 photos it drops at 10%
+    belong to anemic patients, so it isn't neutral.
+
 Reports: [`reports/stage20_metadata.md`](reports/stage20_metadata.md),
-[`reports/stage21_quality.md`](reports/stage21_quality.md). Within-site and across-site stages are indexed in
+[`reports/stage21_quality.md`](reports/stage21_quality.md), [`reports/stage22_hb_tabpfn.md`](reports/stage22_hb_tabpfn.md),
+[`reports/stage23_auto_crop.md`](reports/stage23_auto_crop.md). Within-site and across-site stages are indexed in
 [`reports/README.md`](reports/README.md).
 
 ## 7. Discussion
@@ -549,6 +570,7 @@ Raw data is **never committed** (`data/` and `results/` are gitignored). Downloa
 | DHS Individual Recode | `data/raw/dhs/{zimbabwe,malawi,zambia}/` (the `*IR*DT` folders: ZWIR72, MWIR81, ZMIR81) | DHS Program (registration required) |
 | VisionFM external-eye weights (optional) | `data/weights/visionfm/VFM_External_weights.pth` | VisionFM GitHub README (github.com/ABILab-CUHK/VisionFM), research use only |
 | TabPFN v2 classifier weights | `data/weights/tabpfn/tabpfn-v2-classifier-finetuned-zk73skhh.ckpt` | Hugging Face `Prior-Labs/TabPFN-v2-clf` (open download; see its model card for the license) |
+| TabPFN v2 regressor weights (Stage 22) | `data/weights/tabpfn_reg/tabpfn-v2-regressor.ckpt` | Hugging Face `Prior-Labs/TabPFN-v2-reg` (open download; see its model card for the license) |
 | Fingernails (Yakimov et al. 2024) | `data/raw/yakimov_nails/` (`metadata.csv` and `photo/`, unzipped from `data.zip`) | figshare 10.6084/m9.figshare.c.6760179 (CC0) |
 | Ghana palm (Asare et al. 2022) | `data/raw/ghana_palm/Palm/` (unpacked from `Palm.rar`) | Mendeley Data 10.17632/ccr8cm22vz.1 (CC BY 4.0) |
 | Ghana fingernails (Asare et al. 2022) | `data/raw/ghana_nails/Fingernails/` (unpacked from `Fingernails.rar`) | Mendeley Data 10.17632/2xx4j3kjg2.1 (CC BY 4.0) |
@@ -587,11 +609,13 @@ python -m src.eyelid.hb_local              # Stage 18, a few local Hb values to 
 python -m src.nails_cross                  # Stage 19, fingernails between Ghana and Moscow
 python -m src.eyelid.metadata              # 6.8, Stage 20, age and sex next to the photo
 python -m src.eyelid.quality               # 6.8, Stage 21, photo quality and glare
+python -m src.eyelid.hb_tabpfn             # 6.8, Stage 22, TabPFN for the Hb number (needs the regressor weights)
+python -m src.eyelid.auto_crop             # 6.8, Stage 23, DINOv2 crops the eyelid from the full Eyes-Defy photo
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [TabPFN for Hb](reports/stage22_hb_tabpfn.md), [automatic crop](reports/stage23_auto_crop.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -612,6 +636,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/ghana_sites.py` | Part III: Ghana palm and fingernail photos, copies and rotations merged (Section 6.7) |
 | `src/eyelid/hb_regression.py`, `hb_cross.py`, `hb_local.py`, `src/nails_cross.py` | Stages 16-19: the Hb number within and across datasets, local correction, nails across sites |
 | `src/eyelid/metadata.py`, `quality.py` | Section 6.8: age and sex next to the photo; photo quality, glare and the retake gate |
+| `src/eyelid/hb_tabpfn.py`, `auto_crop.py` | Section 6.8: TabPFN for the Hb number; DINOv2 crops the eyelid and scores its confidence |
 | `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
 | `src/summary.py`, `src/figures.py` | Build `reports/summary.md` and the figures from `results/*.json` |
@@ -653,6 +678,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | One model for three countries; a few local photos for a new one (Section 6.1) | done: fair, but no better than the rule outside Ghana |
 | The Hb number within and across datasets, nails across sites (Stages 16-19) | done; see `HB_EXPERIMENTS_EXPLAINED.md` |
 | Age and sex next to the photo; photo quality and glare (Section 6.8) | done: no gain for yes/no; age + sex help the Hb number in adults |
+| TabPFN for the Hb number; automatic eyelid crop (Section 6.8) | done: TabPFN closer only on Moscow nails; the crop nearly matches the hand mask in Italy |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
 

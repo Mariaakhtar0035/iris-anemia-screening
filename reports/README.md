@@ -24,13 +24,15 @@ column); Ghana palms and nails: the dataset's own label (no Hb).
 | 16 | Can the photo estimate the Hb number? | Yes, better than guessing the mean | Ghana error 1.38 g/dL (mean guess 1.71); Moscow nails 1.65 (1.98) | [Hb number](stage16_hb_regression.md) |
 | 20 | Does adding age and sex to the photo help? | Not for yes/no anywhere; yes for the Hb number in adults (India, Italy) | Ghana TabPFN 0.919 -> 0.918; India Hb error 1.45 -> 1.29 g/dL | [age and sex](stage20_metadata.md) |
 | 21 | Does a photo-quality filter or glare removal help? | No gain; but glare alone flags Italy's anemic photo batch | best-model change +0.00 to +0.02; Italy glare alone 0.89 | [quality](stage21_quality.md) |
+| 22 | Does TabPFN estimate the Hb number better? | Only on Moscow nails; elsewhere level with Stage 16 | Moscow error 1.65 -> 1.59 g/dL; Ghana 1.44 (gradient boosting 1.38) | [TabPFN Hb](stage22_hb_tabpfn.md) |
+| 23 | Can a vision model crop the eyelid itself? | Yes, close enough in Italy; looser in India | overlap 0.75 / 0.66; Italy TabPFN 0.902 vs 0.909 on the hand mask | [auto crop](stage23_auto_crop.md) |
 
 ## Across sites (closed: explains why per-location models)
 
 | Stage | Question | Answer | Number | Report |
 |---|---|---|---|---|
 | 5 | Does a Ghana model work on Eyes-Defy, and back? | No; only the untrained redness rule carries over | random forest 0.587, rule 0.835 | [cross-dataset](stage5_cross_dataset.md) |
-| 10 | Why do the datasets differ? | The color gap between datasets is about 3x the anemia signal | healthy Ghana vs Italy 12.0 a* vs anemia 3.5 inside Ghana; dataset detector 0.99 | [populations](stage10_populations.md) |
+| 10 | Why do the datasets differ? | The color gap between datasets is about 3.4x the anemia signal | healthy Ghana vs Italy 12.0 a* vs anemia 3.5 inside Ghana; dataset detector 0.99 | [populations](stage10_populations.md) |
 | 11 | Can debiasing remove the country shortcut? | Fairer scores, not more accurate ones | no within-country gain | [debias](stage11_debias.md) |
 | TabPFN | Does the best model (TabPFN) carry over? | No | Ghana -> Eyes-Defy 0.602 (rule 0.835) | [TabPFN transfer](tabpfn_transfer.md) |
 | 14 | One model for all three countries? | Fine in Ghana, never beats the rule in India or Italy | Ghana 0.903, India 0.644, Italy 0.906 | [three countries](stage14_three_countries.md) |
