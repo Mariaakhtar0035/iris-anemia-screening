@@ -1,0 +1,25 @@
+# Stage 22: TabPFN for the Hb number, per location (extends Stage 16 and Stage 20).
+# Download of the TabPFN v2 regressor (Hugging Face Prior-Labs/TabPFN-v2-reg, tabpfn-v2-regressor.ckpt, 44,390,977
+# bytes) approved by Jaineel 2026-11-04 ("do all the parts we talked about"). Weights are gitignored, in their own folder,
+# and load in PyTorch's weights-only mode (torch 2.14 default; also checked with weights_only=True).
+# Mentor advice 2026-10-31: measure both the yes/no and how well Hb is estimated. 2026-11-03: per location only.
+#
+# Anemia cutoffs, one per dataset, never mixed inside an experiment. They are used only to score the estimate (ranking
+# AUROC; caught = anemic people whose estimate is below their own cutoff; cleared = the same for healthy people):
+#   Ghana eyelids (CP-AnemiC, the 388 photos with no copy, children 6-59 months): Hb < 11.0 g/dL (default.yaml).
+#   India and Italy eyelids (Eyes-Defy, adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml);
+#   pregnancy not recorded.
+#   Moscow fingernails (Yakimov et al. 2024, 250 adults): Hb < 12.0 g/dL for everyone (nails.yaml; no sex column,
+#   Jaineel's choice 2026-10-23).
+# Inputs: the 29 color numbers (photo); photo + age + sex for the eyelid sets (Moscow has no age or sex).
+# Regressors: dummy (everyone gets the mean Hb), Stage 16's ridge, random forest and gradient boosting
+# (hb_regression.yaml), and TabPFN. The hospital is never an input.
+# Splits: 5x5 CV by photo (one photo per person, stratified on anemia); Ghana also leave one hospital out; Moscow also
+# leave one photo session out, as in Stage 16.
+# Answer, fixed before running: TabPFN helps at a location if its MAE minus the MAE of the best of Stage 16's three
+# regressors (same input, same split, paired bootstrap) has its CI below 0.
+locations: [cp_anemic, eyes_defy_india, eyes_defy_italy, moscow_nails]
+tabpfn:
+  model_path: data/weights/tabpfn_reg/tabpfn-v2-regressor.ckpt
+  device: cpu   # repeatable scores
+cv: {n_splits: 5, n_repeats: 5}

@@ -1,0 +1,41 @@
+# Stage 23: a vision model that crops the eyelid and flags photos to retake, per location.
+# Mentor advice 2026-10-31: "a visual model that crops the image based on the specific portion it's analyzing", and one
+# that separates good from bad photos, as steps in the data pipeline. Go-ahead from Jaineel 2026-11-04 ("do all the parts
+# we talked about"). Per location only (mentor advice 2026-11-03).
+#
+# Only Eyes-Defy has the full photo next to the hand-drawn palpebral mask, so this runs on India and Italy only.
+# Anemia: Eyes-Defy adults, WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml); pregnancy not recorded.
+# Left out: Italy_15 (its mask covers the whole photo) and India_2 (its mask doesn't line up with its photo; mean RGB
+# difference 67 inside the mask vs a median of 0.3). So India 94 photos, Italy 121.
+# Alignment: the photo is turned upright with its EXIF tag, resized to the mask's size (all 216 others share its aspect),
+# then both go to `work_long_side`; mask pixels with alpha >= the color.yaml alpha_threshold count as eyelid.
+#
+# Vision model: DINOv2-small (probe.yaml model and revision, already on disk, loaded offline), frozen. The photo is
+# resized so its long side is `encoder_long_side` (multiples of 14 px), giving one 384-number token per 14 px patch.
+# A logistic regression learns from the hand masks which patches are eyelid (patch target = share of mask >= 0.5).
+# Trained per location with `segmenter_folds`-fold CV by photo, so every photo is cropped by a model that never saw its
+# mask. No anemia label is used. Patch probabilities are resized to the photo, cut at `threshold`, and the largest
+# connected piece is kept; if nothing passes, the single most likely patch is kept and the photo counts as "not found".
+# Settings fixed from one feasibility check on these photos, judged on overlap with the hand mask only (never on
+# anemia): 448 px gave median Dice 0.68 (India) and 0.75 (Italy); 672 px gave 0.66 and 0.78, so 448 was kept.
+# Confidence (the model's own quality score, no labels, no mask): mean patch probability inside its crop.
+#
+# Experiments, answers fixed before running:
+#   (a) crop quality: Dice against the hand mask (1 = same pixels);
+#   (b) anemia from the automatic crop vs the hand mask, same photo pixels, same 29 color numbers and models
+#       (5x5 CV by photo): the automatic crop costs accuracy if the paired AUROC change has its CI below 0;
+#   (c) confidence is a usable quality check if its Spearman correlation with Dice has its CI above 0;
+#   (d) retake gate on confidence: drop the least confident reject_share at test time; helps if AUROC on kept photos
+#       minus all (paired bootstrap) has its CI above 0. Also: does confidence alone separate anemic photos (shortcut)?
+locations: [eyes_defy_india, eyes_defy_italy]
+exclude: [Italy_15, India_2]
+work_long_side: 800
+encoder_long_side: 448
+patch_size: 14
+patch_target_share: 0.5
+segmenter: {C: 0.1, max_iter: 2000}   # logistic regression, class_weight balanced
+segmenter_folds: 5
+threshold: 0.5
+dice_good: 0.7
+reject_share: [0.10, 0.20]
+cv: {n_splits: 5, n_repeats: 5}   # anemia models: by photo (one photo per person), stratified on anemia
