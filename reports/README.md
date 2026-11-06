@@ -7,7 +7,8 @@ per location. So **within one site** is the main line now, and **across sites** 
 
 AUROC: 0.5 = guessing, 1.0 = perfect. Every number has a bootstrap 95% CI in its report. Cutoffs: Ghana children
 Hb < 11.0 g/dL; Eyes-Defy adults WHO by sex (women < 12.0, men < 13.0); Moscow adults Hb < 12.0 for everyone (no sex
-column); Ghana palms and nails: the dataset's own label (no Hb).
+column); Ghana palms and nails: the dataset's own label (no Hb), except Stage 24, which uses Hb < 11.0 from the
+CP-AnemiC sheet for all three body sites.
 
 ## Within one site (main line)
 
@@ -26,6 +27,7 @@ column); Ghana palms and nails: the dataset's own label (no Hb).
 | 21 | Does a photo-quality filter or glare removal help? | No gain; but glare alone flags Italy's anemic photo batch | best-model change +0.00 to +0.02; Italy glare alone 0.89 | [quality](stage21_quality.md) |
 | 22 | Does TabPFN estimate the Hb number better? | Only on Moscow nails; elsewhere level with Stage 16 | Moscow error 1.65 -> 1.59 g/dL; Ghana 1.44 (gradient boosting 1.38) | [TabPFN Hb](stage22_hb_tabpfn.md) |
 | 23 | Can a vision model crop the eyelid itself? | Yes, close enough in Italy; looser in India | overlap 0.75 / 0.66; Italy TabPFN 0.902 vs 0.909 on the hand mask | [auto crop](stage23_auto_crop.md) |
+| 24 | Does a Ghana child's nail and palm add to the eyelid? | Probable link by file number; helps weaker models, not TabPFN; pretend pairs overstate it 3x | TabPFN 0.913 -> 0.931 (+0.018, CI crosses 0); pretend 0.967 | [eyelid + nail + palm](stage24_ghana_link.md) |
 
 ## Across sites (closed: explains why per-location models)
 

@@ -689,6 +689,29 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Caveats:** the masks it learns from are the same hand masks it is judged against. Raw phone photos would be
   harder. Report: [`reports/stage23_auto_crop.md`](reports/stage23_auto_crop.md).
 
+### F24. One child's eyelid, nail and palm together (Stage 24). Probable link; helps the weaker models, not TabPFN.
+- **Question:** the mentors (2026-11-03): put each child's nail and eyelid photos together, as if from the same person.
+  Does that help?
+- **Answer:** a little. **TabPFN 0.913 on the eyelid -> 0.931 with nail and palm (+0.018, CI crosses 0).** Random forest
+  and gradient boosting gain +0.06 to +0.09 (CI above 0).
+- **What we did:**
+  - New data (Jaineel's OK, 2026-11-05): Ghana conjunctiva set, Mendeley 10.17632/nt7r8hv2pz.1. 414 of its 514 photos
+    are CP-AnemiC photos pixel for pixel, so they carry CP-AnemiC's Hb. Its file names follow the nail and palm sets
+    (`Anemic-105` / `Anemic-FN-105` / `AnemicP-105`).
+  - Link test, fixed before any model: same-number photos agree in color more than neighbouring numbers. Nail-palm
+    0.38 vs 0.27 (p = 0.0005), eyelid-palm 0.18 vs 0.12 (p = 0.003), eyelid-nail 0.09 vs 0.06 (p = 0.07, not shown).
+  - 302 children with all three photos and an agreed Hb; **Hb < 11.0 from the CP-AnemiC sheet** for all three sites.
+    5x5 CV by child plus leave one hospital out; early and late fusion; 5 draws of pretend children (random same-label
+    nail and palm).
+- **Takeaways:**
+  - The palm adds most: eyelid + palm late TabPFN 0.933 (+0.020 [-0.001, 0.043]).
+  - Pretend children score 0.967 (+0.054, CI above 0 in every draw), about 3x the real gain. One child's photos
+    probably share the same mistakes; random partners don't. So pretending overstates what combining gives.
+  - Hb number: no gain (gradient boosting 1.32 -> 1.33 g/dL).
+- **Caveats:** the link comes from file names and color agreement, not from the authors. Korle Bu colorimetry (PLOS ONE
+  2023) was checked and not used: 43 children, 25 under 6 months. Report:
+  [`reports/stage24_ghana_link.md`](reports/stage24_ghana_link.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -699,7 +722,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | The ViT paper's counts only come out with Italy Hb <= 10.5, though it says "< 10.5" | Eyes-Defy | noted; Part A copies the paper, everything else uses WHO cutoffs |
 | 31 Italian masks on a white background instead of transparent | Eyes-Defy Italy | fixed in `src/eyelid/roi.py`, reran Parts C and E; conclusions held (rule 0.808 -> 0.835) |
 | Italy's anemic patients almost all in the first photo batch (21/31 vs 2/91) | Eyes-Defy Italy | report the early batch alone as the fair Italy check |
-| Each palm and nail photo stored 6-12 times (copies and rotations); no Hb, age or link to the eyelid photos | Ghana palm and nails | one row per photo; body sites compared, not combined |
+| Each palm and nail photo stored 6-12 times (copies and rotations); no Hb, age or link to the eyelid photos | Ghana palm and nails | one row per photo; linked to the eyelids in F24 through a third set |
+| The conjunctiva set re-uses 414 CP-AnemiC photos under nail- and palm-style names, undocumented | Ghana conjunctiva | matched by pixels to get Hb; the file-number link tested by color agreement (F24) |
 
 ## What worked and what didn't, in one list
 
@@ -720,6 +744,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Photo-quality numbers as a shortcut check (glare flags Italy's anemic batch at 0.89).
 - A vision model (DINOv2) cropping the eyelid from the full photo: nearly as good as the hand mask in Italy.
 - TabPFN for the Hb number on the Moscow nails (error 1.65 -> 1.59 g/dL).
+- Adding the same child's nail and palm for the weaker models in Ghana (+0.06 to +0.09; F24).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
@@ -736,6 +761,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Age and sex next to the photo, for the anemic yes/no.
 - A retake gate on photo quality, or removing glare (no gain on these curated cut-outs).
 - The Hb number across datasets (the scale shifts).
+- Adding nail and palm for TabPFN (+0.02, CI crosses 0), or for the Hb number (F24).
+- Pretend children (random same-label partners) as a stand-in for real ones: they overstate the gain 3x (F24).
 
 **Still open**
 - The deeper eyelid fold in India (F2): real but borderline, needs new Indian photos.
@@ -744,7 +771,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 
 | Item | Status | Who |
 |---|---|---|
-| Eyelid + palm + nail for the same child | can't: the Ghana palm and nail files have no IDs or Hb linking them to the eyelids | ask the dataset authors for the linking sheet |
+| Eyelid + palm + nail for the same child | done (F24) on a probable file-number link | ask the dataset authors for the linking sheet to confirm it |
 | Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |

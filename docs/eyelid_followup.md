@@ -31,6 +31,7 @@ Paraphrased from the meeting, without names.
 | M15 | (2026-10-31) Split the experiments into within one site and across sites so they can be followed. | `reports/README.md`: two tables, across-site marked closed after M17 | done |
 | M16 | (2026-10-31) Put a step in the pipeline that screens out bad-quality photos and crops the region. | Step 19 (Stage 21): quality numbers, glare removal, retake gate; Step 21 (Stage 23): DINOv2 crops the eyelid and scores its confidence | done: no gain from the quality filter; glare flags Italy's batch. Automatic crop on Eyes-Defy: Dice 0.75 Italy, 0.66 India; anemia close to the hand mask in Italy |
 | M17 | (2026-11-03) Don't set the goal at transfer for the image data; focus on per-location models. Where does the metadata go into the model? | Step 18 (Stage 20): age and sex next to the photo, per location | done: no gain for yes/no; helps the Hb number in adults |
+| M18 | (2026-11-03) Group nail and eyelid photos of similar Hb as if from the same person, and try that. | Step 22 (Stage 24): a third Ghana set links eyelid, nail and palm by file number; real children vs pretend ones | done: probable link; TabPFN 0.913 -> 0.931 (CI crosses 0), weaker models +0.06 to +0.09; pretend pairs overstate the gain 3x |
 
 ## Part 2. Step log
 
@@ -688,3 +689,29 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **What it means:** a cropping model can replace the hand cut-out in Italy at almost no cost. In India the crops are
   looser and the learned models lose some. The confidence score is a weak quality check. Real phone photos, not these
   curated ones, would be the real test.
+
+### Step 22 (Stage 24): one child's eyelid, nail and palm together (M18)
+- **Why:** the mentors (2026-11-03) suggested putting nail and eyelid photos of similar Hb together as one person. The
+  Stage 13 palm and nail sets have no Hb and no link to the eyelids.
+- **New data (asked first; Jaineel 2026-11-05: "can we use any of these? if so use them if u think they make sense!"):**
+  - Ghana conjunctiva, Mendeley 10.17632/nt7r8hv2pz.1 (CC BY 4.0): 4,262 PNGs, 514 distinct photos, no sheet. 414 are
+    CP-AnemiC photos pixel for pixel (up to rotation or flip), so they carry its Hb. Named like the nail and palm sets.
+  - Korle Bu colorimetry, PLOS ONE 10.1371/journal.pone.0281736 (CC BY 4.0): 43 children, 25 under 6 months, 4 anemic
+    among the rest. Not used.
+- **What we ran:** `python -m src.ghana_link` (settings `configs/ghana_link.yaml`, results at clean commit `c873338`).
+  - Link test (fixed before any model): same-number color agreement against 2000 shuffles inside the batch and among 5
+    or 11 neighbouring numbers; linked if p < 0.01 against all.
+  - 302 children with all three and an agreed Hb; Hb < 11.0 from the CP-AnemiC sheet for all three sites; 41.4% anemic.
+  - 5x5 CV by child; leave one hospital out (300 children); early and late fusion; 5 pretend draws.
+  - Report: `reports/stage24_ghana_link.md`.
+- **Results:**
+  - Link: nail-palm 0.383 vs 0.268 among 5 neighbours (p = 0.0005); eyelid-palm 0.177 vs 0.116 (p = 0.003);
+    eyelid-nail 0.089 vs 0.055 (p = 0.07, not shown).
+  - TabPFN: eyelid 0.913, nail 0.754, palm 0.866; eyelid + nail + palm late 0.931, change +0.018 [-0.010, 0.047];
+    eyelid + palm late +0.020 [-0.001, 0.043].
+  - Weaker models gain (late, all three): random forest +0.088 [0.038, 0.139], gradient boosting +0.055 [0.015, 0.093];
+    the same with a hospital held out.
+  - Pretend children: TabPFN 0.967 (+0.054, CI above 0 in every draw); real minus pretend -0.035.
+  - Hb number: no change (gradient boosting 1.318 -> 1.331 g/dL).
+- **What it means:** the nail and palm add a little for the weaker models, and almost nothing on top of TabPFN's
+  eyelid. Pretend pairs make combining look 3x better than real children show. The link is probable, not documented.

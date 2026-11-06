@@ -38,6 +38,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Does screening out bad photos help? (2026-10-31) | **No gain, but glare flags Italy's anemic batch** | best-model change +0.00 to +0.02; Italy glare alone 0.89 |
 | Can a vision model crop the eyelid itself? (2026-10-31) | **Yes in Italy, looser in India** | overlap with the hand mask 0.75 / 0.66; Italy TabPFN 0.902 vs 0.909 |
 | Does TabPFN estimate the Hb number better? | **Only on the Moscow nails** | error 1.65 -> 1.59 g/dL; Ghana level (1.44 vs 1.38) |
+| Does the same child's nail and palm add to the eyelid? (2026-11-03) | **A little; pretend pairs overstate it 3x** | TabPFN 0.913 -> 0.931 (CI crosses 0); pretend 0.967 |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak.
@@ -398,6 +399,17 @@ and one cutoff (Ghana Hb < 11.0; India and Italy WHO by sex).
 - Closer than Stage 16's best regressor only on the Moscow nails (1.65 -> 1.59 g/dL).
 - Ghana is level (1.44 vs 1.38). India and Italy are within +-0.03.
 
+**One child's eyelid, nail and palm together** (report: [`stage24_ghana_link.md`](stage24_ghana_link.md))
+- You suggested putting nail and eyelid photos together as one person. A third Ghana set (conjunctiva, same authors)
+  makes it possible. 414 of its photos are CP-AnemiC photos, so they carry its Hb. Its file numbers match the nail and
+  palm sets.
+- Is the number the child? Probably: same-number palms agree in color with nails and eyelids more than neighbouring
+  numbers do (p = 0.0005 and 0.003). Eyelid and nail agree too little to test directly. The authors don't document it.
+- 302 children, Hb < 11.0 for all three sites. TabPFN: eyelid 0.913, palm 0.866, nail 0.754. All three (mean of the
+  scores) 0.931, +0.018 with the CI crossing 0. Random forest and gradient boosting gain +0.06 to +0.09 (CI above 0).
+- Pretend children (each eyelid with a random nail and palm of the same label) score 0.967, about 3x the real gain.
+  Probably because one child's photos make the same mistakes. So pretend pairing overstates what combining gives.
+
 **Answer:** age and sex belong in the Hb-number model for adults, not the yes/no. A quality filter adds nothing on
 these curated cut-outs. A cropping model can stand in for the hand cut-out, at least in Italy. Both may matter more for
 raw phone photos, which we don't have.
@@ -412,5 +424,8 @@ raw phone photos, which we don't have.
 3. **Models.** TabPFN on color numbers is now our best (0.92 in Ghana); eye-pretrained VisionFM reaches 0.79 even
    fine-tuned. Were there other models you meant for the list?
 4. **Eyelid region.** The deeper fold (forniceal) did better in India for the rule and logistic regression, but only
-   just (95 photos). Is that consistent with what you've seen?5. **Metadata.** Age and sex help the Hb number in adults but not the anemic yes/no. Should the main output be the Hb
+   just (95 photos). Is that consistent with what you've seen?
+5. **Metadata.** Age and sex help the Hb number in adults but not the anemic yes/no. Should the main output be the Hb
    estimate (with age and sex), turned into yes/no with each population's cutoff afterwards?
+6. **Ghana body sites.** The eyelid-nail-palm link comes from file numbers and color agreement. Should we ask the
+   authors (Asare, Appiahene, Donkoh) for the sheet that links the files to Hb, to confirm it?

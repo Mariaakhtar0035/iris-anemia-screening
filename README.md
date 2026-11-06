@@ -426,8 +426,8 @@ Report: [`reports/stage12_nails.md`](reports/stage12_nails.md).
 The CP-AnemiC group also published palm and fingernail photos of Ghanaian children (Asare et al. 2022, Mendeley, CC BY
 4.0). Each photo is stored 6 or 12 times (exact copies and rotations), so the 4,260 files per set are **514 palm and 526
 nail photos** once merged (one palm photo filed under both labels is dropped). The only label is Anemic / Non-anemic in
-the file name: no Hb, age, sex or hospital, and nothing links a photo to an eyelid photo, so the body sites can't be
-combined per child. **Anemia here is the dataset's own label; its cutoff isn't stated** (the group's eyelid set uses
+the file name: no Hb, age, sex or hospital, and nothing in this set links a photo to an eyelid photo (Section 6.9 found a
+probable link through a third set). **Anemia here is the dataset's own label; its cutoff isn't stated** (the group's eyelid set uses
 Hb < 11.0 g/dL). Same 29 color numbers and models, 5x5 CV by photo, plus a model that sees only the file-naming style
 (`AnemicP-`, `Anemic-Pa-`, ...) in case styles mark batches.
 
@@ -516,6 +516,63 @@ Reports: [`reports/stage20_metadata.md`](reports/stage20_metadata.md),
 [`reports/stage23_auto_crop.md`](reports/stage23_auto_crop.md). Within-site and across-site stages are indexed in
 [`reports/README.md`](reports/README.md).
 
+### 6.9 One child's eyelid, nail and palm together (Stage 24)
+
+At the 2026-11-03 meeting the mentors suggested putting each child's nail and eyelid photos together, as if from the
+same person. Section 6.7 couldn't. A third set from the same group made it possible: **Ghana conjunctiva photos**
+(Appiahene, Asare, Donkoh 2022, Mendeley 10.17632/nt7r8hv2pz.1, CC BY 4.0). It has no spreadsheet, but:
+- 414 of its 514 distinct photos are CP-AnemiC eyelid photos, pixel for pixel (up to rotation or flip). So they get
+  CP-AnemiC's Hb, and its hospital where only one CP-AnemiC row matches.
+- Its files are named like the nail and palm sets: `Anemic-105`, `Anemic-FN-105`, `AnemicP-105`. If the number is the
+  child, the three photos belong together.
+
+**Anemia: Hb < 11.0 g/dL from the CP-AnemiC sheet (children 6-59 months), one label per child for all three body
+sites.** Section 6.7 used the nail and palm file-name labels instead; here those agree with Hb < 11.0 for 98.0% of the
+children.
+
+**Does the number link the photos?** The authors don't say, so we tested it. Photos of one child should agree in color
+more than photos taken next to each other in the same session. Agreement = the correlation of color ranks (mean L*, a*,
+b*) inside each label and batch, against 2000 shuffles. The rule was fixed before any model ran: p < 0.01 against both
+whole-batch and neighbour shuffles.
+
+| Sites | Same number | Shuffled among 5 neighbours | Linked? |
+|---|---|---|---|
+| nail - palm | 0.383 | 0.268 (p = 0.0005) | yes |
+| eyelid - palm | 0.177 | 0.116 (p = 0.003) | yes |
+| eyelid - nail | 0.089 | 0.055 (p = 0.07) | not shown |
+
+Eyelid and nail colors agree too little to test directly, but both agree with the palm. So the three photos are
+**probably** one child. That isn't proven; the authors' sheet would settle it.
+
+**The children:** 302 have all three photos and an agreed Hb (41.4% anemic). We used 5x5 CV by child, keeping children
+that share any photo together, and left one hospital out for the 300 whose hospital is known. *Early* = one model on all
+the numbers; *late* = the mean of the per-site scores. *Pretend* = the same eyelids, each with a random nail and palm of
+the same anemia label (the fallback when no link exists), 5 draws.
+
+| TabPFN, 5x5 CV by child | AUROC | Change vs eyelid alone |
+|---|---|---|
+| Eyelid alone | 0.913 [0.877, 0.943] | - |
+| Nail alone / palm alone | 0.754 / 0.866 | - |
+| Eyelid + palm, late | 0.933 [0.904, 0.959] | +0.020 [-0.001, 0.043] |
+| Eyelid + nail + palm, late | 0.931 [0.901, 0.958] | +0.018 [-0.010, 0.047] |
+| Pretend children, all three, late | 0.967 (0.957-0.972 over draws) | +0.054 (every draw's CI above 0) |
+
+- **Combining helps the weaker models, not the best one.**
+  - Eyelid + nail + palm (late) adds +0.088 [0.038, 0.139] for random forest and +0.055 [0.015, 0.093] for gradient
+    boosting. Both gains hold with a hospital held out.
+  - TabPFN, already at 0.91 on the eyelid alone, gains +0.018 and the CI crosses 0.
+  - One model on all 87 numbers (early) doesn't help TabPFN either (-0.017).
+- **Pretend children overstate the gain about 3x:** 0.967 against 0.931 for the real children (-0.035, draws' CIs -0.070
+  to +0.002).
+  - Why, probably: one child's three photos share the same borderline Hb, so they make the same mistakes. Random partners
+    make independent mistakes, and averaging cancels those out.
+  - This also fits the link being real.
+- **The Hb number doesn't improve:** gradient boosting's error is 1.32 g/dL on the eyelid and 1.33 with all three sites
+  (dummy 1.64).
+
+Not used: Korle Bu colorimetry (PLOS ONE 2023, 10.1371/journal.pone.0281736). It has 43 children; 25 are under 6 months
+(no WHO cutoff), and only 4 of the rest are anemic. Report: [`reports/stage24_ghana_link.md`](reports/stage24_ghana_link.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -543,7 +600,8 @@ Reports: [`reports/stage20_metadata.md`](reports/stage20_metadata.md),
 
 - **No paired data.** No dataset links an eyelid photo to survey answers for the same person, so fusion is simulated and assumes the two signals are independent given anemia.
 - **Different populations.** CP-AnemiC is young children, Eyes-Defy is adults including men, the survey is women 15-49.
-- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking). Fingernails (Section 6.6): Hb < 12.0 for everyone, since sex is not recorded. Ghana palm and nails (Section 6.7): the dataset's own label, cutoff not stated.
+- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking). Fingernails (Section 6.6): Hb < 12.0 for everyone, since sex is not recorded. Ghana palm and nails (Section 6.7): the dataset's own label, cutoff not stated. Ghana eyelid + nail + palm (Section 6.9): Hb < 11.0 from the CP-AnemiC sheet for all three sites.
+- **The Ghana body-site link is inferred** from file names and color agreement (Section 6.9); the authors don't document it.
 - **Survey rounds differ.** Zimbabwe 2015 vs Malawi and Zambia 2024, so transfer mixes country with time. Malawi's missing wealth index is imputed inside the model.
 - **Small image test sets.** Eyes-Defy test sets hold 44 photos when split by photo; Italy has few anemic adults.
 - **Replications are not identical recipes.** Replication A uses ImageNet weights and 30 epochs; we do not have either paper's exact split or code; GPU differences (Apple M1 vs NVIDIA) can shift results slightly.
@@ -574,6 +632,8 @@ Raw data is **never committed** (`data/` and `results/` are gitignored). Downloa
 | Fingernails (Yakimov et al. 2024) | `data/raw/yakimov_nails/` (`metadata.csv` and `photo/`, unzipped from `data.zip`) | figshare 10.6084/m9.figshare.c.6760179 (CC0) |
 | Ghana palm (Asare et al. 2022) | `data/raw/ghana_palm/Palm/` (unpacked from `Palm.rar`) | Mendeley Data 10.17632/ccr8cm22vz.1 (CC BY 4.0) |
 | Ghana fingernails (Asare et al. 2022) | `data/raw/ghana_nails/Fingernails/` (unpacked from `Fingernails.rar`) | Mendeley Data 10.17632/2xx4j3kjg2.1 (CC BY 4.0) |
+| Ghana conjunctiva (Appiahene et al. 2022, Stage 24) | `data/raw/ghana_conj/Conjunctiva/` (unzipped from `nt7r8hv2pz-1.zip`, downloaded 2026-11-05) | Mendeley Data 10.17632/nt7r8hv2pz.1 (CC BY 4.0) |
+| Korle Bu colorimetry (checked, not used) | `data/raw/ghana_colorimetry/` (`pone.0281736.s002.xlsx`, `.s003.xlsx`, downloaded 2026-11-05) | PLOS ONE 10.1371/journal.pone.0281736 supporting files (CC BY 4.0) |
 
 Then run, in order (Section 11 lists what each file does):
 
@@ -611,11 +671,12 @@ python -m src.eyelid.metadata              # 6.8, Stage 20, age and sex next to 
 python -m src.eyelid.quality               # 6.8, Stage 21, photo quality and glare
 python -m src.eyelid.hb_tabpfn             # 6.8, Stage 22, TabPFN for the Hb number (needs the regressor weights)
 python -m src.eyelid.auto_crop             # 6.8, Stage 23, DINOv2 crops the eyelid from the full Eyes-Defy photo
+python -m src.ghana_link                   # 6.9, Stage 24, one Ghana child's eyelid, nail and palm (~35 min, TabPFN)
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [TabPFN for Hb](reports/stage22_hb_tabpfn.md), [automatic crop](reports/stage23_auto_crop.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [TabPFN for Hb](reports/stage22_hb_tabpfn.md), [automatic crop](reports/stage23_auto_crop.md), [eyelid + nail + palm](reports/stage24_ghana_link.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -637,6 +698,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/eyelid/hb_regression.py`, `hb_cross.py`, `hb_local.py`, `src/nails_cross.py` | Stages 16-19: the Hb number within and across datasets, local correction, nails across sites |
 | `src/eyelid/metadata.py`, `quality.py` | Section 6.8: age and sex next to the photo; photo quality, glare and the retake gate |
 | `src/eyelid/hb_tabpfn.py`, `auto_crop.py` | Section 6.8: TabPFN for the Hb number; DINOv2 crops the eyelid and scores its confidence |
+| `src/ghana_link.py` | Section 6.9: links each Ghana child's eyelid, nail and palm photos by file number, tests the link, combines the sites |
 | `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
 | `src/summary.py`, `src/figures.py` | Build `reports/summary.md` and the figures from `results/*.json` |
@@ -674,13 +736,14 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Eye-pretrained model (VisionFM external eye, frozen and fine-tuned, Section 6.1) | done |
 | Deeper eyelid fold, paired check (Section 6.1) | done: borderline lead in India |
 | TabPFN, the model named at the mentor meeting (Section 6.1) | done; passes the shortcut checks (0.913 with hospitals held out) |
-| Ghana palm and fingernail photos (Section 6.7) | done; can't be paired with the eyelids |
+| Ghana palm and fingernail photos (Section 6.7) | done; paired with the eyelids in Section 6.9 |
 | One model for three countries; a few local photos for a new one (Section 6.1) | done: fair, but no better than the rule outside Ghana |
 | The Hb number within and across datasets, nails across sites (Stages 16-19) | done; see `HB_EXPERIMENTS_EXPLAINED.md` |
 | Age and sex next to the photo; photo quality and glare (Section 6.8) | done: no gain for yes/no; age + sex help the Hb number in adults |
 | TabPFN for the Hb number; automatic eyelid crop (Section 6.8) | done: TabPFN closer only on Moscow nails; the crop nearly matches the hand mask in Italy |
+| One Ghana child's eyelid, nail and palm together (Section 6.9) | done: probable link; weaker models gain, TabPFN +0.02 (CI crosses 0); pretend pairs overstate the gain 3x |
 
-Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos.
+Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos and for the sheet linking the conjunctiva, nail and palm files to Hb (to confirm Section 6.9).
 
 ## References
 
