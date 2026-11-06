@@ -1,0 +1,61 @@
+# Stage 24: one Ghanaian child's eyelid, nail and palm photos together.
+# Mentor suggestion (2026-11-03 meeting, as Jaineel heard it): group nail and eyelid photos of similar Hb as if they
+# came from the same person, and try that. Jaineel 2026-11-05: "can we use any of these? if so use them if u think
+# they make sense!" (the Ghana datasets found that day).
+#
+# Data (each in its own folder under data/raw/, never committed):
+#   eyelid: Appiahene, Asare, Donkoh 2022, Mendeley Data 10.17632/nt7r8hv2pz.1, CC BY 4.0, downloaded 2026-11-05 with
+#     Jaineel's OK. 4,262 PNG cut-outs, no spreadsheet. 414 of its distinct photos are pixel-for-pixel CP-AnemiC photos
+#     (up to rotation/flip), but they are named like the nail and palm sets, not Image_###.
+#   nail, palm: the Stage 13 sets (Mendeley 10.17632/2xx4j3kjg2.1 and 10.17632/ccr8cm22vz.1).
+# The link: label + batch + number in the file name (Anemic-105 / Anemic-FN-105 / AnemicP-105). The authors don't
+# document it, so step 1 tests it (link_test). Hb, hospital: from the CP-AnemiC sheet, through the pixel match.
+#
+# Anemia: Hb < 11.0 g/dL from the CP-AnemiC sheet (children 6-59 months, default.yaml), the same label for all three
+# body sites of a child. The nail and palm file-name labels are not the target (their cutoff isn't stated).
+# Not used: Korle Bu colorimetry (PLOS ONE 2023, 10.1371/journal.pone.0281736, downloaded 2026-11-05 to
+# data/raw/ghana_colorimetry/): 43 children, 25 under 6 months (no WHO cutoff, newborn Hb runs high), only 4 anemic
+# among those 6 months or older, and 270 features. Too small to answer anything.
+data:
+  eyelid: data/raw/ghana_conj/Conjunctiva
+  nail: data/raw/ghana_nails/Fingernails
+  palm: data/raw/ghana_palm/Palm
+# The whole cleaned name must match a pattern; the number is the child's number inside that label and batch. Names
+# that match none are left out: Anemic-Conj-N-... (eyelid; its numbers run to 141 in a 1-31 batch), Anmeic-fn-...
+# (nail; numbers in several styles), and variants with letters after the number (FV, R, RA).
+copy_suffix: '(\s*\(\d+\))?(\s*-\s*Copy)?(-[A-Za-z0-9]{6})?$'   # " (3)", " - Copy", "-i10vHz" upload suffixes
+names:
+  eyelid:
+    - {pattern: 'Anemic-(\d+)', anemic: 1, batch: main}
+    - {pattern: 'Anemic-Conj-(\d+)', anemic: 1, batch: small}
+    - {pattern: 'Non-Anemic-(\d+)', anemic: 0, batch: main}
+    - {pattern: 'Non-anemic-Con-(\d+)', anemic: 0, batch: small}
+  nail:
+    - {pattern: 'Anemic-FN-(\d+)', anemic: 1, batch: main}
+    - {pattern: 'Anemic-Fin-(\d+)', anemic: 1, batch: small}
+    - {pattern: 'Non-Anrmic-FN-(\d+)', anemic: 0, batch: main}
+    - {pattern: 'Non-anemic-Fin-(\d+)', anemic: 0, batch: small}
+  palm:
+    - {pattern: 'AnemicP-?(\d+)', anemic: 1, batch: main}
+    - {pattern: 'Anemic-(\d+)', anemic: 1, batch: main}       # 260-272, the end of the main batch
+    - {pattern: 'Anemic-Pa-(\d+)', anemic: 1, batch: small}
+    - {pattern: 'Non-AnemicP-(\d+)', anemic: 0, batch: main}
+    - {pattern: 'Non-anemic-Pa-(\d+)', anemic: 0, batch: small}
+# Settings below were fixed after a feasibility check on the link only (scratchpad link_proto.py), before any model ran.
+# Answer (a), fixed before running: the number links two body sites if photos with the same number agree in color
+# (mean L*, a*, b*, ranked inside each label x batch) more than in p_max of the shuffles, both shuffling inside the
+# whole batch and shuffling only among neighbouring numbers (block_sizes), since neighbours share a photo session.
+link_test:
+  features: [L_mean, a_mean, b_mean]
+  n_shuffles: 2000
+  block_sizes: [5, 11]
+  offsets: [-2, -1, 1, 2]
+  p_max: 0.01
+# Answer (b), fixed before running: combining body sites helps if eyelid + nail + palm (same model, early or late)
+# beats the eyelid alone, paired bootstrap CI of the AUROC change above 0, under 5x5 CV; "across hospitals" if also
+# when leaving one hospital out (children whose eyelid photo has no copy in CP-AnemiC, so the hospital is trusted).
+# Answer (c): pretend children (the mentors' idea when no link exists): the same eyelids with a random nail and palm of
+# the same anemia label, pretend_draws times; late fusion compared with the real link.
+pretend_draws: 5
+cv: {n_splits: 5, n_repeats: 5}   # by child, stratified on anemia; children sharing any photo stay in one fold
+hb_regressors: [ridge, random_forest, hist_gradient_boosting]   # settings in hb_regression.yaml
