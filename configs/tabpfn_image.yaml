@@ -1,0 +1,16 @@
+# Stage 26b: TabPFN on the 29 color numbers plus a big image model's features (Jaineel 2026-11-08: the mentors'
+# DINOv2 suggestion; "1+2" in the 2026-11-07 proposal). The embeddings are the Stage 4/5 DINOv2-small cache
+# (CLS + mean patch token, 768 numbers) and the Stage 9 VisionFM cache (eye-pretrained), both on disk: nothing is
+# downloaded. Photos, folds and models as Stage 9 (ceiling.yaml): one photo per person, 5-fold CV x 5 repeats by
+# photo; Ghana also leaves one hospital out.
+#
+# Anemia cutoffs (one per dataset; no model is carried between datasets):
+#   CP-AnemiC (Ghana children 6-59 months, the 388 photos with no copy): Hb < 11.0 g/dL (default.yaml).
+#   Eyes-Defy (India and Italy adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml).
+#
+# The image features are squeezed to pca_components numbers inside each training fold (scaled, then PCA fitted on the
+# training photos only), because TabPFN works best with few columns and 768 would swamp the 29 color numbers.
+# Answer, fixed before running: image features help if color + image beats color alone for TabPFN (paired CI of the
+# AUROC change above 0).
+pca_components: 16
+populations: [cp_anemic, eyes_defy_india, eyes_defy_italy]

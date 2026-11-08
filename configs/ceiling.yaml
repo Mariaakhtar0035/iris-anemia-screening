@@ -70,3 +70,12 @@ visionfm:
   # starting weights and normalization differ. Approved by Jaineel 2026-10-24. python -m src.eyelid.finetune_vit --model visionfm
   runs:                     # population -> jitter on/off settings to run
     cp_anemic: [true]
+
+# DINOv2-small fine-tuned end to end (Jaineel 2026-11-08: the mentors' DINOv2 suggestion; Stage 26a). The probe.yaml
+# weights and revision (already on disk, loaded offline: nothing downloaded), with the same `vit` settings (epochs, lr,
+# batch, jitter, folds, gray padding); ImageNet normalization from its own processor. The head reads the CLS token and
+# the mean patch token, like the frozen probe. 1 seed, 5 folds, as the other fine-tuned rungs.
+# python -m src.eyelid.finetune_vit --model dinov2
+dinov2:
+  runs:                     # population -> jitter on/off settings to run
+    cp_anemic: [true]

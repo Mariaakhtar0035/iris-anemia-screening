@@ -99,8 +99,9 @@ def main():
     folds = repeated_stratified_grouped(y, groups, link_cfg["cv"]["n_splits"], link_cfg["cv"]["n_repeats"], seed)
     X = {s: feats[s].loc[ids].to_numpy() for s in SITES}
     X[f"{ALL3} (early)"] = np.hstack([X[s] for s in SITES])
-    X[SHAPE] = np.hstack([image_properties(list(tabs[s].loc[ids, "path"]), range(len(ids))).to_numpy()
-                          for s in SITES])
+    props = {s: image_properties(list(tabs[s].loc[ids, "path"]), range(len(ids))) for s in SITES}
+    X[SHAPE] = np.hstack([props[s].to_numpy() for s in SITES])
+    X |= {f"size and shape, {s}": props[s].to_numpy() for s in SITES}  # follow-up: added after the check failed
     print(f"children: {len(y)}, anemic {y.mean():.1%}", flush=True)
 
     # baselines, then held-out scores (mean over the 5 repeats) and training AUROC
@@ -123,6 +124,17 @@ def main():
         scores[(name, LATE)] = np.mean([scores[(name, s)] for s in SITES], axis=0)
         rows.append(head | {"model": name, "input": LATE, "train": "-",
                             **summarize(y, scores[(name, LATE)], n_boot, ci, seed)})
+
+    # 2b. follow-up, added after the no-color check failed: which shape numbers carry it, and do the color scores
+    # still separate the children inside each third of the shape score?
+    single = [{"site": s, "number": c, "auroc": bootstrap_ci(auroc, y, props[s][c].to_numpy(), n_boot, ci, seed=seed)}
+              for s in SITES for c in props[s]]
+    third = np.digitize(scores[("tabpfn", SHAPE)], np.quantile(scores[("tabpfn", SHAPE)], [1 / 3, 2 / 3]))
+    strata = [{"model": name, "input": inp, "third": int(t), "n": int((third == t).sum()),
+               "anemic": float(y[third == t].mean()),
+               "auroc": summarize(y[third == t], scores[(name, inp)][third == t], n_boot, ci, seed,
+                                  metrics=AUROC_ONLY)["auroc"]}
+              for name in models for inp in ("eyelid", LATE) for t in range(3)]
 
     # 1. fairness
     fc = cfg["fairness"]
@@ -184,13 +196,14 @@ def main():
                      zip(ids, groups, y, kids.hb, age, sex, kids.hospital))]
     path = save_results("stage25_ghana_checks", {"rows": rows, "fairness": fair, "per_group": per_group,
                                                  "same_mistakes": corr, "wrong_matches": wrong,
+                                                 "shape_numbers": single, "shape_thirds": strata,
                                                  "children": per_child},
                         {"default": base, "ghana_checks": cfg, "ghana_link": link_cfg, "color": color_cfg,
                          "probe": probe_cfg, "ceiling": ceiling_cfg})
-    write_report(path, cfg, rows, fair, per_group, corr, wrong, list(models), cutoff, n_boot, len(y))
+    write_report(path, cfg, rows, fair, per_group, corr, wrong, single, strata, list(models), cutoff, n_boot, len(y))
 
 
-def write_report(path, cfg, rows, fair, per_group, corr, wrong, names, cutoff, n_boot, n):
+def write_report(path, cfg, rows, fair, per_group, corr, wrong, single, strata, names, cutoff, n_boot, n):
     fc = cfg["fairness"]
     by = {(r["model"], r["input"]): r for r in rows}
     shape = {m: by[(m, SHAPE)]["auroc"] for m in names}
@@ -208,6 +221,9 @@ def write_report(path, cfg, rows, fair, per_group, corr, wrong, names, cutoff, n
     corr_lines = [f"| {c['model']} | eyelid - {c['partner']} | {fmt(c['same number'])} | {fmt(c['neighbouring number'])} "
                   f"| {fmt(c['same minus neighbour'])} | {c['random same-label']['mean']:+.3f} "
                   f"(97.5%: {c['random same-label']['q975']:.3f}) |" for c in corr]
+    single_lines = [f"| {r['site']} | {r['number']} | {fmt(r['auroc'])} |" for r in single]
+    strata_lines = [f"| {r['model']} | {r['input']} | {('lowest', 'middle', 'highest')[r['third']]} | {r['n']} "
+                    f"({r['anemic']:.0%} anemic) | {fmt(r['auroc'])} |" for r in strata]
     wrong_lines = [f"| {w['model']} | {w['share wrong']:.0%} | {w['auroc mean']:.3f} [{w['lo']:.3f}, {w['hi']:.3f}] | "
                    f"{w['vs eyelid']:+.3f} |" for w in wrong]
     report = (
@@ -229,7 +245,8 @@ def write_report(path, cfg, rows, fair, per_group, corr, wrong, names, cutoff, n
         "## Answers\n\n"
         f"- **(1) Fairness:** adding nail and palm widens a gap for: {', '.join(widened) or 'none'}.\n"
         f"- **(2) No color:** no shortcut in size and shape for: {', '.join(no_shortcut) or 'none'} ("
-        + ", ".join(f"{m} {fmt(a)}" for m, a in shape.items()) + ").\n"
+        + ", ".join(f"{m} {fmt(a)}" for m, a in shape.items()) + "). Each site alone (TabPFN): "
+        + ", ".join(f"{s} {fmt(by[('tabpfn', f'size and shape, {s}')]['auroc'])}" for s in SITES) + ".\n"
         f"- **(3) Same mistakes:** holds for: {', '.join(holds) or 'none'}. The child, not just the session, for: "
         f"{', '.join(child) or 'none'}.\n"
         "- **(4) Wrong matches:** see section 4.\n\n"
@@ -247,7 +264,14 @@ def write_report(path, cfg, rows, fair, per_group, corr, wrong, names, cutoff, n
         "|---|---|---|---|---|---|\n" + "\n".join(group_lines) + "\n\n"
         "## 2. No color: size and shape of the three photos\n\n"
         "See the *size and shape, all three* rows in section 0: image width, height, aspect and the opaque and edge "
-        "shares of each of the three photos (15 numbers).\n\n"
+        "shares of each of the three photos (15 numbers), and each site's 5 numbers alone.\n\n"
+        "**Follow-up, added after this check failed (not fixed before running).** Each shape number on its own (AUROC "
+        "of the raw number; below 0.5 means smaller values go with anemia):\n\n"
+        "| site | number | AUROC |\n|---|---|---|\n" + "\n".join(single_lines) + "\n\n"
+        "Do the color scores lean on the shape signal? AUROC inside each third of TabPFN's size-and-shape score "
+        "(all three photos). If the color models used the shortcut, they would drop toward 0.5 inside a third.\n\n"
+        "| model | input | shape-score third | children | AUROC inside the third |\n|---|---|---|---|---|\n"
+        + "\n".join(strata_lines) + "\n\n"
         "## 3. Same child, same mistakes\n\n"
         "Inside each anemia label, the rank correlation between the eyelid's score and the partner's, averaged over "
         "the two labels. Neighbouring number = same label and batch, so the same photo session, but another child. "
