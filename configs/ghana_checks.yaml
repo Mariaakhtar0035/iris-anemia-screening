@@ -1,0 +1,34 @@
+# Stage 25: cheating and fairness checks on the Stage 24 children (one Ghanaian child's eyelid, nail and palm).
+# Jaineel 2026-11-07: "did we do the cheating and fairness and stuff test?"; go-ahead 2026-11-08 ("u can do Proposed
+# Stage 25"). Same children, folds and label as Stage 24 (configs/ghana_link.yaml): Hb < 11.0 g/dL from the
+# CP-AnemiC sheet (children 6-59 months, default.yaml), one label per child for all three body sites.
+models: [tabpfn, hist_gradient_boosting]   # the best model and the best of the rest in Stage 24
+
+# 1. Fairness. Age (months) and sex from the CP-AnemiC sheet, when every copy of the photo agrees. Groups: girls vs
+# boys, and under age_split_months vs older. Per group: AUROC, and sensitivity and false alarms at one shared threshold
+# (the one giving `specificity` on all the children, as our sens @ 90% spec). Gap = first group minus second.
+# Answer, fixed before running: adding nail and palm (late fusion) is fair if it doesn't widen a gap, i.e. the paired
+# CI of |gap with all three| - |gap with the eyelid alone| is not entirely above 0.
+fairness:
+  age_split_months: 24
+  specificity: 0.9
+
+# 2. No-color check: the models on the size and shape numbers of all three photos together (image_properties: width,
+# height, aspect, opaque and edge shares, as the no-color control of every earlier stage).
+# Answer, fixed before running: no shortcut if the AUROC's CI includes 0.5 or the estimate is below 0.6.
+
+# 3. Same child, same mistakes (why Stage 24's pretend children scored higher). Inside each anemia label, the rank
+# correlation between the eyelid's held-out score and the nail's or palm's, averaged over the two labels, for the
+# partner with the same number, the neighbouring number (same label and batch, so the same photo session, but another
+# child), and n_shuffles random same-label partners.
+# Answer, fixed before running: the explanation holds if the same-number correlation's CI is above 0 and above the
+# random partners' 97.5% point; it is the child, not just the photo session, if same number minus neighbour has its
+# paired CI above 0.
+n_shuffles: 2000
+
+# 4. Wrong matches. The photos are matched inside the Anemic / Non-anemic folders, so a wrong match still hands the
+# model a photo of a child with the same answer. What-if: give a share of the children a random same-label nail and
+# palm instead of their own (held-out scores reused, no refit) and see how the all-three score moves. It shows how much
+# wrong matches could inflate the gain; it can't say how many matches are actually wrong.
+wrong_share: [0.0, 0.25, 0.5, 0.75, 1.0]
+wrong_draws: 200

@@ -75,15 +75,16 @@ def numbered(folder, patterns, copy_suffix, near):
 
 
 def cp_lookup(keys):
-    """CP-AnemiC by pixel key: Hb when every copy of the photo agrees on it; the hospital only for a photo with no copy
+    """CP-AnemiC by pixel key: Hb, age and sex when every copy of the photo agrees on them; the hospital only for a photo with no copy
     (the only rows whose hospital we can trust, as in Stage 7); the photo group for the CV folds."""
     cp = load_cp_anemic("all")
     cp["key"] = [pixel_key(ROOT / p) for p in cp.image_path]
     out = {}
     for key, groups in cp[cp.key.isin(set(keys))].groupby("key").photo_group:
         rows = cp[cp.photo_group.isin(set(groups))]
-        out[key] = {"hb": rows.hb.iloc[0] if rows.hb.nunique() == 1 else np.nan,
-                    "hospital": rows.site.iloc[0] if len(rows) == 1 else None, "cp_group": rows.photo_group.min()}
+        agreed = {c: rows[c].iloc[0] if rows[c].nunique() == 1 else np.nan for c in ("hb", "age_months", "sex")}
+        out[key] = agreed | {"hospital": rows.site.iloc[0] if len(rows) == 1 else None,
+                             "cp_group": rows.photo_group.min()}
     return pd.DataFrame.from_dict(out, orient="index")
 
 
@@ -165,6 +166,28 @@ def rank_mean(columns):
     return np.mean([(rankdata(c) - 0.5) / len(c) for c in columns], axis=0)
 
 
+def load_sites(cfg, base, alpha):
+    """Each body site's numbered photos, their counts, and their 29 color numbers (rows: label, batch, number)."""
+    tabs, counts, feats = {}, {}, {}
+    for site in SITES:
+        tabs[site], counts[site] = numbered(cfg["data"][site], cfg["names"][site], cfg["copy_suffix"],
+                                            base["cp_anemic_near_duplicate"])
+        feats[site] = feature_table(tabs[site].path, range(len(tabs[site])), alpha_threshold=alpha).set_axis(
+            tabs[site].index)
+        print(f"loaded {site}: {counts[site]}", flush=True)
+    return tabs, counts, feats
+
+
+def children(tabs):
+    """Eyelid rows joined to CP-AnemiC; the children (numbers with an agreed Hb and a nail and palm photo); and one
+    CV group per child, shared by children that share any photo."""
+    eye = tabs["eyelid"].join(cp_lookup(tabs["eyelid"].image_group), on="image_group")
+    ids = eye.index[eye.hb.notna()].intersection(tabs["nail"].index).intersection(tabs["palm"].index)
+    groups = shared_groups(eye.loc[ids, "cp_group"].to_numpy(), tabs["nail"].loc[ids, "photo_group"].to_numpy(),
+                           tabs["palm"].loc[ids, "photo_group"].to_numpy())
+    return eye, ids, groups
+
+
 def main():
     base, cfg, color_cfg = load_config("default"), load_config("ghana_link"), load_config("color")
     probe_cfg, ceiling_cfg, hb_cfg = load_config("probe"), load_config("ceiling"), load_config("hb_regression")
@@ -177,13 +200,7 @@ def main():
               if kind == "color" and n != "dummy"}
 
     # 1. the link
-    tabs, counts, feats = {}, {}, {}
-    for site in SITES:
-        tabs[site], counts[site] = numbered(cfg["data"][site], cfg["names"][site], cfg["copy_suffix"],
-                                            base["cp_anemic_near_duplicate"])
-        feats[site] = feature_table(tabs[site].path, range(len(tabs[site])), alpha_threshold=alpha).set_axis(
-            tabs[site].index)
-        print(f"loaded {site}: {counts[site]}", flush=True)
+    tabs, counts, feats = load_sites(cfg, base, alpha)
     links = {}
     for a, b in [("eyelid", "nail"), ("eyelid", "palm"), ("nail", "palm")]:
         common = feats[a].index.intersection(feats[b].index)
@@ -195,15 +212,12 @@ def main():
         print(f"link {a}-{b}: {links[f'{a} - {b}']}", flush=True)
 
     # 2. the children: an eyelid with an Hb from CP-AnemiC, plus a nail and a palm under the same number
-    eye = tabs["eyelid"].join(cp_lookup(tabs["eyelid"].image_group), on="image_group")
+    eye, ids, groups = children(tabs)
     with_hb = eye.index[eye.hb.notna()]
-    ids = with_hb.intersection(tabs["nail"].index).intersection(tabs["palm"].index)
     hb = eye.loc[ids, "hb"].to_numpy(float)
     y = (hb < cutoff).astype(int)
     name_label = ids.get_level_values("anemic_name").to_numpy()
     hospital = eye.loc[ids, "hospital"].to_numpy(object)
-    groups = shared_groups(eye.loc[ids, "cp_group"].to_numpy(), tabs["nail"].loc[ids, "photo_group"].to_numpy(),
-                           tabs["palm"].loc[ids, "photo_group"].to_numpy())
     X = {s: feats[s].loc[ids].to_numpy() for s in SITES}
     X |= {c: np.hstack([X[s] for s in parts]) for c, parts in COMBOS.items()}
     rule = {s: -feats[s].loc[ids, rule_feature].to_numpy() for s in SITES}
