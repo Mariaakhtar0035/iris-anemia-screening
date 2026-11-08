@@ -39,6 +39,8 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Can a vision model crop the eyelid itself? (2026-10-31) | **Yes in Italy, looser in India** | overlap with the hand mask 0.75 / 0.66; Italy TabPFN 0.902 vs 0.909 |
 | Does TabPFN estimate the Hb number better? | **Only on the Moscow nails** | error 1.65 -> 1.59 g/dL; Ghana level (1.44 vs 1.38) |
 | Does the same child's nail and palm add to the eyelid? (2026-11-03) | **A little; pretend pairs overstate it 3x** | TabPFN 0.913 -> 0.931 (CI crosses 0); pretend 0.967 |
+| Is that combined result fair, and free of shortcuts? | **Fair by sex and age; one shortcut, not used** | no gap widens; eyelid cut-out shape alone 0.69; color still 0.90-0.93 inside each shape third |
+| Does DINOv2 help if we fine-tune it, or give its features to TabPFN? (2026-11-03) | **No** | fine-tuned 0.690 (frozen 0.672); color + DINOv2 0.897 vs color alone 0.919 |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak.
@@ -410,6 +412,22 @@ and one cutoff (Ghana Hb < 11.0; India and Italy WHO by sex).
 - Pretend children (each eyelid with a random nail and palm of the same label) score 0.967, about 3x the real gain.
   Probably because one child's photos make the same mistakes. So pretend pairing overstates what combining gives.
 
+**Cheating and fairness checks on those children** (report: [`stage25_ghana_checks.md`](stage25_ghana_checks.md))
+- Fair: adding nail and palm widens no gap between girls and boys or younger and older children (every CI of the
+  change crosses 0).
+- One shortcut: the eyelid cut-outs' size and shape alone find anemia at 0.69 (nail 0.56, palm 0.50). The color models
+  don't use it: inside each third of the shape score TabPFN still scores 0.90-0.93.
+- One child's eyelid and palm scores err together (0.32, vs 0.20 for the neighbouring number and 0.00 for a random
+  partner). That is why pretend children look better.
+- The photos are matched inside the Anemic / Non-anemic folders, so a wrong match still carries the right answer and
+  pushes the score up. The +0.018 is an upper bound.
+
+**DINOv2, fine-tuned and next to the color numbers** (report: [`stage26_tabpfn_image.md`](stage26_tabpfn_image.md))
+- Fine-tuned end to end on the Ghana photos: 0.690 [0.634, 0.741], vs 0.672 frozen. It learns the training photos
+  (training AUROC 1.00) and barely improves on new ones.
+- Its features (or VisionFM's) next to the 29 color numbers make TabPFN slightly worse in Ghana (-0.022 and -0.014,
+  CI below 0), and change nothing in India or Italy.
+
 **Answer:** age and sex belong in the Hb-number model for adults, not the yes/no. A quality filter adds nothing on
 these curated cut-outs. A cropping model can stand in for the hand cut-out, at least in Italy. Both may matter more for
 raw phone photos, which we don't have.
@@ -422,7 +440,8 @@ raw phone photos, which we don't have.
    little more. Our eyelid photos have no such reference. Is it worth asking for eyelid photos with a white or color
    card in the frame, or finding a way into the larger Indian conjunctiva set (1,485 people, paid subscription)?
 3. **Models.** TabPFN on color numbers is now our best (0.92 in Ghana); eye-pretrained VisionFM reaches 0.79 even
-   fine-tuned. Were there other models you meant for the list?
+   fine-tuned, DINOv2 0.69 fine-tuned, and neither adds anything next to the color numbers. Were there other models
+   you meant for the list?
 4. **Eyelid region.** The deeper fold (forniceal) did better in India for the rule and logistic regression, but only
    just (95 photos). Is that consistent with what you've seen?
 5. **Metadata.** Age and sex help the Hb number in adults but not the anemic yes/no. Should the main output be the Hb

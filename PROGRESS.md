@@ -1,6 +1,6 @@
 # Progress: every strategy we tried, why, and what happened
 
-*Last updated 2026-10-24, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
+*Last updated 2026-11-08, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
 why we tried it, what happened, and whether it worked. The full paper-style write-up is the [README](README.md); the
 answers for the mentors are in [`reports/mentor_followup_eyelid.md`](reports/mentor_followup_eyelid.md).*
 
@@ -12,8 +12,29 @@ then followed up every piece of eyelid advice from the mentor meeting. All of th
 
 Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained model VisionFM, frozen and fine-tuned
 (F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
-fingernail photos of Ghanaian children (F16). See
+fingernail photos of Ghanaian children (F16). Then (Stages 16-26): the Hb number, metadata, photo quality, automatic
+cropping, one child's eyelid, nail and palm together with cheating and fairness checks (F24, F25), and DINOv2
+fine-tuned (F26). See
 [What's next](#whats-next) for what's left.
+
+## Best results so far
+
+The best honest number for each question, kept up to date after every stage. Every one is a held-out score with its
+95% range in the stage it links to.
+
+| Question | Best result | Strategy |
+|---|---|---|
+| Eyelid photo, Ghana children (Hb < 11.0) | **TabPFN on 29 color numbers: 0.919** [0.893, 0.945]; 0.913 with whole hospitals held out | F14 |
+| Palm photo, Ghana children | **TabPFN: 0.912** | F16 |
+| Eyelid + nail + palm of the same Ghana child | TabPFN 0.931 (eyelid alone 0.913; the gain isn't clear) | F24, F25 |
+| Fingernails, Moscow adults in a light box (Hb < 12.0) | **logistic regression: 0.818**, no shortcut, holds on unseen sessions | F13 |
+| Fingernails, Ghana children | TabPFN 0.798 | F16 |
+| Eyelid, India adults (WHO by sex) | the untrained rule, 0.671; no model beats it | F1 |
+| Eyelid, Italy adults | 0.92, but mostly the photo batch | F1, F4 |
+| A new dataset with no training | the "less red = anemic" rule, 0.835 on Eyes-Defy | C2 |
+| Survey answers only (DHS women; survey side) | 0.58 in Zimbabwe, unchanged in Malawi and Zambia (0.57) | D1, D2 |
+| The Hb number, Ghana children | error 1.38 g/dL, vs 1.71 for guessing the mean | F19 |
+| What it saves a clinic (Ghana) | test 50% of children to catch 90% of the anemic ones (TabPFN), vs 90% at random | F10 |
 
 ## The story in six points
 
@@ -87,6 +108,14 @@ fingernail photos of Ghanaian children (F16). See
 | F15 | Correct the nail colors: white board, or the skin next to the nail | cancel lighting and skin tone (M6) | white board: rule +0.025, models +0.00-0.03 (within noise); minus skin: -0.11 to -0.31 | **white board: small gain; minus skin: hurt** |
 | F17 | One model for Ghana, India and Italy, with shortcuts taken out (M5, M8, M9) | can mixed training learn every country without guessing the country? | mixed TabPFN Ghana 0.90, India 0.64, Italy 0.91 (own-country models 0.92, 0.66, 0.92); standardizing per country halves the country gap (0.52 -> 0.27); train on two, test on the third: no better than the rule | **fair and as good as separate models; no new signal** |
 | F18 | A few labelled local photos for a new country (M8, M9) | how many photos must a new clinic label before a model beats the rule? | 10-40 photos: no model beats the rule anywhere; Ghana needs ~80 (0.92 at 310); India and Italy never beat it, even with all their photos; the other two countries only keep small-k models at the rule's level | **a few photos aren't enough** |
+| F19 | The Hb number inside and across datasets (Stages 16-19, Maria) | a number is more useful than yes/no | Ghana error 1.38 vs 1.71 g/dL; across datasets the scale shifts (Italy 2.9 g/dL low) | **works inside a dataset only** |
+| F20 | Age and sex next to the photo (M17) | where does the metadata go? | yes/no: Ghana 0.919 -> 0.918; Hb number in India 1.45 -> 1.29 g/dL | **no gain for yes/no; helps the Hb number in adults** |
+| F21 | Photo quality, glare, retake gate (M16) | screen out bad photos | no gain; glare alone flags Italy's batch (0.89) | **no gain; a good shortcut check** |
+| F22 | TabPFN for the Hb number | the best yes/no model, as a regressor | Moscow nails 1.65 -> 1.59 g/dL; level elsewhere | **small gain on nails only** |
+| F23 | A vision model crops the eyelid (M16) | full photos, not hand cut-outs | Dice 0.75 Italy, 0.66 India; Italy TabPFN 0.902 vs 0.909 | **close in Italy, looser in India** |
+| F24 | One child's eyelid, nail and palm together (M18) | the mentors' "same person" idea | TabPFN 0.913 -> 0.931 (CI crosses 0); random forest, boosting +0.06 to +0.09 | **helps weaker models, not TabPFN** |
+| F25 | Cheating and fairness checks on those children | asked 2026-11-07 | fair by sex and age; eyelid cut-out shape alone 0.69, not used by the color models | **fair; one shortcut found, not used** |
+| F26 | DINOv2 fine-tuned, and its features next to the color numbers (M1, M10) | the mentors' DINOv2 question | fine-tuned 0.690 (frozen 0.672); color + DINOv2 0.897 vs color 0.919 | **didn't work** |
 
 ## Part A: checking the published eyelid results
 
@@ -712,6 +741,53 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   2023) was checked and not used: 43 children, 25 under 6 months. Report:
   [`reports/stage24_ghana_link.md`](reports/stage24_ghana_link.md).
 
+### F25. Cheating and fairness checks on the linked children (Stage 25). Fair; one shortcut, not used.
+- **Question:** Jaineel asked (2026-11-07) whether F24 had the usual cheating and fairness tests. It had the split by
+  child, hospitals held out and pretend children, but not these four.
+- **Answer:** adding nail and palm is fair by sex and age. **But the eyelid cut-outs' size and shape alone find anemia
+  (0.693), a shortcut; the color models don't use it** (TabPFN still 0.895-0.929 inside each third of the shape score).
+- **What we did:**
+  - Same 302 children, folds and label as F24 (Hb < 11.0 from the CP-AnemiC sheet); age and sex from the same sheet.
+  - Answers fixed before running in `configs/ghana_checks.yaml`.
+  - (1) Fairness: AUROC, sensitivity and false alarms at one shared threshold, for girls vs boys and 6-23 vs 24-59
+    months, eyelid alone vs all three.
+  - (2) No color: TabPFN and boosting on the size and shape of the three photos.
+  - (3) Same mistakes: inside each label, how much the eyelid and palm/nail scores move together, for the same
+    number, the neighbouring number and random partners.
+  - (4) Wrong matches: give a share of children a random same-label nail and palm and watch the score.
+- **Takeaways:**
+  - **Fair:** no gap widens (every CI of the change crosses 0). TabPFN with all three: girls 0.946, boys 0.919; 6-23
+    months 0.880, 24-59 months 0.956.
+  - **Shortcut:** it's the eyelid (0.699). Nail 0.555, palm 0.498. Anemic children's cut-outs are a little smaller,
+    with more soft-edged pixels (edge share alone 0.684). Over all 388 CP-AnemiC photos the same check gave 0.565.
+  - **Same mistakes:** eyelid and palm scores of one child move together (0.318), more than a neighbour's (0.195) and
+    far more than a random partner's (0.00). That explains why pretend children score higher in F24, and backs the
+    link.
+  - **Wrong matches:** every wrong match pushes the score up (a quarter wrong: +0.026 instead of +0.018), because
+    matches are made inside the Anemic / Non-anemic folders. So the real gain is at most +0.018.
+- **Caveats:** the shape follow-up (which numbers, the thirds) was added after the check failed, not fixed
+  beforehand. Report: [`reports/stage25_ghana_checks.md`](reports/stage25_ghana_checks.md).
+
+### F26. DINOv2 fine-tuned, and DINOv2 features next to the color numbers (Stage 26). Didn't work.
+- **Question:** the mentors asked about DINOv2. We had only used it frozen (B5). Does training it, or giving its
+  features to TabPFN next to the color numbers, help?
+- **Answer:** no. **Fine-tuned DINOv2 0.690 (frozen 0.672); TabPFN on color + DINOv2 0.897, worse than color alone
+  (0.919, -0.022 [-0.033, -0.011]).**
+- **What we did:**
+  - DINOv2-small, already on disk (nothing downloaded), trained end to end on the 388 Ghana photos with the same
+    settings as our ViT and VisionFM (30 epochs, 5 folds, 1 seed, 23 min on the M1).
+  - TabPFN on the 29 color numbers plus DINOv2 or VisionFM features, squeezed to 16 PCA numbers inside each training
+    fold. Ghana (also leave one hospital out), India and Italy.
+  - Answers fixed before running: (a) beats frozen DINOv2; (b) color + image beats color alone (paired CI above 0).
+- **Takeaways:**
+  - Fine-tuning learns the training photos (training AUROC 0.997-1.00), and the held-out score barely moves (+0.02,
+    ranges overlap almost completely).
+  - The image features add noise: -0.022 (DINOv2) and -0.014 (VisionFM) in Ghana, also with a hospital held out. No
+    change in India or Italy.
+  - Same lesson as F1 and F11: with about 310 training photos the limit is the data, not the model.
+- **Run it yourself:** `python -m src.eyelid.finetune_vit --model dinov2`. Report:
+  [`reports/stage26_tabpfn_image.md`](reports/stage26_tabpfn_image.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -724,6 +800,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Italy's anemic patients almost all in the first photo batch (21/31 vs 2/91) | Eyes-Defy Italy | report the early batch alone as the fair Italy check |
 | Each palm and nail photo stored 6-12 times (copies and rotations); no Hb, age or link to the eyelid photos | Ghana palm and nails | one row per photo; linked to the eyelids in F24 through a third set |
 | The conjunctiva set re-uses 414 CP-AnemiC photos under nail- and palm-style names, undocumented | Ghana conjunctiva | matched by pixels to get Hb; the file-number link tested by color agreement (F24) |
+| In the 302 linked children, the eyelid cut-outs' size and edge softness alone predict anemia (0.69) | Ghana conjunctiva / CP-AnemiC | checked that the color models don't use it (F25); cause unknown |
 
 ## What worked and what didn't, in one list
 
@@ -745,6 +822,9 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - A vision model (DINOv2) cropping the eyelid from the full photo: nearly as good as the hand mask in Italy.
 - TabPFN for the Hb number on the Moscow nails (error 1.65 -> 1.59 g/dL).
 - Adding the same child's nail and palm for the weaker models in Ghana (+0.06 to +0.09; F24).
+- Fairness by sex and age when combining the body sites: no gap widens (F25).
+- The no-color control on combined photos: it caught a new eyelid shortcut that the color models turned out not to use
+  (F25).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
@@ -762,16 +842,22 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - A retake gate on photo quality, or removing glare (no gain on these curated cut-outs).
 - The Hb number across datasets (the scale shifts).
 - Adding nail and palm for TabPFN (+0.02, CI crosses 0), or for the Hb number (F24).
-- Pretend children (random same-label partners) as a stand-in for real ones: they overstate the gain 3x (F24).
+- Pretend children (random same-label partners) as a stand-in for real ones: they overstate the gain 3x (F24),
+  because one child's real photos make the same mistakes (F25).
+- Fine-tuning DINOv2 (0.690 vs 0.672 frozen; F26).
+- DINOv2 or VisionFM features next to the color numbers: TabPFN gets 0.01-0.02 worse (F26).
 
 **Still open**
+- Why the linked Ghana eyelid cut-outs' shape predicts anemia (0.69; F25).
+- How many Ghana file-number matches are wrong (only the authors' sheet can say; wrong ones inflate the gain, F25).
 - The deeper eyelid fold in India (F2): real but borderline, needs new Indian photos.
 
 ## What's next
 
 | Item | Status | Who |
 |---|---|---|
-| Eyelid + palm + nail for the same child | done (F24) on a probable file-number link | ask the dataset authors for the linking sheet to confirm it |
+| Eyelid + palm + nail for the same child | done (F24) on a probable file-number link; checks done (F25) | ask the dataset authors for the linking sheet to confirm it |
+| DINOv2 fine-tuned, and next to the color numbers | done (F26): no gain | - |
 | Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |

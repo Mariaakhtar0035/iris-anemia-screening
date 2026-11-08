@@ -33,7 +33,9 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Does debiasing help? | it closes the country gaps (rank gap 0.39 -> 0.10) but doesn't raise AUROC inside any country |
 > | What would it save a clinic? | to catch 90% of anemic children, test 50% (TabPFN) instead of 90%; to catch all, test 83-98% |
 > | Does color work without camera and batch differences? | on fingernails photographed in one light box (250 Moscow adults), logistic regression reaches **0.82**, the same on held-out photo sessions, and the no-color control sits at chance |
-> | Do other body sites work in Ghana children? | palm photos: **0.91** (TabPFN), as good as the eyelid, no shortcut found; fingernail cut-outs: 0.80. They can't be combined per child: the files carry no IDs |
+> | Do other body sites work in Ghana children? | palm photos: **0.91** (TabPFN), as good as the eyelid, no shortcut found; fingernail cut-outs: 0.80. Linked per child by file number (Section 6.9): adding nail and palm helps the weaker models (+0.06 to +0.09), TabPFN only +0.02 (CI crosses 0) |
+> | Does DINOv2 help if we fine-tune it, or feed its features to TabPFN? | no: fine-tuned DINOv2 **0.69** (frozen 0.67); next to the 29 color numbers its features cost TabPFN 0.02 (0.92 -> 0.90) (Section 6.11) |
+> | Is the combined Ghana result fair and free of shortcuts? | fair: no gap between girls and boys or younger and older children widens. But the eyelid cut-outs' size and shape alone score **0.69**, a shortcut; the color models don't use it (Section 6.10) |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
 
@@ -567,11 +569,72 @@ the same anemia label (the fallback when no link exists), 5 draws.
   - Why, probably: one child's three photos share the same borderline Hb, so they make the same mistakes. Random partners
     make independent mistakes, and averaging cancels those out.
   - This also fits the link being real.
+- **A catch (Section 6.10):** the photos are matched inside the Anemic / Non-anemic folders, so a wrong match still
+  hands the model a photo with the same answer and pushes the score up. If some matches are wrong, the true gain is
+  smaller than +0.018.
 - **The Hb number doesn't improve:** gradient boosting's error is 1.32 g/dL on the eyelid and 1.33 with all three sites
   (dummy 1.64).
 
 Not used: Korle Bu colorimetry (PLOS ONE 2023, 10.1371/journal.pone.0281736). It has 43 children; 25 are under 6 months
 (no WHO cutoff), and only 4 of the rest are anemic. Report: [`reports/stage24_ghana_link.md`](reports/stage24_ghana_link.md).
+
+### 6.10 Cheating and fairness checks on the linked Ghana children (Stage 25)
+
+Section 6.9 split by child, held hospitals out and compared real children with pretend ones. Four checks were still
+missing (asked 2026-11-07). Same 302 children, folds and label: **Hb < 11.0 g/dL from the CP-AnemiC sheet**, with age
+and sex from the same sheet. The answers were fixed in `configs/ghana_checks.yaml` before running.
+
+| Check | Answer | Number |
+|---|---|---|
+| Does adding nail and palm make it less fair (girls vs boys; 6-23 vs 24-59 months)? | **no** | no gap widens; every CI of the change crosses 0. TabPFN with all three: girls 0.946, boys 0.919 |
+| Can size and shape alone, with no color, find anemia? | **yes: a shortcut** | 0.693 [0.635, 0.752]. It sits in the eyelid cut-outs (0.699); nail 0.555, palm 0.498 |
+| Do the color models use that shortcut? (follow-up) | **no** | inside each third of the shape score, TabPFN on the eyelid still scores 0.895-0.929 |
+| Do one child's photos make the same mistakes? | **yes, eyelid and palm** | score correlation 0.318 [0.207, 0.427]; neighbouring number 0.195; random partner 0.00 |
+| Could wrong matches inflate the gain? | **yes** | a quarter wrong: TabPFN +0.026 instead of +0.018; all wrong (pretend): +0.052 |
+
+- **The shortcut:** anemic children's eyelid cut-outs are a little smaller and have more soft-edged pixels (the share
+  of semi-transparent edge pixels alone: 0.684). Most likely it comes from how the cut-outs were made. On all 388
+  CP-AnemiC photos the same check gave 0.565 (Section 6.1), so it is stronger in these 302 children.
+  - The follow-up (which numbers carry it, and the color scores inside each third) was added after the check failed;
+    it wasn't fixed beforehand.
+  - The color models don't lean on it: inside each third their AUROC barely drops (0.895-0.929 vs 0.913 overall),
+    although the share of anemic children runs from 23% to 60% across the thirds.
+- **Same mistakes** explains why pretend children score higher (Section 6.9). One child's eyelid and palm scores err
+  together; random partners don't. The same number beats the neighbouring one (+0.123 [0.001, 0.243]), so it is the
+  child and not only the photo session. That also backs the eyelid-palm link.
+- **Wrong matches** (a what-if; held-out scores reused): every wrong match pushes the score up, so TabPFN's +0.018 is,
+  if anything, too high. Only the authors' linking sheet can tell how many matches are wrong.
+- Report: [`reports/stage25_ghana_checks.md`](reports/stage25_ghana_checks.md). Per-child held-out scores are saved in
+  `results/stage25_ghana_checks.json`.
+
+### 6.11 Fine-tuned DINOv2, and DINOv2 features next to the color numbers (Stage 26)
+
+The mentors asked about DINOv2. Until now it was only used frozen (Section 4.4). Two new tries (2026-11-08), both on
+DINOv2-small already on disk (nothing downloaded): (a) train the whole model on the photos; (b) give TabPFN the image
+features next to the 29 color numbers, squeezed to 16 PCA numbers inside each training fold. Ghana children, the 388
+photos with no copy, **Hb < 11.0 g/dL**; (b) also India and Italy (**WHO by sex: women < 12.0, men < 13.0 g/dL**).
+The answers were fixed before running: (a) helps if it beats frozen DINOv2 (0.672); (b) helps if color + image beats
+color alone (paired CI above 0).
+
+| Ghana children (388 photos) | AUROC | Change vs color alone |
+|---|---|---|
+| DINOv2, frozen (Section 4.4) | 0.672 [0.616, 0.723] | - |
+| **DINOv2, fine-tuned** (30 epochs, 5 folds, 1 seed, 23 min on the M1) | **0.690 [0.634, 0.741]** | - |
+| ViT-B/16 / VisionFM, fine-tuned (Section 6.1) | 0.715 / 0.785 | - |
+| TabPFN, 29 color numbers | **0.919 [0.893, 0.945]** | - |
+| TabPFN, color + DINOv2 | 0.897 [0.865, 0.926] | -0.022 [-0.033, -0.011] |
+| TabPFN, color + VisionFM | 0.905 [0.874, 0.935] | -0.014 [-0.025, -0.003] |
+
+- **(a) Fine-tuning DINOv2 barely helps:** it passes the rule (0.690 vs 0.672), but by +0.02 with ranges that
+  overlap almost completely, so we don't count it as a real gain. It fits the training photos (training AUROC
+  0.997-1.00) and stays far below the color numbers.
+- **(b) Image features make TabPFN slightly worse in Ghana**, also with a hospital held out (-0.014 for both). India
+  and Italy: no change (every CI crosses 0).
+- **Answer to the mentors:** with about 310 training photos, the big image models add noise, not signal. The 29 color
+  numbers already carry what these photos have.
+- Run it yourself: `python -m src.eyelid.finetune_vit --model dinov2` (fine-tune, ~25 min on an M1) and
+  `python -m src.eyelid.tabpfn_image` (~50 min). Report: [`reports/stage26_tabpfn_image.md`](reports/stage26_tabpfn_image.md);
+  the fine-tune's held-out scores are in `results/stage9_vit_dinov2_cp_anemic_jitter.json`.
 
 ## 7. Discussion
 
@@ -600,14 +663,15 @@ Not used: Korle Bu colorimetry (PLOS ONE 2023, 10.1371/journal.pone.0281736). It
 
 - **No paired data.** No dataset links an eyelid photo to survey answers for the same person, so fusion is simulated and assumes the two signals are independent given anemia.
 - **Different populations.** CP-AnemiC is young children, Eyes-Defy is adults including men, the survey is women 15-49.
-- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking). Fingernails (Section 6.6): Hb < 12.0 for everyone, since sex is not recorded. Ghana palm and nails (Section 6.7): the dataset's own label, cutoff not stated. Ghana eyelid + nail + palm (Section 6.9): Hb < 11.0 from the CP-AnemiC sheet for all three sites.
-- **The Ghana body-site link is inferred** from file names and color agreement (Section 6.9); the authors don't document it.
+- **Cutoffs differ.** CP-AnemiC: Hb < 11.0 (children). Eyes-Defy: the ViT paper's cutoffs in Part I, WHO by sex in Part II (pregnancy not recorded; assumed not pregnant). DHS: `v457` (WHO for women, adjusted for altitude and smoking). Fingernails (Section 6.6): Hb < 12.0 for everyone, since sex is not recorded. Ghana palm and nails (Section 6.7): the dataset's own label, cutoff not stated. Ghana eyelid + nail + palm (Sections 6.9 and 6.10): Hb < 11.0 from the CP-AnemiC sheet for all three sites. Section 6.11: Hb < 11.0 in Ghana, WHO by sex in India and Italy.
+- **The Ghana body-site link is inferred** from file names and color agreement (Section 6.9); the authors don't document it. Wrong matches would inflate the combined score, since matches are made inside the Anemic / Non-anemic folders (Section 6.10).
+- **The linked Ghana eyelid cut-outs carry a size-and-shape shortcut** (0.69 with no color, Section 6.10). The color models don't use it, but its cause is unknown.
 - **Survey rounds differ.** Zimbabwe 2015 vs Malawi and Zambia 2024, so transfer mixes country with time. Malawi's missing wealth index is imputed inside the model.
 - **Small image test sets.** Eyes-Defy test sets hold 44 photos when split by photo; Italy has few anemic adults.
 - **Replications are not identical recipes.** Replication A uses ImageNet weights and 30 epochs; we do not have either paper's exact split or code; GPU differences (Apple M1 vs NVIDIA) can shift results slightly.
 - **Duplicate detection is not perfect**, and labels on copied CP-AnemiC photos conflict (one photo is recorded with Hb 10.2 and 5.8); there is no patient ID.
 - **Italy is confounded by photo batch.** Its anemic patients were almost all photographed in the first 31 folders, so Italian scores mostly measure the batch; we report the early batch alone (31 photos) as the fairer check.
-- **The fine-tuned ViT and VisionFM in Part III have one seed each**, so their CIs come from the bootstrap only, not from seed variation.
+- **The fine-tuned ViT, VisionFM and DINOv2 have one seed each**, so their CIs come from the bootstrap only, not from seed variation.
 - **The Chemhaka et al. comparison was done by the survey side** and is not in this branch.
 
 ## 10. Reproducing
@@ -672,11 +736,14 @@ python -m src.eyelid.quality               # 6.8, Stage 21, photo quality and gl
 python -m src.eyelid.hb_tabpfn             # 6.8, Stage 22, TabPFN for the Hb number (needs the regressor weights)
 python -m src.eyelid.auto_crop             # 6.8, Stage 23, DINOv2 crops the eyelid from the full Eyes-Defy photo
 python -m src.ghana_link                   # 6.9, Stage 24, one Ghana child's eyelid, nail and palm (~35 min, TabPFN)
+python -m src.ghana_checks                 # 6.10, Stage 25, fairness and shortcut checks on those children (~30 min)
+python -m src.eyelid.finetune_vit --model dinov2   # 6.11, Stage 26a, fine-tuned DINOv2-small on CP-AnemiC (~25 min)
+python -m src.eyelid.tabpfn_image          # 6.11, Stage 26b, TabPFN on color + DINOv2 / VisionFM features (~50 min)
 python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [TabPFN for Hb](reports/stage22_hb_tabpfn.md), [automatic crop](reports/stage23_auto_crop.md), [eyelid + nail + palm](reports/stage24_ghana_link.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [TabPFN for Hb](reports/stage22_hb_tabpfn.md), [automatic crop](reports/stage23_auto_crop.md), [eyelid + nail + palm](reports/stage24_ghana_link.md), [cheating and fairness checks](reports/stage25_ghana_checks.md), [DINOv2 next to the color numbers](reports/stage26_tabpfn_image.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 
@@ -699,6 +766,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | `src/eyelid/metadata.py`, `quality.py` | Section 6.8: age and sex next to the photo; photo quality, glare and the retake gate |
 | `src/eyelid/hb_tabpfn.py`, `auto_crop.py` | Section 6.8: TabPFN for the Hb number; DINOv2 crops the eyelid and scores its confidence |
 | `src/ghana_link.py` | Section 6.9: links each Ghana child's eyelid, nail and palm photos by file number, tests the link, combines the sites |
+| `src/ghana_checks.py` | Section 6.10: fairness, the no-color control, same-child mistakes and wrong matches on those children |
+| `src/eyelid/tabpfn_image.py` | Section 6.11: TabPFN on the color numbers plus DINOv2 or VisionFM features (fine-tuned DINOv2: `finetune_vit.py --model dinov2`) |
 | `docs/eyelid_followup.md` | The mentors' eyelid suggestions and a log of every follow-up step |
 | `src/common/metrics.py`, `splits.py`, `evaluate.py` | Metrics, calibration, bootstrap CIs, grouped splits |
 | `src/summary.py`, `src/figures.py` | Build `reports/summary.md` and the figures from `results/*.json` |
@@ -742,6 +811,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Age and sex next to the photo; photo quality and glare (Section 6.8) | done: no gain for yes/no; age + sex help the Hb number in adults |
 | TabPFN for the Hb number; automatic eyelid crop (Section 6.8) | done: TabPFN closer only on Moscow nails; the crop nearly matches the hand mask in Italy |
 | One Ghana child's eyelid, nail and palm together (Section 6.9) | done: probable link; weaker models gain, TabPFN +0.02 (CI crosses 0); pretend pairs overstate the gain 3x |
+| Cheating and fairness checks on those children (Section 6.10) | done: fair by sex and age; eyelid cut-out shape is a shortcut (0.69) the color models don't use |
+| Fine-tuned DINOv2; DINOv2 and VisionFM features next to the color numbers (Section 6.11) | done: fine-tuned 0.69; features cost TabPFN 0.01-0.02 |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos and for the sheet linking the conjunctiva, nail and palm files to Hb (to confirm Section 6.9).
 
