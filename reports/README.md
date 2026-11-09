@@ -30,6 +30,7 @@ CP-AnemiC sheet for all three body sites. Stage 26: Ghana Hb < 11.0, India and I
 | 24 | Does a Ghana child's nail and palm add to the eyelid? | Probable link by file number; helps weaker models, not TabPFN; pretend pairs overstate it 3x | TabPFN 0.913 -> 0.931 (+0.018, CI crosses 0); pretend 0.967 | [eyelid + nail + palm](stage24_ghana_link.md) |
 | 25 | Is the combined Ghana result fair, and free of shortcuts? | Fair by sex and age; the eyelid cut-outs' size and shape are a shortcut the color models don't use | no gap widens; shape alone 0.693; color inside each shape third 0.895-0.929 | [cheating and fairness checks](stage25_ghana_checks.md) |
 | 26 | Does DINOv2 help if fine-tuned, or next to the color numbers? | No | fine-tuned 0.690 (frozen 0.672); TabPFN color 0.919 vs color + DINOv2 0.897 | [DINOv2 + color](stage26_tabpfn_image.md) |
+| 27 | Does the Ghana model catch the sickest children? | No more than the mild ones; the score separates the two groups but doesn't rank by Hb | caught: severe 81%, moderate 73%, mild 79%; score vs Hb inside the anemic group +0.11 [-0.04, +0.26] | [severity](stage27_severity.md) |
 
 ## Across sites (closed: explains why per-location models)
 

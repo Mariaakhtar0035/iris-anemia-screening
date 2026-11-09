@@ -35,6 +35,7 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Does color work without camera and batch differences? | on fingernails photographed in one light box (250 Moscow adults), logistic regression reaches **0.82**, the same on held-out photo sessions, and the no-color control sits at chance |
 > | Do other body sites work in Ghana children? | palm photos: **0.91** (TabPFN), as good as the eyelid, no shortcut found; fingernail cut-outs: 0.80. Linked per child by file number (Section 6.9): adding nail and palm helps the weaker models (+0.06 to +0.09), TabPFN only +0.02 (CI crosses 0) |
 > | Does DINOv2 help if we fine-tune it, or feed its features to TabPFN? | no: fine-tuned DINOv2 **0.69** (frozen 0.67); next to the 29 color numbers its features cost TabPFN 0.02 (0.92 -> 0.90) (Section 6.11) |
+> | Does the Ghana eyelid model catch the sickest children? | **no more than the mild ones**: severe 81%, moderate 73%, mild 79% caught; inside the anemic group the score doesn't follow Hb (Section 6.12) |
 > | Is the combined Ghana result fair and free of shortcuts? | fair: no gap between girls and boys or younger and older children widens. But the eyelid cut-outs' size and shape alone score **0.69**, a shortcut; the color models don't use it (Section 6.10) |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
@@ -635,6 +636,29 @@ color alone (paired CI above 0).
 - Run it yourself: `python -m src.eyelid.finetune_vit --model dinov2` (fine-tune, ~25 min on an M1) and
   `python -m src.eyelid.tabpfn_image` (~50 min). Report: [`reports/stage26_tabpfn_image.md`](reports/stage26_tabpfn_image.md);
   the fine-tune's held-out scores are in `results/stage9_vit_dinov2_cp_anemic_jitter.json`.
+
+
+### 6.12 Does the model catch the sickest children? (Stage 27)
+
+One AUROC treats a child at Hb 10.9 and a child at Hb 6 the same, so we split the 388 Ghana children (**anemic: Hb <
+11.0 g/dL**) into the WHO severity bands for their age: severe < 7.0, moderate 7.0-9.9, mild 10.0-10.9 g/dL. Same
+folds and models as Section 6.1. Threshold: 90% of healthy children cleared.
+
+| Hb band | n | caught by TabPFN | caught by the redness rule |
+|---|---|---|---|
+| severe (< 7.0) | 16 | 0.81 [0.61, 1.00] | 0.19 |
+| moderate (7.0-9.9) | 93 | 0.73 [0.60, 0.86] | 0.29 |
+| mild (10.0-10.9) | 56 | 0.79 [0.66, 0.90] | 0.27 |
+
+- **The catch rate is flat.** Moderate + severe minus mild: -0.04 [-0.17, +0.13]. We expected the mild cases to be the
+  hard ones; they aren't.
+- **Follow-up, added after seeing this:** the TabPFN score follows Hb over all children (rank correlation -0.58), but
+  not inside the anemic group (+0.11 [-0.04, +0.26]) or the healthy group (+0.10 [-0.03, +0.23]).
+- **What it means:** the score splits the children into two groups and doesn't rank them inside either. Paleness
+  should grow as Hb falls, so this is a warning: the score may read something tied to the Anemic / Non-anemic label
+  (how each group's photos were taken or cut out, see the shape shortcut in Section 6.10) and not Hb itself. Our checks
+  so far can't tell that apart from eyelid color that saturates.
+- Run: `python -m src.eyelid.severity` (~5 min). Report: [`reports/stage27_severity.md`](reports/stage27_severity.md).
 
 ## 7. Discussion
 

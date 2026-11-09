@@ -1,6 +1,6 @@
 # Progress: every strategy we tried, why, and what happened
 
-*Last updated 2026-11-08, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
+*Last updated 2026-11-10, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
 why we tried it, what happened, and whether it worked. The full paper-style write-up is the [README](README.md); the
 answers for the mentors are in [`reports/mentor_followup_eyelid.md`](reports/mentor_followup_eyelid.md).*
 
@@ -14,7 +14,7 @@ Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained mode
 (F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
 fingernail photos of Ghanaian children (F16). Then (Stages 16-26): the Hb number, metadata, photo quality, automatic
 cropping, one child's eyelid, nail and palm together with cheating and fairness checks (F24, F25), and DINOv2
-fine-tuned (F26). See
+fine-tuned (F26), and a severity check that raised a warning (F27). See
 [What's next](#whats-next) for what's left.
 
 ## Best results so far
@@ -34,6 +34,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 | A new dataset with no training | the "less red = anemic" rule, 0.835 on Eyes-Defy | C2 |
 | Survey answers only (DHS women; survey side) | 0.58 in Zimbabwe, unchanged in Malawi and Zambia (0.57) | D1, D2 |
 | The Hb number, Ghana children | error 1.38 g/dL, vs 1.71 for guessing the mean | F19 |
+| Does the Ghana score track how low the Hb is? | **No**: caught 81% severe, 73% moderate, 79% mild; inside the anemic group the score doesn't follow Hb (+0.11) | F27 |
 | What it saves a clinic (Ghana) | test 50% of children to catch 90% of the anemic ones (TabPFN), vs 90% at random | F10 |
 
 ## The story in six points
@@ -116,6 +117,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 | F24 | One child's eyelid, nail and palm together (M18) | the mentors' "same person" idea | TabPFN 0.913 -> 0.931 (CI crosses 0); random forest, boosting +0.06 to +0.09 | **helps weaker models, not TabPFN** |
 | F25 | Cheating and fairness checks on those children | asked 2026-11-07 | fair by sex and age; eyelid cut-out shape alone 0.69, not used by the color models | **fair; one shortcut found, not used** |
 | F26 | DINOv2 fine-tuned, and its features next to the color numbers (M1, M10) | the mentors' DINOv2 question | fine-tuned 0.690 (frozen 0.672); color + DINOv2 0.897 vs color 0.919 | **didn't work** |
+| F27 | Catch rate by Hb severity band, Ghana children | does the model catch the sickest children? | severe 81%, moderate 73%, mild 79%; score vs Hb inside the anemic group +0.11 | **warning: separates the groups, doesn't rank by Hb** |
 
 ## Part A: checking the published eyelid results
 
@@ -788,6 +790,30 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Run it yourself:** `python -m src.eyelid.finetune_vit --model dinov2`. Report:
   [`reports/stage26_tabpfn_image.md`](reports/stage26_tabpfn_image.md).
 
+### F27. Does the model catch the sickest children? (Stage 27). A warning: it doesn't rank by Hb.
+- **Question:** one AUROC treats a child at Hb 10.9 and a child at Hb 6 the same. Does the Ghana eyelid model catch the
+  severe cases and miss mostly the mild ones?
+- **Answer:** no. **TabPFN catches about the same share in every band: severe 81%, moderate 73%, mild 79%** (90% of
+  healthy children cleared). Moderate + severe minus mild: -0.04 [-0.17, +0.13].
+- **What we did:** the 388 Ghana children, **Hb < 11.0 g/dL**, WHO severity bands (severe < 7.0, moderate 7.0-9.9, mild
+  10.0-10.9), Stage 9's folds, the rule, gradient boosting and TabPFN. The answer rule was fixed before running.
+- **Follow-up (added after seeing the flat rates):** rank correlation between Hb and the TabPFN score: -0.58 over all
+  children, but **+0.11 [-0.04, +0.26] inside the anemic group and +0.10 [-0.03, +0.23] inside the healthy group**.
+  Gradient boosting and the rule: the same.
+- **Takeaways:**
+  - The score separates the two groups (0.92) but doesn't rank children inside them. A child at Hb 6 doesn't score
+    higher than one at 10.5, and a child at 11.2 isn't flagged more than one at 14 (8% vs 10% false alarms).
+  - Paleness should grow as Hb falls, so a score that reads paleness should keep tracking Hb inside the anemic group.
+    Ours doesn't. Either eyelid color saturates, or the score reads something tied to the Anemic / Non-anemic label
+    and not to Hb itself, such as how each group's photos were taken or cut out (the same worry as the shape shortcut
+    in F25).
+  - TabPFN misses 40 of 165 anemic children, 3 of them severe (of 16).
+  - It also explains F19: the Hb number estimate is mostly a two-group guess.
+- **What would settle it:** photos with Hb collected in one session by one protocol, or the authors telling us how the
+  photos were grouped and cut out.
+- **Run it yourself:** `python -m src.eyelid.severity` (~5 min). Report:
+  [`reports/stage27_severity.md`](reports/stage27_severity.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -850,6 +876,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 **Still open**
 - Why the linked Ghana eyelid cut-outs' shape predicts anemia (0.69; F25).
 - How many Ghana file-number matches are wrong (only the authors' sheet can say; wrong ones inflate the gain, F25).
+- Why the Ghana score doesn't track Hb inside the anemic or the healthy group (F27): color that saturates, or
+  something tied to the label and not to Hb.
 - The deeper eyelid fold in India (F2): real but borderline, needs new Indian photos.
 
 ## What's next
@@ -858,6 +886,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 |---|---|---|
 | Eyelid + palm + nail for the same child | done (F24) on a probable file-number link; checks done (F25) | ask the dataset authors for the linking sheet to confirm it |
 | DINOv2 fine-tuned, and next to the color numbers | done (F26): no gain | - |
+| Catch rate by Hb severity | done (F27): flat across bands; the score doesn't rank by Hb | ask the authors how the photos were grouped and cut out |
 | Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |

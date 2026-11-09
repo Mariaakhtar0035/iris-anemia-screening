@@ -753,3 +753,12 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
     -0.003]); the same direction with a hospital held out (-0.014 each). India and Italy: every change's CI crosses 0.
 - **What it means:** neither training DINOv2 nor feeding its features to TabPFN helps. With about 310 training photos
   the image models add noise; the 29 color numbers carry what the photos have.
+
+### Step 25 (Stage 27): catch rate by Hb severity band
+- **Why:** Jaineel (2026-11-10): "try idea 1 only for now". M13 asked for more than AUROC.
+- **What:** `src/eyelid/severity.py`, `configs/severity.yaml`. The 388 Ghana children, Hb < 11.0 g/dL, WHO severity
+  bands, share flagged per band at two thresholds, plus (follow-up, not fixed beforehand) the rank correlation of each
+  score with Hb inside the anemic and the healthy group.
+- **Result:** flat: severe 81%, moderate 73%, mild 79% caught by TabPFN. Score vs Hb: -0.58 over all children, +0.11
+  inside the anemic group, +0.10 inside the healthy group. The score separates the groups but doesn't rank by Hb.
+- **Checks:** 61 tests pass; results at clean commit `ca2732a`. Report: `reports/stage27_severity.md`.
