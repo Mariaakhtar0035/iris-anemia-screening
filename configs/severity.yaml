@@ -21,3 +21,6 @@ sensitivity: 0.9
 # Answer, fixed before running: the misses are mostly mild cases if, for the best model at the specificity threshold,
 # the share caught among moderate + severe minus the share caught among mild has its bootstrap CI above 0.
 # Only 16 children are severe, so that band's own range will be wide.
+
+# Follow-up, added 2026-11-10 after the first run (flat catch rates across the bands), so not fixed beforehand: the
+# rank correlation between Hb and each score among all children, the anemic only and the healthy only.

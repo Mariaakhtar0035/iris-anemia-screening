@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.eyelid.severity import band_index, flagged_share, threshold
+from src.eyelid.severity import band_index, flagged_share, rank_corr, threshold
 
 
 def test_bands_thresholds_and_flagged_share():
@@ -27,3 +27,6 @@ def test_bands_thresholds_and_flagged_share():
     assert flagged_share("specificity", 0.9, [2])(y, packed) == 0.0
     with pytest.raises(ValueError):
         flagged_share("specificity", 0.9, [7])(y, packed)
+    assert rank_corr(np.array([1.0, 2, 3]), np.array([9.0, 5, 1])) == -1.0
+    with pytest.raises(ValueError):
+        rank_corr(np.ones(3), np.arange(3.0))

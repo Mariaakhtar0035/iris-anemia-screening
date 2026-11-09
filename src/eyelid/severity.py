@@ -7,6 +7,7 @@ Settings in configs/severity.yaml.
 Run from the repo root: python -m src.eyelid.severity
 """
 import numpy as np
+from scipy.stats import spearmanr
 from sklearn.metrics import roc_curve
 
 from src.common.io import ROOT, load_config, save_results
@@ -46,6 +47,13 @@ def flagged_share(kind, level, members):
             raise ValueError("no row of this band in the resample")
         return float((ss[m, 0] >= threshold(yy, ss[:, 0], kind, level)).mean())
     return metric
+
+
+def rank_corr(a, b):
+    """Spearman correlation; undefined (ValueError) when either side is constant."""
+    if len(np.unique(a)) < 2 or len(np.unique(b)) < 2:
+        raise ValueError("constant input")
+    return float(spearmanr(a, b)[0])
 
 
 def main():
@@ -88,6 +96,12 @@ def main():
                      "gap": bootstrap_ci(lambda yy, ss: worse_fn(yy, ss) - mild_fn(yy, ss), y, packed, n_boot, ci,
                                          seed=seed)})
 
+    # Follow-up, added after the first run showed flat catch rates: does the score track Hb inside each group?
+    track = [{"model": model, "group": group, "n": int(m.sum()),
+              "rho": bootstrap_ci(rank_corr, hb[m], s[m], n_boot, ci, seed=seed)}
+             for model, s in scores.items()
+             for group, m in {"all children": y >= 0, "anemic only": y == 1, "healthy only": y == 0}.items()]
+
     # missed anemic children at the specificity threshold, best model: how low is their Hb?
     best = cfg["models"][-1]
     missed = (y == 1) & (scores[best] < threshold(y, scores[best], "specificity", cfg["specificity"]))
@@ -95,7 +109,7 @@ def main():
                  "median_hb_missed": float(np.median(hb[missed])), "median_hb_caught": float(np.median(hb[(y == 1) & ~missed])),
                  "missed_by_band": {names[k]: int((missed & (band == k)).sum()) for k in anemic_bands}}
 
-    path = save_results("stage27_severity", {"rows": rows, "gaps": gaps, "missed": missed_hb},
+    path = save_results("stage27_severity", {"rows": rows, "gaps": gaps, "missed": missed_hb, "hb_tracking": track},
                         {"default": base, "severity": cfg, "ceiling": ceiling, "color": color_cfg})
     g = next(r for r in gaps if r["model"] == best)["gap"]
     verdict = "Yes" if g["lo"] > 0 else "Not shown"
@@ -128,7 +142,13 @@ def main():
         f"{missed_hb['median_hb_caught']:.1f} g/dL.\n\n"
         "## Share flagged in each Hb band\n\n" + "\n".join(table)
         + "\n\n## Moderate + severe against mild (first threshold)\n\n"
-        "| model | caught, moderate + severe | minus caught, mild |\n|---|---|---|\n" + "\n".join(gap_lines) + "\n"
+        "| model | caught, moderate + severe | minus caught, mild |\n|---|---|---|\n" + "\n".join(gap_lines)
+        + "\n\n## Follow-up: does the score track Hb inside each group?\n\n"
+        "Added after the first run showed flat catch rates across the bands, so it was not fixed beforehand. Rank "
+        "correlation between Hb and the score (negative = lower Hb, higher score). A score that reads pallor should "
+        "stay negative inside the anemic group; near 0 means it separates the two groups without ranking children "
+        "inside them.\n\n| model | group | n | rank correlation with Hb |\n|---|---|---|---|\n"
+        + "\n".join(f"| {r['model']} | {r['group']} | {r['n']} | {fmt(r['rho'])} |" for r in track) + "\n"
     )
     (ROOT / "reports" / "stage27_severity.md").write_text(report)
     print(report)
