@@ -14,7 +14,7 @@ Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained mode
 (F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
 fingernail photos of Ghanaian children (F16). Then (Stages 16-26): the Hb number, metadata, photo quality, automatic
 cropping, one child's eyelid, nail and palm together with cheating and fairness checks (F24, F25), and DINOv2
-fine-tuned (F26), and a severity check that raised a warning (F27). See
+fine-tuned (F26), a severity check that raised a warning (F27), and fingernail + skin together (F28). See
 [What's next](#whats-next) for what's left.
 
 ## Best results so far
@@ -118,6 +118,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 | F25 | Cheating and fairness checks on those children | asked 2026-11-07 | fair by sex and age; eyelid cut-out shape alone 0.69, not used by the color models | **fair; one shortcut found, not used** |
 | F26 | DINOv2 fine-tuned, and its features next to the color numbers (M1, M10) | the mentors' DINOv2 question | fine-tuned 0.690 (frozen 0.672); color + DINOv2 0.897 vs color 0.919 | **didn't work** |
 | F27 | Catch rate by Hb severity band, Ghana children | does the model catch the sickest children? | severe 81%, moderate 73%, mild 79%; score vs Hb inside the anemic group +0.11 | **warning: separates the groups, doesn't rank by Hb** |
+| F28 | Fingernail and skin numbers together, Moscow | the idea left open in F15 | TabPFN nail 0.823 -> nail + skin 0.825; rule 0.703 -> 0.748 | **no gain for models**; small gain for the rule |
 
 ## Part A: checking the published eyelid results
 
@@ -809,10 +810,27 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
     in F25).
   - TabPFN misses 40 of 165 anemic children, 3 of them severe (of 16).
   - It also explains F19: the Hb number estimate is mostly a two-group guess.
-- **What would settle it:** photos with Hb collected in one session by one protocol, or the authors telling us how the
-  photos were grouped and cut out.
+- **What would settle it:** photos with Hb collected in one session by one protocol.
 - **Run it yourself:** `python -m src.eyelid.severity` (~5 min). Report:
   [`reports/stage27_severity.md`](reports/stage27_severity.md).
+
+### F28. Fingernail and skin color numbers together (Stage 28). No gain for the models; a small one for the rule.
+- **Question:** F15 left one idea open: the skin next to the nail pales with anemia too (0.73-0.76 alone), so does
+  giving the model both the nail and the skin numbers beat the nail alone?
+- **Answer:** not for any trained model. **TabPFN: nail 0.823, nail + skin in one model 0.825 (+0.002 [-0.019,
+  +0.024]).** The untrained redness rule does gain: 0.703 -> 0.748 when the nail and skin redness ranks are averaged
+  (+0.046 [+0.003, +0.084]).
+- **What we did:** the 250 Moscow adults, **Hb < 12.0 g/dL for everyone**, Stage 12's splits (5x5 CV by patient, leave
+  one session out). Inputs: nail, skin, both in one model, and the two models' scores averaged. Logistic regression,
+  random forest, gradient boosting, TabPFN, the rule, a dummy and a no-color control (box sizes: 0.52). Answer fixed
+  before running.
+- **Takeaways:**
+  - Every model's change is between -0.006 and +0.017 and every CI crosses 0, also on held-out sessions.
+  - The skin carries the same signal as the nail, only weaker (skin alone 0.05-0.09 below the nail), so it adds
+    nothing new to a model that already has the nail.
+  - A rule with no training does gain from the second reading, but it stays below the models (0.75 vs 0.82).
+- **Run it yourself:** `python -m src.nails_skin` (~15 min). Report:
+  [`reports/stage28_nails_skin.md`](reports/stage28_nails_skin.md).
 
 ## Data problems we found along the way
 
@@ -871,6 +889,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Pretend children (random same-label partners) as a stand-in for real ones: they overstate the gain 3x (F24),
   because one child's real photos make the same mistakes (F25).
 - Fine-tuning DINOv2 (0.690 vs 0.672 frozen; F26).
+- Fingernail and skin numbers together for a trained model (TabPFN +0.002; F28).
 - DINOv2 or VisionFM features next to the color numbers: TabPFN gets 0.01-0.02 worse (F26).
 
 **Still open**
@@ -884,10 +903,10 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 
 | Item | Status | Who |
 |---|---|---|
-| Eyelid + palm + nail for the same child | done (F24) on a probable file-number link; checks done (F25) | ask the dataset authors for the linking sheet to confirm it |
+| Eyelid + palm + nail for the same child | done (F24) on a probable file-number link; checks done (F25) | - |
 | DINOv2 fine-tuned, and next to the color numbers | done (F26): no gain | - |
-| Catch rate by Hb severity | done (F27): flat across bands; the score doesn't rank by Hb | ask the authors how the photos were grouped and cut out |
-| Fingernails: nail and skin numbers side by side as one input | idea, not started (F15 showed the skin carries signal of its own) | team |
+| Catch rate by Hb severity | done (F27): flat across bands; the score doesn't rank by Hb | test on the data we have what the score reads (redness, brightness, file facts) |
+| Fingernails: nail and skin numbers side by side as one input | done (F28): no gain for the models, +0.05 for the untrained rule | - |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |
 | Paired photo + survey data, to test fusion for real | future | team |

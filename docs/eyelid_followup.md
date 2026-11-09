@@ -762,3 +762,11 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **Result:** flat: severe 81%, moderate 73%, mild 79% caught by TabPFN. Score vs Hb: -0.58 over all children, +0.11
   inside the anemic group, +0.10 inside the healthy group. The score separates the groups but doesn't rank by Hb.
 - **Checks:** 61 tests pass; results at clean commit `ca2732a`. Report: `reports/stage27_severity.md`.
+
+### Step 26 (Stage 28): fingernail and skin numbers together (Moscow)
+- **Why:** Jaineel (2026-11-10): "Nail and skin together". The idea F15 left open.
+- **What:** `src/nails_skin.py`, `configs/nails_skin.yaml`. Hb < 12.0 g/dL for everyone; nail, skin, both in one model,
+  scores averaged; Stage 12's splits.
+- **Result:** no gain for any trained model (TabPFN 0.823 -> 0.825); the untrained rule 0.703 -> 0.748 (+0.046
+  [+0.003, +0.084]).
+- **Checks:** 62 tests pass; results at clean commit `4d9a566`. Report: `reports/stage28_nails_skin.md`.

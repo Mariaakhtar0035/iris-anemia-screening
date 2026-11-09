@@ -660,6 +660,25 @@ folds and models as Section 6.1. Threshold: 90% of healthy children cleared.
   so far can't tell that apart from eyelid color that saturates.
 - Run: `python -m src.eyelid.severity` (~5 min). Report: [`reports/stage27_severity.md`](reports/stage27_severity.md).
 
+
+### 6.13 Fingernail and skin color numbers together (Stage 28)
+
+Stage 12b showed the skin next to the nail pales with anemia too, so we gave the models both (2026-11-10). Moscow, 250
+adults, **anemic: Hb < 12.0 g/dL for everyone**, same splits as Section 6.5.
+
+| Input | Redness rule | Logistic regression | TabPFN |
+|---|---|---|---|
+| Nail alone | 0.703 | 0.818 | 0.823 |
+| Skin alone | 0.730 | 0.763 | 0.768 |
+| Nail + skin, one model | - | 0.818 | 0.825 (+0.002 [-0.019, +0.024]) |
+| Nail + skin, scores averaged | 0.748 (+0.046 [+0.003, +0.084]) | 0.821 | 0.829 (+0.006 [-0.022, +0.035]) |
+
+- **No trained model gains** (every change -0.006 to +0.017, every CI crosses 0, also on held-out photo sessions).
+  The skin carries the nail's signal, only weaker.
+- **The untrained rule gains a little** from averaging the two redness ranks, but stays below the models.
+- No-color control (box sizes) 0.52; dummy 0.47.
+- Run: `python -m src.nails_skin` (~15 min). Report: [`reports/stage28_nails_skin.md`](reports/stage28_nails_skin.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
