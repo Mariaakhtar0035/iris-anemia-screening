@@ -20,7 +20,7 @@ def test_bands_thresholds_and_flagged_share():
     assert (s[y == 1] > t).mean() < 0.9                           # the highest threshold that still catches 90%
 
     # perfect score: every anemic band fully caught, healthy never flagged
-    band = np.where(y == 0, 2, np.arange(400) % 2)
+    band = np.where(y == 0, 2, np.arange(400) // 2 % 2)
     packed = np.column_stack([y.astype(float), band])
     assert flagged_share("specificity", 0.9, [0])(y, packed) == 1.0
     assert flagged_share("specificity", 0.9, [0, 1])(y, packed) == 1.0
