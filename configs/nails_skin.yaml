@@ -1,0 +1,11 @@
+# Stage 28: fingernail and skin color numbers side by side (Jaineel 2026-11-10: "Nail and skin together"; the idea
+# left open in Stage 12b, where subtracting the skin hurt but the skin alone scored 0.73-0.76).
+# Data, cutoff, splits and models as Stage 12 (nails.yaml): 250 Moscow adults, one photo each in a fixed light box,
+# anemic = Hb < 12.0 g/dL (120 g/L) for everyone (no sex column; Jaineel's choice 2026-10-23), 5-fold CV x 5 repeats
+# by patient, and leave one photo session out.
+#
+# Inputs: nail alone (29 color numbers), skin alone (29), nail + skin in one model (58, "early"), and the mean of the
+# nail model's and the skin model's scores ("late"). No-color control: the nail and skin box sizes.
+# Answer, fixed before running: nail and skin together help if, for a model, early or late beats the nail alone with
+# the paired CI of the AUROC change above 0 in the 5x5 CV; it holds if the change is also above 0 on held-out sessions.
+models: [logistic_regression, random_forest, hist_gradient_boosting, tabpfn]   # plus dummy and the redness rule
