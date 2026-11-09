@@ -1,0 +1,23 @@
+# Stage 27: does the eyelid model catch the sickest children? (Jaineel 2026-11-10: "try idea 1 only for now".)
+# Ghana children (CP-AnemiC, the 388 photos with no copy), anemic = Hb < 11.0 g/dL (default.yaml). Photos, folds
+# and models as Stage 9 (ceiling.yaml): 5-fold CV x 5 repeats by photo, held-out scores averaged over repeats.
+#
+# Hb bands in g/dL, lower edge included: the WHO severity grades for children 6-59 months (severe < 7.0, moderate
+# 7.0-9.9, mild 10.0-10.9), and the healthy children split at 12.0 into "just above the cutoff" and "clearly healthy".
+bands:
+  severe: [0.0, 7.0]
+  moderate: [7.0, 10.0]
+  mild: [10.0, 11.0]
+  healthy, just above: [11.0, 12.0]
+  healthy, clear: [12.0, 99.0]
+models: [hist_gradient_boosting, tabpfn]   # plus the untrained redness rule; a score with no signal is the baseline
+
+# Two thresholds, each set on all the children, then the share of every band that is flagged for a blood test:
+#   specificity: 90% of healthy children are cleared (as our sens @ 90% spec); a no-signal score flags 10% of any band.
+#   sensitivity: 90% of anemic children are caught (the clinic view, clinical.yaml); a no-signal score flags 90%.
+specificity: 0.9
+sensitivity: 0.9
+
+# Answer, fixed before running: the misses are mostly mild cases if, for the best model at the specificity threshold,
+# the share caught among moderate + severe minus the share caught among mild has its bootstrap CI above 0.
+# Only 16 children are severe, so that band's own range will be wide.
