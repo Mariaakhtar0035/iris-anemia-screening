@@ -1,0 +1,45 @@
+# Stage 29: a full audit of the TabPFN eyelid result (Jaineel 2026-11-13: "yes do The audit stage"; checks 1-7 of the
+# plan in the methods doc). Ghana children, CP-AnemiC, the 388 photos with no copy, anemic = Hb < 11.0 g/dL
+# (default.yaml, children 6-59 months). Folds and models as Stage 9 (ceiling.yaml): 5-fold CV x 5 repeats by photo,
+# TabPFN v2 on the 29 color numbers. Every answer below was fixed before running.
+
+# 4. What it reads: TabPFN on each group of the 29 numbers alone (the groups split the 29 exactly).
+#    "reads redness" if redness alone >= reads_redness; "mostly something else" if redness alone < 0.80 and another
+#    group >= reads_redness; otherwise "mixed".
+groups:
+  redness: [a_mean, a_median, a_std, R_over_G, a_minus_b]
+  brightness: [L_mean, L_median, L_std, V_mean, V_median, V_std]
+  hue: [H_mean, H_median, H_std]
+  rest: [R_mean, R_median, R_std, G_mean, G_median, G_std, B_mean, B_median, B_std, S_mean, S_median, S_std,
+         b_mean, b_median, b_std]
+reads_redness: 0.85
+
+# 5. Right direction: rank correlation of the TabPFN score with a_mean. Passes if the CI is below 0 (paler = riskier).
+
+# 3. File details only, no pixels: (a) metadata (dpi, gamma) and (b) file size (bytes, per pixel, per eyelid pixel).
+#    (a) passes if the AUROC's CI includes 0.5 or the estimate is below 0.6. File size also depends on the picture
+#    itself (more texture compresses less), so (b) is reported, not pass/fail.
+
+# 2. Hidden copies: dHash (16x16 on mid-grey, as the Stage 2 audit) over all 8 rotations and mirror images; two photos
+#    count as possible copies at <= near_bits of 256, looser than the Stage 2 rule (20 bits and size within 5%). Also
+#    possible same-child pairs: same Hb, age, sex and hospital. TabPFN rescored with both kept in one fold.
+#    Passes if the AUROC drops by less than max_drop.
+near_bits: 30
+max_drop: 0.02
+
+# 7. Never-used photos: Ghana conjunctiva photos (Appiahene, Asare, Donkoh 2022, Mendeley 10.17632/nt7r8hv2pz.1, the
+#    Stage 24 download) whose pixels match no CP-AnemiC photo, minus any within near_bits of a CP-AnemiC photo or of
+#    each other. Label from the file name (Anemic / Non-anemic; the cutoff isn't stated, and it agreed with
+#    Hb < 11.0 g/dL for 98% of the Stage 24 children). TabPFN trained on all 388, tested once. Holds up if the AUROC
+#    is >= hold_min. Same research group, so this guards against our choices fitting the 388; it is not a new site.
+conj_dir: data/raw/ghana_conj/Conjunctiva
+hold_min: 0.80
+
+# 6. Model choice: inside each outer training split, inner_splits-fold CV picks the model with the best inner AUROC
+#    from `models`; passes if the nested AUROC is >= the TabPFN AUROC minus max_drop.
+models: [logistic_regression, random_forest, hist_gradient_boosting, tabpfn]
+inner_splits: 5
+
+# 1. Shuffled labels: TabPFN, 5-fold CV x 1 repeat, the real labels against n_shuffles shuffles of them.
+#    Passes if the real AUROC beats every shuffle.
+n_shuffles: 100
