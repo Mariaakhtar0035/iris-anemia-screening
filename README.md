@@ -36,6 +36,7 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Do other body sites work in Ghana children? | palm photos: **0.91** (TabPFN), as good as the eyelid, no shortcut found; fingernail cut-outs: 0.80. Linked per child by file number (Section 6.9): adding nail and palm helps the weaker models (+0.06 to +0.09), TabPFN only +0.02 (CI crosses 0) |
 > | Does DINOv2 help if we fine-tune it, or feed its features to TabPFN? | no: fine-tuned DINOv2 **0.69** (frozen 0.67); next to the 29 color numbers its features cost TabPFN 0.02 (0.92 -> 0.90) (Section 6.11) |
 > | Does the Ghana eyelid model catch the sickest children? | **no more than the mild ones**: severe 81%, moderate 73%, mild 79% caught; inside the anemic group the score doesn't follow Hb (Section 6.12) |
+> | Is the TabPFN eyelid result cheating? | **no**: shuffled labels at chance, redness alone 0.88, no model-choice optimism; but on 61 differently processed Ghana photos it drops to 0.59, below the plain rule (0.67) (Section 6.14) |
 > | Is the combined Ghana result fair and free of shortcuts? | fair: no gap between girls and boys or younger and older children widens. But the eyelid cut-outs' size and shape alone score **0.69**, a shortcut; the color models don't use it (Section 6.10) |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
@@ -678,6 +679,31 @@ adults, **anemic: Hb < 12.0 g/dL for everyone**, same splits as Section 6.5.
 - **The untrained rule gains a little** from averaging the two redness ranks, but stays below the models.
 - No-color control (box sizes) 0.52; dummy 0.47.
 - Run: `python -m src.nails_skin` (~15 min). Report: [`reports/stage28_nails_skin.md`](reports/stage28_nails_skin.md).
+
+
+### 6.14 A full audit of the TabPFN eyelid result (Stage 29)
+
+TabPFN on the 29 color numbers (0.92) beats every vision model (0.67-0.79) on the 388 Ghana children (**anemic: Hb <
+11.0 g/dL**). Seven checks, pass rules fixed before running (2026-11-13):
+
+| Check | Result | Verdict |
+|---|---|---|
+| Shuffled labels, 100 times | real 0.883 vs shuffles mean 0.499, max 0.576 | pass |
+| Hidden copies kept together | 0.884 (30-bit match, too loose); 0.910 with the 17 close pairs only | pass on follow-up |
+| File metadata only | identical in every photo | pass |
+| What it reads | redness alone 0.876, brightness alone 0.785, hue 0.574 | reads redness |
+| Right direction | paler = riskier (-0.47 [-0.55, -0.39]) | pass |
+| Model chosen without the test children | 0.919, TabPFN picked every time | pass |
+| 61 never-used Ghana eyelid photos | TabPFN 0.586 [0.404, 0.759]; rule 0.673 | fail |
+
+- **No sign of cheating,** and most of the score is redness.
+- **The never-used photos are a differently processed batch** (rotated, darker, less red; even near-copies of
+  CP-AnemiC photos have shifted colors), and there TabPFN loses to the plain rule. So TabPFN's edge holds within one
+  consistent batch of photos, not across batches. Only 10 of the 61 are healthy, so the range is wide.
+- The follow-up (checks 2 and 7) was added after they failed. The main report's near-copy pair count (75,690) is a
+  counting bug; the right number is 224 (`reports/stage29_followup.md`).
+- Run: `python -m src.eyelid.tabpfn_audit` (~2 h) and `python -m src.eyelid.tabpfn_audit_followup` (~25 min). Reports:
+  [`reports/stage29_tabpfn_audit.md`](reports/stage29_tabpfn_audit.md), [`reports/stage29_followup.md`](reports/stage29_followup.md).
 
 ## 7. Discussion
 

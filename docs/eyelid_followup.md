@@ -770,3 +770,13 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **Result:** no gain for any trained model (TabPFN 0.823 -> 0.825); the untrained rule 0.703 -> 0.748 (+0.046
   [+0.003, +0.084]).
 - **Checks:** 62 tests pass; results at clean commit `4d9a566`. Report: `reports/stage28_nails_skin.md`.
+
+### Step 27 (Stage 29): full audit of the TabPFN eyelid result
+- **Why:** Jaineel (2026-11-13): audit the table-model-beats-vision-models result completely; "yes do The audit stage".
+- **What:** `src/eyelid/tabpfn_audit.py`, `configs/tabpfn_audit.yaml`: shuffled labels, hidden copies, file metadata,
+  feature groups, direction, nested model choice, never-used photos. Follow-up for the two failed checks:
+  `src/eyelid/tabpfn_audit_followup.py`.
+- **Result:** no leak (shuffles max 0.58; metadata identical; nested 0.919), redness alone 0.876, paler = riskier.
+  Hidden copies: no leak once the match is tight (0.910). Never-used photos: a differently processed batch, TabPFN
+  0.586 vs rule 0.673.
+- **Checks:** 66 tests pass; audit at clean commit `541045b`, follow-up at `ef11c9a`.

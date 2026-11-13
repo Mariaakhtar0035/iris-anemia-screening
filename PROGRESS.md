@@ -1,6 +1,6 @@
 # Progress: every strategy we tried, why, and what happened
 
-*Last updated 2026-11-10, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
+*Last updated 2026-11-13, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
 why we tried it, what happened, and whether it worked. The full paper-style write-up is the [README](README.md); the
 answers for the mentors are in [`reports/mentor_followup_eyelid.md`](reports/mentor_followup_eyelid.md).*
 
@@ -14,7 +14,7 @@ Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained mode
 (F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
 fingernail photos of Ghanaian children (F16). Then (Stages 16-26): the Hb number, metadata, photo quality, automatic
 cropping, one child's eyelid, nail and palm together with cheating and fairness checks (F24, F25), and DINOv2
-fine-tuned (F26), a severity check that raised a warning (F27), and fingernail + skin together (F28). See
+fine-tuned (F26), a severity check that raised a warning (F27), fingernail + skin together (F28), and a full audit of the TabPFN eyelid result (F29). See
 [What's next](#whats-next) for what's left.
 
 ## Best results so far
@@ -24,7 +24,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 
 | Question | Best result | Strategy |
 |---|---|---|
-| Eyelid photo, Ghana children (Hb < 11.0) | **TabPFN on 29 color numbers: 0.919** [0.893, 0.945]; 0.913 with whole hospitals held out | F14 |
+| Eyelid photo, Ghana children (Hb < 11.0) | **TabPFN on 29 color numbers: 0.919** [0.893, 0.945]; 0.913 with whole hospitals held out; audited (no leak, redness alone 0.88), but 0.59 on 61 differently processed photos | F14, F29 |
 | Palm photo, Ghana children | **TabPFN: 0.912** | F16 |
 | Eyelid + nail + palm of the same Ghana child | TabPFN 0.931 (eyelid alone 0.913; the gain isn't clear) | F24, F25 |
 | Fingernails, Moscow adults in a light box (Hb < 12.0) | **logistic regression: 0.818**, no shortcut, holds on unseen sessions | F13 |
@@ -119,6 +119,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 | F26 | DINOv2 fine-tuned, and its features next to the color numbers (M1, M10) | the mentors' DINOv2 question | fine-tuned 0.690 (frozen 0.672); color + DINOv2 0.897 vs color 0.919 | **didn't work** |
 | F27 | Catch rate by Hb severity band, Ghana children | does the model catch the sickest children? | severe 81%, moderate 73%, mild 79%; score vs Hb inside the anemic group +0.11 | **warning: separates the groups, doesn't rank by Hb** |
 | F28 | Fingernail and skin numbers together, Moscow | the idea left open in F15 | TabPFN nail 0.823 -> nail + skin 0.825; rule 0.703 -> 0.748 | **no gain for models**; small gain for the rule |
+| F29 | Full audit of TabPFN on Ghana eyelids (7 checks) | is the 0.92 cheating, overfitting or our choices? | shuffles at chance, redness alone 0.88, model choice 0.92; 61 differently processed photos 0.59 (rule 0.67) | **no leak; holds within the batch, not across batches** |
 
 ## Part A: checking the published eyelid results
 
@@ -832,6 +833,48 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Run it yourself:** `python -m src.nails_skin` (~15 min). Report:
   [`reports/stage28_nails_skin.md`](reports/stage28_nails_skin.md).
 
+### F29. A full audit of the TabPFN eyelid result (Stage 29). No leak; redness carries it; but it doesn't hold on a differently processed batch.
+- **Question:** a table model on 29 color numbers (0.92) beats every vision model (0.67-0.79). Is that cheating,
+  overfitting or a fluke of our choices, and does it read paleness?
+- **What we did:** seven checks on the 388 Ghana children (**Hb < 11.0 g/dL**), every pass rule fixed in
+  `configs/tabpfn_audit.yaml` before running.
+- **Answers:**
+
+| Check | Result | Verdict |
+|---|---|---|
+| 1. Shuffled labels, 100 times | real 0.883 (one 5-fold run); shuffles mean 0.499, max 0.576; 0 of 100 reach it | pass |
+| 2. Hidden copies kept together (looser photo match) | 0.884 vs 0.919 | fail (but see the follow-up) |
+| 3. File metadata only | dpi and gamma identical in every photo | pass |
+| 4. What it reads | redness alone (5 numbers) 0.876; brightness alone 0.785; hue 0.574 | reads redness |
+| 5. Right direction | score vs mean a*: -0.47 [-0.55, -0.39] (paler = riskier) | pass |
+| 6. Model chosen without the test children | 0.919; TabPFN picked in all 25 splits | pass |
+| 7. 61 never-used Ghana eyelid photos (51 anemic) | TabPFN 0.586 [0.404, 0.759]; rule 0.673; gradient boosting 0.692 | fail |
+
+- **Follow-up (added after checks 2 and 7 failed, not fixed beforehand; `reports/stage29_followup.md`):**
+  - Check 2: the pre-set 30-bit match was too loose (the typical gap to the nearest unrelated photo is 34 bits), so
+    look-alike photos chained into a group of 110 forced into one fold. With only the close pairs kept together the
+    score barely moves: 10 bits 0.919 (2 pairs), 20 bits 0.910 (17 pairs; -0.009 [-0.020, +0.001]). Random groups of
+    the same sizes drop 0.003-0.017. So there is no copy leak; look-alike photos (76% share a label, against 51% for
+    random pairs) help TabPFN a little.
+  - Check 7: the never-used photos are a differently processed batch: portrait cut-outs (median 69 x 172 px against
+    211 x 81), darker (L* 44-53 against 57-58) and less red (a* 19-22 against 24-27). Even the 37 near-copies of
+    CP-AnemiC photos in that set have shifted colors. So check 7 is really a small cross-batch test: TabPFN drops to
+    0.59 while the plain rule holds (0.67), the same pattern as across datasets (TabPFN transfer 0.60, rule 0.84).
+- **Takeaways:**
+  - No sign of cheating: shuffled labels sit at chance, metadata is identical, the model choice adds no optimism, and
+    the score follows paleness in the right direction.
+  - Redness alone gives 0.88, so most of the 0.92 is a paleness signal.
+  - TabPFN's edge over simpler models is within one consistent batch of photos. When colors shift, the plain redness
+    rule holds better. Only 10 healthy photos in check 7, so that range is wide.
+  - Paper wording: "within CP-AnemiC, a table model on color numbers beat fine-tuned vision models", not a general
+    claim.
+- **Note:** the main report's near-copy pair count (75,690) is a counting bug; the right number is 224 (fixed in the
+  code at `ef11c9a`; the follow-up report has it). No other number in the main report depends on it.
+- **Run it yourself:** `python -m src.eyelid.tabpfn_audit` (~2 h, mostly the 100 shuffles) and
+  `python -m src.eyelid.tabpfn_audit_followup` (~25 min). Reports:
+  [`reports/stage29_tabpfn_audit.md`](reports/stage29_tabpfn_audit.md),
+  [`reports/stage29_followup.md`](reports/stage29_followup.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -890,6 +933,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   because one child's real photos make the same mistakes (F25).
 - Fine-tuning DINOv2 (0.690 vs 0.672 frozen; F26).
 - Fingernail and skin numbers together for a trained model (TabPFN +0.002; F28).
+- TabPFN on a differently processed batch of Ghana eyelid photos: 0.59, below the plain rule (0.67; F29).
 - DINOv2 or VisionFM features next to the color numbers: TabPFN gets 0.01-0.02 worse (F26).
 
 **Still open**
@@ -905,7 +949,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 |---|---|---|
 | Eyelid + palm + nail for the same child | done (F24) on a probable file-number link; checks done (F25) | - |
 | DINOv2 fine-tuned, and next to the color numbers | done (F26): no gain | - |
-| Catch rate by Hb severity | done (F27): flat across bands; the score doesn't rank by Hb | test on the data we have what the score reads (redness, brightness, file facts) |
+| Catch rate by Hb severity | done (F27): flat across bands; the score doesn't rank by Hb | - |
+| Full audit of the TabPFN result | done (F29): no leak, reads redness; doesn't hold on a differently processed batch | - |
 | Fingernails: nail and skin numbers side by side as one input | done (F28): no gain for the models, +0.05 for the untrained rule | - |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |
