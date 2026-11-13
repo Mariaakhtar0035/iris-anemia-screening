@@ -158,8 +158,12 @@ def main():
     out["file_details"] = []
     for part, cols in {"metadata (dpi, gamma)": ["dpi_x", "dpi_y", "gamma"],
                        "file size": ["file_bytes", "bytes_per_pixel", "bytes_per_eyelid_pixel"]}.items():
+        cols = [c for c in cols if files[c].nunique() > 1]
+        if not cols:  # the same value in every file can't tell anemic from healthy (TabPFN refuses constant input)
+            out["file_details"].append({"input": part, "all_identical": True})
+            continue
         held = oof_scores(tab, files[cols].to_numpy(), y, folds)
-        out["file_details"].append({"input": part, **summarize(y, held, n_boot, ci, seed, metrics=AUC)})
+        out["file_details"].append({"input": part, "columns": cols, **summarize(y, held, n_boot, ci, seed, metrics=AUC)})
     print("done: file details", flush=True)
     save()
 
@@ -227,7 +231,8 @@ def write_report(path, cfg, out, ref_auc, n_boot):
     reads = ("reads redness" if red >= cfg["reads_redness"] else
              "mostly something else" if red < 0.80 and others >= cfg["reads_redness"] else "mixed")
     direction = out["direction"]["a_mean"]
-    meta = out["file_details"][0]["auroc"]
+    meta = out["file_details"][0]
+    same = meta.get("all_identical", False)
     cop, nest, sh, un = out["copies"], out["nested"], out["shuffled"], out["unseen"]
     rows = [
         ("1. Shuffled labels", f"real {sh['real_one_run']:.3f} vs {sh['n']} shuffles: mean {sh['mean']:.3f}, max "
@@ -235,8 +240,8 @@ def write_report(path, cfg, out, ref_auc, n_boot):
         ("2. Hidden copies + same-child pairs kept together", f"{fmt(cop['auroc'])} vs {ref_auc:.3f}; "
          f"{cop['near_copy_pairs']} near-copy pairs, {cop['same_child_pairs']} same-child pairs",
          f"drop < {cfg['max_drop']}", ref_auc - cop["auroc"]["estimate"] < cfg["max_drop"]),
-        ("3. File metadata only (dpi, gamma)", fmt(meta), "CI includes 0.5 or below 0.6",
-         meta["lo"] <= 0.5 or meta["estimate"] < 0.6),
+        ("3. File metadata only (dpi, gamma)", "identical in every photo" if same else fmt(meta["auroc"]),
+         "CI includes 0.5 or below 0.6", same or meta["auroc"]["lo"] <= 0.5 or meta["auroc"]["estimate"] < 0.6),
         ("4. What it reads", f"redness alone {red:.3f}; best other group {others:.3f}: {reads}",
          "reported (redness >= 0.85 = reads redness)", None),
         ("5. Right direction (score vs a_mean)", fmt(direction), "CI below 0 (paler = riskier)", direction["hi"] < 0),
@@ -254,8 +259,9 @@ def write_report(path, cfg, out, ref_auc, n_boot):
         f"| {a} | {b} | {c} | {verdict[v]} |" for a, b, c, v in rows)
     groups = "| group | numbers | AUROC | change vs all 29 |\n|---|---|---|---|\n" + "\n".join(
         f"| {r['group']} | {r['n_numbers']} | {fmt(r['auroc'])} | {fmt(r['vs_all'])} |" for r in out["groups"])
-    files = "| input | AUROC |\n|---|---|\n" + "\n".join(f"| {r['input']} | {fmt(r['auroc'])} |"
-                                                      for r in out["file_details"])
+    files = "| input | AUROC |\n|---|---|\n" + "\n".join(
+        f"| {r['input']} | {'identical in every photo, so no signal' if r.get('all_identical') else fmt(r['auroc'])} |"
+        for r in out["file_details"])
     unseen = "\n".join(f"| {k} | {fmt(v['auroc'])} |" for k, v in un.items() if k != "counts")
     report = (
         "# Stage 29: a full audit of the TabPFN eyelid result\n\n"
