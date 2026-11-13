@@ -43,3 +43,13 @@ inner_splits: 5
 # 1. Shuffled labels: TabPFN, 5-fold CV x 1 repeat, the real labels against n_shuffles shuffles of them.
 #    Passes if the real AUROC beats every shuffle.
 n_shuffles: 100
+
+# Follow-up (src/eyelid/tabpfn_audit_followup.py), added 2026-11-13 after checks 2 and 7 failed, so not fixed
+# beforehand; reported, not pass/fail.
+# 2: possible copies by distance; TabPFN with only the closer pairs kept together (followup_bits); and a control with
+#    the same group sizes as at near_bits but photos assigned to the groups at random (control_draws times), to tell a
+#    leak from the cost of forcing one big group into one fold.
+# 7: the never-used photos by naming style and label, their color against CP-AnemiC, and TabPFN on the near-copies
+#    of CP-AnemiC photos that check 7 left out.
+followup_bits: [10, 20]
+control_draws: 3

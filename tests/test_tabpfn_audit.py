@@ -38,3 +38,10 @@ def test_nested_choice_picks_the_informative_model():
     makers = {"dummy": lambda: DummyClassifier(strategy="prior"), "lr": lambda: LogisticRegression()}
     held, picks = nested_choice(makers, X, y, repeated_stratified(y, 5, 1, 0), 5, 0)
     assert picks == ["lr"] * 5 and auroc(y, held[0]) > 0.8
+
+
+def test_random_groups_keep_the_group_sizes():
+    from src.eyelid.tabpfn_audit_followup import random_groups
+    g = np.array([0, 0, 0, 1, 1, 2, 3, 4, 4, 4, 4])
+    r = random_groups(g, np.random.default_rng(0))
+    assert sorted(np.bincount(r)) == sorted(np.bincount(g)) and not (r == g).all()

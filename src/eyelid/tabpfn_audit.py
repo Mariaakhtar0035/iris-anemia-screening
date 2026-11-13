@@ -87,7 +87,7 @@ def nested_choice(makers, X, y, folds, inner_splits, seed):
 
 def unseen_photos(conj_dir, cp, near_bits):
     """Ghana conjunctiva photos that are not CP-AnemiC photos: one path per distinct photo with its file-name label,
-    after dropping near-copies of CP-AnemiC photos and of each other; and the counts."""
+    after dropping near-copies of CP-AnemiC photos and of each other; the counts; and the near-copies dropped."""
     files = sorted((ROOT / conj_dir).glob("*.png"))
     df = pd.DataFrame({"path": files, "key": [pixel_key(f) for f in files]})
     cp_keys = {pixel_key(ROOT / p) for p in cp.image_path}
@@ -100,6 +100,7 @@ def unseen_photos(conj_dir, cp, near_bits):
     cp_base = np.array([dhash_views(ROOT / p)[0] for p in cp.drop_duplicates("image_group").image_path])
     far = min_bits(views, cp_base).min(1) > near_bits
     counts["near-copy of a CP-AnemiC photo"] = int((~far).sum())
+    near = new[~far].reset_index(drop=True)
     new, views = new[far].reset_index(drop=True), views[far]
     d = min_bits(views, views[:, 0])
     comp = components(np.minimum(d, d.T) <= near_bits)
@@ -108,7 +109,7 @@ def unseen_photos(conj_dir, cp, near_bits):
     counts["dropped as near-copies of each other"] = int(len(new) - keep.sum())
     new = new[keep].reset_index(drop=True)
     counts |= {"kept": len(new), "anemic": int(new.anemic.sum())}
-    return new, counts
+    return new, counts, near
 
 
 def main():
@@ -178,7 +179,7 @@ def main():
     gfolds = repeated_stratified_grouped(y, groups, cv["n_splits"], cv["n_repeats"], seed)
     held = oof_scores(tab, X, y, gfolds)
     sizes = np.bincount(groups)
-    out["copies"] = {"near_copy_pairs": int((np.triu(d, 1) <= cfg["near_bits"]).sum()),
+    out["copies"] = {"near_copy_pairs": int((d <= cfg["near_bits"]).sum() // 2),  # d is symmetric, diagonal huge
                      "closest_pair_bits": int(d.min()), "median_nearest_bits": int(np.median(d.min(1))),
                      "same_child_pairs": int((np.bincount(child) > 1).sum()),
                      "photos_in_shared_groups": int(sizes[sizes > 1].sum()),
@@ -187,7 +188,7 @@ def main():
     save()
 
     # 7. never-used photos
-    new, counts = unseen_photos(cfg["conj_dir"], load_cp_anemic("all"), cfg["near_bits"])
+    new, counts, _ = unseen_photos(cfg["conj_dir"], load_cp_anemic("all"), cfg["near_bits"])
     yn = new.anemic.to_numpy()
     out["unseen"] = {"counts": counts}
     if len(set(yn)) == 2:
