@@ -33,6 +33,7 @@ CP-AnemiC sheet for all three body sites. Stage 26: Ghana Hb < 11.0, India and I
 | 27 | Does the Ghana model catch the sickest children? | No more than the mild ones; the score separates the two groups but doesn't rank by Hb | caught: severe 81%, moderate 73%, mild 79%; score vs Hb inside the anemic group +0.11 [-0.04, +0.26] | [severity](stage27_severity.md) |
 | 28 | Do fingernail and skin numbers together beat the nail alone (Moscow)? | No for every model; the untrained rule gains a little | TabPFN 0.823 -> 0.825 (+0.002 [-0.019, +0.024]); rule 0.703 -> 0.748 | [nail + skin](stage28_nails_skin.md) |
 | 29 | Is the TabPFN eyelid result (0.92) cheating, overfitting or our choices? | No leak, no choice optimism, reads redness; but it drops on a differently processed batch | shuffles max 0.58; redness alone 0.876; nested 0.919; 61 never-used photos 0.586 (rule 0.673) | [audit](stage29_tabpfn_audit.md), [follow-up](stage29_followup.md) |
+| 30 | Does the score read anemia, or how the photos were handled? | Ghana: partly the handling. Every model's Ghana score jumps at Hb 11.0; India, Italy and Moscow follow Hb steadily; TabPFN loses 0.2 under small color edits | Ghana eyelid TabPFN near the cutoff 0.938 vs 0.72 for a steady signal; Moscow 0.569 vs 0.58; brightness x0.85: 0.919 -> 0.708 | [check](stage30_handling_check.md), [vision models](stage30_vision.md) |
 
 ## Across sites (closed: explains why per-location models)
 

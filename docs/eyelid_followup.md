@@ -780,3 +780,16 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   Hidden copies: no leak once the match is tight (0.910). Never-used photos: a differently processed batch, TabPFN
   0.586 vs rule 0.673.
 - **Checks:** 66 tests pass; audit at clean commit `541045b`, follow-up at `ef11c9a`.
+
+### Step 28 (Stage 30): anemia or photo handling?
+- **Why:** Jaineel (2026-11-14): the mentors were surprised by TabPFN; "make sure it is seeing only anemia"; "yes do
+  stage 30". The Ghana score flagged 79% at Hb 10-11 but 8% at 11-12 (Stage 27), which paleness can't do.
+- **What:** `src/eyelid/handling_check.py`, `configs/handling_check.yaml`: jump at the cutoff against a steady
+  reference, Hb inside each group, no-color numbers, edited Ghana photos; on Ghana eyelids, nails, palms, India, Italy
+  and Moscow. Follow-up on the vision models' saved scores: `src/eyelid/handling_check_vision.py`.
+- **Result:** every Ghana model jumps at the cutoff (TabPFN eyelid 0.938 near the cutoff vs 0.72 steady; nails,
+  palms, ViT, DINOv2, VisionFM the same); India, Italy, Moscow don't. Ghana eyelids carry only a weak Hb signal inside
+  each group (+0.21 anemic). No-color numbers predict the Ghana labels at 0.57-0.62. Small color edits cost TabPFN 0.2.
+  So the Ghana scores are partly a handling trace, and "table beats vision" doesn't hold as a claim about anemia.
+- **Checks:** 70 tests pass (4 new); smoke run with stand-in models; Stage 30 at clean commit `1874d5f`, vision
+  follow-up at `6e11bd0`.

@@ -20,10 +20,10 @@ side of the project. The suggestions are recorded, and every step is logged, in
 
 | Question | Simple answer | Number |
 |---|---|---|
-| Is there a real pallor signal in eyelid photos? | **Yes, in Ghana children** | 0.85 with gradient boosting, 0.92 with TabPFN; a model blind to color: 0.54 |
+| Is there a real pallor signal in eyelid photos? | **Some, but the Ghana scores are partly a photo-handling trace** (Stage 30) | 0.85 with gradient boosting, 0.92 with TabPFN; a model blind to color: 0.54; but every Ghana score jumps at the Hb cutoff |
 | Would more photos help? | **Yes, in Ghana** | still rising: 0.72 -> 0.92 from 78 to 310 training photos |
 | Does a bigger image model help? (M1, M10) | **No** | fine-tuned ViT 0.72, eye-pretrained VisionFM 0.79, vs 0.85 for 29 color numbers |
-| Does TabPFN, the model you named, help? (M14) | **Yes in Ghana, not elsewhere** | Ghana 0.92 vs 0.85; India 0.65; fingernails 0.82 |
+| Does TabPFN, the model you named, help? (M14) | **On Ghana it scores highest, partly by reading the handling trace; elsewhere about the rule** | Ghana 0.92 vs 0.85; India 0.65; fingernails 0.82 (rule 0.70) |
 | Does TabPFN still work on a new dataset? | **No**, only the simple rule carries over | Ghana -> Eyes-Defy 0.60 (rule 0.84); reverse 0.60 (rule 0.65) |
 | Can one model learn all three countries? (M8) | **Yes, as well as separate models, and it can be made fair**; still no better than the rule in India or Italy | Ghana 0.90, India 0.64, Italy 0.91 (rule 0.65, 0.67, 0.92); country gap 0.52 -> 0.27 |
 | Can a new country get by with a few labelled photos? | **No**: 10-40 photos never beat the rule; Ghana needs about 80 | best at 40 photos: Ghana 0.68, India 0.68, Italy 0.93 (rule 0.65, 0.67, 0.92) |
@@ -41,9 +41,12 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Does the same child's nail and palm add to the eyelid? (2026-11-03) | **A little; pretend pairs overstate it 3x** | TabPFN 0.913 -> 0.931 (CI crosses 0); pretend 0.967 |
 | Is that combined result fair, and free of shortcuts? | **Fair by sex and age; one shortcut, not used** | no gap widens; eyelid cut-out shape alone 0.69; color still 0.90-0.93 inside each shape third |
 | Does DINOv2 help if we fine-tune it, or give its features to TabPFN? (2026-11-03) | **No** | fine-tuned 0.690 (frozen 0.672); color + DINOv2 0.897 vs color alone 0.919 |
+| Is the TabPFN result (0.92) cheating? (Stage 29) | **No leak**, but it drops on a differently processed batch | shuffled labels max 0.58; 61 other Ghana photos 0.59 (rule 0.67) |
+| Is the score reading anemia, or how the photos were handled? (Stage 30) | **Ghana: partly the handling.** Every model's Ghana score (TabPFN and the vision models) jumps at Hb 11.0 instead of following Hb; India, Italy and Moscow don't | Ghana near the cutoff 0.94 vs 0.72 for a steady signal; a 15% brightness change costs TabPFN 0.21 |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
-size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak.
+size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak. Stage 30 later showed that part of that color is a trace of
+how the anemic and healthy photos were handled, so the 0.92 is not a clean anemia number.
 
 ## M1 and M2: exhaust each dataset, one population at a time
 

@@ -37,13 +37,14 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Does DINOv2 help if we fine-tune it, or feed its features to TabPFN? | no: fine-tuned DINOv2 **0.69** (frozen 0.67); next to the 29 color numbers its features cost TabPFN 0.02 (0.92 -> 0.90) (Section 6.11) |
 > | Does the Ghana eyelid model catch the sickest children? | **no more than the mild ones**: severe 81%, moderate 73%, mild 79% caught; inside the anemic group the score doesn't follow Hb (Section 6.12) |
 > | Is the TabPFN eyelid result cheating? | **no**: shuffled labels at chance, redness alone 0.88, no model-choice optimism; but on 61 differently processed Ghana photos it drops to 0.59, below the plain rule (0.67) (Section 6.14) |
+> | Does the score read anemia, or how the photos were handled? | **Ghana: partly the handling.** Every model's Ghana score jumps at the Hb 11 cutoff instead of following Hb (TabPFN near the cutoff 0.94, a steady signal would give 0.72); India, Italy and Moscow pass. A 15% brightness change costs TabPFN 0.21. So the Ghana 0.92 is not a clean anemia number (Section 6.15) |
 > | Is the combined Ghana result fair and free of shortcuts? | fair: no gap between girls and boys or younger and older children widens. But the eyelid cut-outs' size and shape alone score **0.69**, a shortcut; the color models don't use it (Section 6.10) |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
 
 ## Abstract
 
-Anemia can be screened without a blood test by looking at how pale the inside of the lower eyelid (the conjunctiva) is, or by asking a few routine questions. Our goal is a tool that tells health workers who to test first, and an honest test of whether it works outside the place it was built. **Part I** re-implements the two published eyelid-photo results our proposal starts from: a ResNet50 on CP-AnemiC (Ghanaian children, 84.79% accuracy) and a Vision Transformer on Eyes-Defy-Anemia (Italian and Indian adults, 98.47%). We reproduce both protocols (85.1%, and 95.6% over 5 splits), but both let the same photo appear in training and test; with a clean split accuracy falls to 77.5% and 88.5%, and on Eyes-Defy 88.5% equals predicting "anemic" for every Indian photo. **Part II** tests transfer. Eyelid models trained on one dataset collapse on the other (AUROC 0.32-0.62), while the untrained rule "less red = anemic" holds up best (0.84 on Eyes-Defy, 0.67 within India). A survey model trained on Zimbabwe DHS data carries a weak but real signal (AUROC 0.58) and keeps it, with close calibration, in Malawi and Zambia (0.57). A clearly labelled simulation suggests that if an eyelid score worked on these women as it does on Eyes-Defy, it would add far more than the survey. **Part III** follows the mentors' eyelid advice. On Ghana children, 29 color statistics reach AUROC 0.85 with gradient boosting and 0.92 with TabPFN, a model pretrained for small tables, and both still improve with more photos, while a fine-tuned ViT scores 0.72; inside India nothing beats the untrained rule. Italy's anemic patients were almost all photographed in one early batch, so Italy's high scores are mostly a batch effect. Debiasing closes the gaps between countries without improving accuracy inside any country, and to catch 90% of anemic children the best model still sends half of the children for a blood test. The headline numbers in this field overstate what a model does on new people; leakage, site confounding and camera differences matter more than model choice.
+Anemia can be screened without a blood test by looking at how pale the inside of the lower eyelid (the conjunctiva) is, or by asking a few routine questions. Our goal is a tool that tells health workers who to test first, and an honest test of whether it works outside the place it was built. **Part I** re-implements the two published eyelid-photo results our proposal starts from: a ResNet50 on CP-AnemiC (Ghanaian children, 84.79% accuracy) and a Vision Transformer on Eyes-Defy-Anemia (Italian and Indian adults, 98.47%). We reproduce both protocols (85.1%, and 95.6% over 5 splits), but both let the same photo appear in training and test; with a clean split accuracy falls to 77.5% and 88.5%, and on Eyes-Defy 88.5% equals predicting "anemic" for every Indian photo. **Part II** tests transfer. Eyelid models trained on one dataset collapse on the other (AUROC 0.32-0.62), while the untrained rule "less red = anemic" holds up best (0.84 on Eyes-Defy, 0.67 within India). A survey model trained on Zimbabwe DHS data carries a weak but real signal (AUROC 0.58) and keeps it, with close calibration, in Malawi and Zambia (0.57). A clearly labelled simulation suggests that if an eyelid score worked on these women as it does on Eyes-Defy, it would add far more than the survey. **Part III** follows the mentors' eyelid advice. On Ghana children, 29 color statistics reach AUROC 0.85 with gradient boosting and 0.92 with TabPFN, a model pretrained for small tables, and both still improve with more photos, while a fine-tuned ViT scores 0.72; inside India nothing beats the untrained rule. Italy's anemic patients were almost all photographed in one early batch, so Italy's high scores are mostly a batch effect. On the three Ghana sets every model's score, TabPFN's included, jumps exactly at the Hb cutoff instead of following Hb, while India, Italy and Moscow do not: part of what the Ghana models read is how the anemic and healthy photos were handled, so their numbers are not clean anemia numbers. Debiasing closes the gaps between countries without improving accuracy inside any country, and to catch 90% of anemic children the best model still sends half of the children for a blood test. The headline numbers in this field overstate what a model does on new people; leakage, site confounding and camera differences matter more than model choice.
 
 ## 1. Introduction
 
@@ -696,20 +697,60 @@ TabPFN on the 29 color numbers (0.92) beats every vision model (0.67-0.79) on th
 | Model chosen without the test children | 0.919, TabPFN picked every time | pass |
 | 61 never-used Ghana eyelid photos | TabPFN 0.586 [0.404, 0.759]; rule 0.673 | fail |
 
-- **No sign of cheating,** and most of the score is redness.
-- **The never-used photos are a differently processed batch** (rotated, darker, less red; even near-copies of
-  CP-AnemiC photos have shifted colors), and there TabPFN loses to the plain rule. So TabPFN's edge holds within one
+- **No sign of cheating,** and most of the score is in the redness numbers (but Section 6.15 shows that redness is
+  partly a trace of how the photos were handled).
+- **The never-used photos are a differently processed batch** (rotated, darker, less red), and there TabPFN loses to the plain rule. So TabPFN's edge holds within one
   consistent batch of photos, not across batches. Only 10 of the 61 are healthy, so the range is wide.
 - The follow-up (checks 2 and 7) was added after they failed. The main report's near-copy pair count (75,690) is a
   counting bug; the right number is 224 (`reports/stage29_followup.md`).
 - Run: `python -m src.eyelid.tabpfn_audit` (~2 h) and `python -m src.eyelid.tabpfn_audit_followup` (~25 min). Reports:
   [`reports/stage29_tabpfn_audit.md`](reports/stage29_tabpfn_audit.md), [`reports/stage29_followup.md`](reports/stage29_followup.md).
 
+### 6.15 Does the score read anemia, or how the photos were handled? (Stage 30)
+
+Pallor changes gradually with Hb, so a score that reads it can't jump at a cutoff that is a convention, and it should
+follow Hb inside each group. The Ghana sets store anemic and healthy photos in separate folders, so a trace of how
+each folder was photographed, cut out or saved would act like a switch at the cutoff. Same 29 color numbers on every
+dataset with Hb; cutoffs as everywhere (Ghana children **Hb < 11.0 g/dL**; India and Italy **WHO by sex, < 12.0
+women, < 13.0 men**, pregnancy not recorded; Moscow **< 12.0 g/dL** for everyone). Answers fixed before running
+(`configs/handling_check.yaml`, 2026-11-14). The steady reference is a score that falls steadily with Hb and has the
+model's own overall AUROC (2000 draws, no Hb error, so as steep near the cutoff as a steady signal can be).
+
+| Dataset | TabPFN, everyone | TabPFN, within 1 g/dL of the cutoff | Steady signal (top 2.5%) | Jumps? |
+|---|---|---|---|---|
+| Ghana eyelids (388) | 0.919 | **0.938** [0.894, 0.974] | 0.72 (0.81) | **yes** |
+| Ghana nails (302) | 0.754 | **0.760** [0.658, 0.855] | 0.60 (0.71) | **yes** |
+| Ghana palms (302) | 0.866 | **0.888** [0.817, 0.951] | 0.66 (0.76) | **yes** |
+| India eyelids (95) | 0.648 | 0.510 [0.289, 0.722] | 0.55 (0.75) | no |
+| Italy eyelids (122) | 0.909 | 0.771 [0.511, 0.977] | 0.68 (0.88) | no |
+| Moscow nails (250) | 0.823 | 0.569 [0.432, 0.700] | 0.58 (0.72) | no |
+
+- Gradient boosting and the fine-tuned vision models jump on Ghana too (ViT 0.727 vs 0.58, DINOv2 0.679 vs 0.57,
+  VisionFM 0.781 vs 0.61). Inside the anemic group the Ghana TabPFN score doesn't follow Hb (+0.11; a steady signal
+  gives -0.69), while Moscow (-0.51) and India (-0.32) do.
+- A regressor trained inside one group at a time finds only a weak Hb signal in the Ghana eyelids (anemic +0.21
+  [0.05, 0.36], healthy +0.12, CI crosses 0), more in the palms (+0.32, +0.44), against +0.55 for anemic Moscow nails.
+- Numbers with no color (size, cut-out shape, soft edge, sharpness, file bytes) predict the Ghana labels at 0.57-0.62,
+  so the folders also differ in how the photos were cut out or saved (Italy 0.86, its known early batch).
+- Small color edits of the Ghana test photos (15% brightness, gamma 0.8 or 1.25, 20% less saturation, 8% white
+  balance) cost TabPFN 0.20-0.23 and gradient boosting 0.15-0.19; the rule moves less than 0.03. A shift the size of
+  the 61-photo batch of Section 6.14 takes TabPFN to 0.66, close to the 0.59 it got there.
+
+So the Ghana scores, TabPFN's 0.92 included, are not clean anemia numbers: part of what every model reads is how the
+anemic and healthy photos were handled, and TabPFN reads it best. The photos still carry some real Hb signal, so it is
+a mix we can't split. "A table model beats vision models" therefore does not hold as a claim about anemia; where no
+trace shows (India, Italy, Moscow), TabPFN matches the untrained rule or adds a little (Moscow 0.82 vs 0.70). This is
+not a leak in our splits: the trace is in every published photo, training and test alike, so the leak checks of
+Section 6.14 can't see it. The jump test itself is a cheap check for any dataset with a measured Hb.
+
+Run: `python -m src.eyelid.handling_check` (~1 h on CPU) and `python -m src.eyelid.handling_check_vision`. Reports:
+[`reports/stage30_handling_check.md`](reports/stage30_handling_check.md), [`reports/stage30_vision.md`](reports/stage30_vision.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
 
-**What survives is simple.** On clean CP-AnemiC data, color statistics beat a large pretrained model; across datasets, only the untrained "less red = anemic" rule keeps working. The learned models fit the camera, not the conjunctiva. That points to fixing the camera gap (a color reference card in each photo, or per-device color calibration) before training anything bigger. Part III backs this up: a fine-tuned ViT fits every training set perfectly yet does worse than gradient boosting on 29 color numbers, the best result comes from a tabular model (TabPFN) on those same numbers, and removing the country shortcut by debiasing doesn't add accuracy inside a country. The limit is the data (too few photos per population, one camera setup per site), not the model.
+**What survives is simple.** On clean CP-AnemiC data, color statistics beat a large pretrained model; across datasets, only the untrained "less red = anemic" rule keeps working. The learned models fit the camera, not the conjunctiva. That points to fixing the camera gap (a color reference card in each photo, or per-device color calibration) before training anything bigger. Part III backs this up: a fine-tuned ViT fits every training set perfectly yet does worse than gradient boosting on 29 color numbers, the best Ghana result comes from a tabular model (TabPFN) on those same numbers (though Section 6.15 shows part of every Ghana score is a trace of photo handling), and removing the country shortcut by debiasing doesn't add accuracy inside a country. The limit is the data (too few photos per population, one camera setup per site), not the model.
 
 **Survey answers are a weak but portable screen.** Six routine questions lift the share of anemic women found at a 30% testing budget from 29% to 38%, and that small gain carries to two other countries and a survey 9 years newer with little loss. It is a modest tool on its own; the simulation suggests it is most useful as a cheap add-on to a better signal.
 
@@ -720,6 +761,8 @@ TabPFN on the 29 color numbers (0.92) beats every vision model (0.67-0.79) on th
 3. Report a site or country baseline next to any model trained on pooled sites.
 4. Never choose epochs or thresholds on the test set.
 5. Test on a different dataset or country before trusting a number.
+6. Check that the score follows the measured Hb and doesn't jump at the label cutoff (Section 6.15). A jump means the
+   photos carry the label in something other than the disease, for example how each label's photos were handled.
 
 ## 8. Ethics and data use
 
@@ -882,8 +925,11 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | One Ghana child's eyelid, nail and palm together (Section 6.9) | done: probable link; weaker models gain, TabPFN +0.02 (CI crosses 0); pretend pairs overstate the gain 3x |
 | Cheating and fairness checks on those children (Section 6.10) | done: fair by sex and age; eyelid cut-out shape is a shortcut (0.69) the color models don't use |
 | Fine-tuned DINOv2; DINOv2 and VisionFM features next to the color numbers (Section 6.11) | done: fine-tuned 0.69; features cost TabPFN 0.01-0.02 |
+| Catch rate by Hb severity; fingernail + skin (Sections 6.12, 6.13) | done: flat catch rate; no gain for the models |
+| Full audit of the TabPFN eyelid result (Section 6.14) | done: no leak; drops on a differently processed batch |
+| Anemia or photo handling? (Section 6.15) | done: the Ghana scores are partly a handling trace; India, Italy, Moscow pass |
 
-Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) compare the survey baseline with Chemhaka et al. and ask the CP-AnemiC authors about the duplicate photos and for the sheet linking the conjunctiva, nail and palm files to Hb (to confirm Section 6.9).
+Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 
 ## References
 
