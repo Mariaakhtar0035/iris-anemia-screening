@@ -14,7 +14,7 @@ Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained mode
 (F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
 fingernail photos of Ghanaian children (F16). Then (Stages 16-26): the Hb number, metadata, photo quality, automatic
 cropping, one child's eyelid, nail and palm together with cheating and fairness checks (F24, F25), and DINOv2
-fine-tuned (F26), a severity check that raised a warning (F27), fingernail + skin together (F28), a full audit of the TabPFN eyelid result (F29), and a check of whether the Ghana scores read anemia or how the photos were handled (F30: partly the handling). See
+fine-tuned (F26), a severity check that raised a warning (F27), fingernail + skin together (F28), a full audit of the TabPFN eyelid result (F29), a check of whether the Ghana scores read anemia or how the photos were handled (F30: partly the handling), an attempt at a Ghana number without that trace (F31: not possible with this data, and the Hb-number models carry it too), and the same small photo edits on every dataset (F32: TabPFN breaks only on the Ghana sets). See
 [What's next](#whats-next) for what's left.
 
 ## Best results so far
@@ -24,7 +24,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 
 | Question | Best result | Strategy |
 |---|---|---|
-| Eyelid photo, Ghana children (Hb < 11.0) | TabPFN on 29 color numbers: 0.919 [0.893, 0.945], **but not a clean anemia number**: the score jumps at the Hb 11 cutoff instead of following Hb, so part of it reads how the anemic and healthy photos were handled (F30); no leak (F29); 0.59 on 61 differently processed photos | F14, F29, F30 |
+| Eyelid photo, Ghana children (Hb < 11.0) | TabPFN on 29 color numbers: 0.919 [0.893, 0.945], **but not a clean anemia number**: the score jumps at the Hb 11 cutoff instead of following Hb, so part of it reads how the anemic and healthy photos were handled (F30); no leak (F29); 0.59 on 61 differently processed photos; a small color edit costs it 0.21, which happens only on the Ghana sets (F32); the trace can't be taken out to give a clean number (F31) | F14, F29-F32 |
 | Palm photo, Ghana children | TabPFN: 0.912; also jumps at the cutoff (F30), though the palm carries some Hb inside each group (0.32 anemic, 0.44 healthy) | F16, F30 |
 | Eyelid + nail + palm of the same Ghana child | TabPFN 0.931 (eyelid alone 0.913; the gain isn't clear); same jump caveat (F30) | F24, F25, F30 |
 | Fingernails, Moscow adults in a light box (Hb < 12.0) | **logistic regression: 0.818**, no shortcut, holds on unseen sessions; TabPFN 0.823 passes the jump test and follows Hb inside both groups (F30): our cleanest result | F13, F30 |
@@ -33,9 +33,11 @@ The best honest number for each question, kept up to date after every stage. Eve
 | Eyelid, Italy adults | 0.92, but mostly the photo batch | F1, F4 |
 | A new dataset with no training | the "less red = anemic" rule, 0.835 on Eyes-Defy | C2 |
 | Survey answers only (DHS women; survey side) | 0.58 in Zimbabwe, unchanged in Malawi and Zambia (0.57) | D1, D2 |
-| The Hb number, Ghana children | error 1.38 g/dL, vs 1.71 for guessing the mean | F19 |
+| The Hb number, Ghana children | error 1.38 g/dL, vs 1.71 for guessing the mean, **but mostly the folder**: no Ghana Hb model follows Hb inside the anemic group (four models, every range crosses 0), and the best one jumps at the cutoff (F31) | F19, F31 |
 | Does the Ghana score track how low the Hb is? | **No**: caught 81% severe, 73% moderate, 79% mild; inside the anemic group the score doesn't follow Hb (+0.11) | F27 |
 | Do the scores read anemia, or how the photos were handled? | **Ghana: partly the handling.** Every model's Ghana score (TabPFN, gradient boosting, the fine-tuned vision models) jumps at Hb 11.0; India, Italy and Moscow follow Hb steadily | F30 |
+| Can the trace be taken out to give a clean Ghana number? | **Not with this data.** A model trained only on differences inside each folder doesn't jump, but it also loses 0.15-0.41 on the clean datasets, so its Ghana 0.50 can't be trusted | F31 |
+| Does a small lighting change break the model? | TabPFN: **only on the Ghana sets** (4-7 of 7 edits break it, average cost 0.08-0.21); India, Italy, Moscow 0 of 7 (cost 0.00-0.02). Training on color-edited copies cuts the Ghana eyelid cost from 0.21 to 0.05 for 0.04 of AUROC | F32 |
 | What it saves a clinic (Ghana) | test 50% of children to catch 90% of the anemic ones (TabPFN), vs 90% at random | F10 |
 
 ## The story in six points
@@ -47,7 +49,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 3. **Color numbers beat big image models only on the Ghana photos, and partly for the wrong reason.** There TabPFN,
    a model built for small tables, reaches **0.92** on 29 color numbers against 0.67-0.79 for vision models. But every
    model's Ghana score jumps at the Hb 11 cutoff instead of following Hb (F30): part of what they read is how the
-   anemic and healthy photos were handled, and TabPFN reads it best. Where there is no such trace, TabPFN matches the
+   anemic and healthy photos were handled, and TabPFN reads it best. The Ghana sets are also the only place where small color edits break TabPFN (F32). Where there is no such trace, TabPFN matches the
    untrained rule (India 0.65, Italy 0.91) or adds a little (Moscow nails 0.82 vs 0.70). The untrained "less red =
    anemic" rule is still the only thing that keeps working on a new dataset.
 4. **Survey answers are a weak but portable signal.** AUROC 0.58 in Zimbabwe, and it holds unchanged in Malawi and
@@ -124,6 +126,8 @@ The best honest number for each question, kept up to date after every stage. Eve
 | F28 | Fingernail and skin numbers together, Moscow | the idea left open in F15 | TabPFN nail 0.823 -> nail + skin 0.825; rule 0.703 -> 0.748 | **no gain for models**; small gain for the rule |
 | F29 | Full audit of TabPFN on Ghana eyelids (7 checks) | is the 0.92 cheating, overfitting or our choices? | shuffles at chance, redness alone 0.88, model choice 0.92; 61 differently processed photos 0.59 (rule 0.67) | **no leak; holds within the batch, not across batches** |
 | F30 | Does the score read anemia or photo handling? (jump at the cutoff, Hb inside each group, no-color numbers, edited photos) | the mentors' surprise at TabPFN; Jaineel: make sure it is seeing only anemia | Ghana eyelid TabPFN near the cutoff 0.938 vs 0.72 for a steady signal; nails, palms and the vision models the same; India, Italy, Moscow no jump; a 15% brightness change costs TabPFN 0.21 | **Ghana scores are partly a handling trace; "table beats vision" doesn't hold as a claim about anemia** |
+| F31 | A Ghana number without the trace (a within-folder model); do the Hb-number models carry the trace? | F30: how much of the Ghana score is real? | within-folder model 0.50 on Ghana but loses 0.15-0.41 on clean data; no Ghana Hb model follows Hb inside the anemic group; the boosting and TabPFN Hb estimates jump; 6 eyelid color numbers separate best near the cutoff | **no trace-free number; the Ghana Hb results carry the trace too** |
+| F32 | The same small photo edits on every dataset; TabPFN trained on color-edited copies | is TabPFN fragile everywhere, or only on Ghana? | fragile on 6, 4, 7 of 7 edits on Ghana eyelids, nails, palms; 0 of 7 on India, Italy, Moscow; copies cut the Ghana eyelid cost 0.21 -> 0.05, the jump stays | **the fragility is a sign of the Ghana trace; edited copies help robustness, not the trace** |
 
 ## Part A: checking the published eyelid results
 
@@ -935,6 +939,80 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   (a minute). Reports: [`reports/stage30_handling_check.md`](reports/stage30_handling_check.md),
   [`reports/stage30_vision.md`](reports/stage30_vision.md).
 
+### F31. A Ghana number without the folder trace? (Stage 31). Not with this data; the Hb-number models carry the trace too.
+- **Question:** F30 showed part of every Ghana score is a trace of how the folders were handled. How much real anemia
+  signal is left? And do the Hb-number models (F19, F22) carry the trace too?
+- **What we did:** every answer fixed in `configs/trace_free.yaml` before running; same six datasets, cutoffs (Ghana
+  **Hb < 11.0 g/dL**; India and Italy **WHO by sex, < 12.0 women, < 13.0 men**; Moscow **< 12.0 g/dL**) and folds as F30.
+  - Within-folder model: a trace shared by a whole folder drops out of differences inside the folder. In each training
+    fold we took each label group's average out of the 29 numbers and out of Hb, fit ridge on what was left, and scored
+    the test photos as they are (their label is never used). Trusted only if it keeps the signal on at least 2 of the
+    3 clean datasets.
+  - The jump test (F30) on the Hb-number models: ridge, random forest and gradient boosting (Stage 16), and the TabPFN
+    regressor (Stage 22).
+  - The jump test on each of the 29 color numbers alone.
+  - Transfer: Ghana eyelids to India and Italy, Ghana nails to Moscow.
+  - A scratch look at the files: both Ghana eyelid folders have the same PNG layout, resolution tag and black under the
+    transparent pixels, so the trace is in the colors, not in how the files were saved.
+- **Answers:**
+  - **No trace-free Ghana number.** The within-folder model doesn't jump anywhere, but it also loses a lot on the clean
+    datasets (Italy -0.41, Moscow -0.25, India -0.15 against ordinary ridge on Hb), so by our rule it can't be trusted.
+    Its Ghana scores: eyelids 0.50, nails 0.50, palms 0.53. Taking out each folder's average throws away real pallor
+    too, because inside one folder Hb only spans a few g/dL.
+  - **The Ghana Hb number is mostly the folder.** None of the four Hb models follows Hb inside the Ghana anemic group
+    (eyelids -0.15 to 0.00, every range crosses 0), while in India (-0.26 to -0.32) and Moscow (-0.45 to -0.63) they
+    do. Gradient boosting, Stage 16's best (error 1.378 g/dL), jumps at the cutoff on the eyelids (0.72 near the cutoff
+    vs 0.62 for a steady signal, p = 0.024), and so does the TabPFN regressor (0.80 vs 0.63; also on the palms). So the
+    1.38 vs 1.71 of F19 comes mostly from getting the folder right, not from reading how low the Hb is.
+  - **Where the trace sits:** 6 of the 29 numbers jump on their own on the Ghana eyelids: saturation (mean, median),
+    blue (mean, median), green (median) and R/G. They separate the groups better near the cutoff (0.67-0.71) than on
+    everyone (0.52-0.62), which a steady signal can't do. One on the nails (hue), none on the palms, none on India,
+    Italy or Moscow.
+  - **Not one hospital:** with one of the 10 hospitals held out at a time, TabPFN still jumps (0.922 near the cutoff vs
+    0.71).
+  - **Transfer:** TabPFN trained on Ghana nails scores 0.30 on Moscow nails, worse than a coin flip; the within-folder
+    model 0.67, level with the rule (0.70). On the eyelids, no gain (India 0.51, Italy 0.47).
+- **Takeaways:**
+  - We can't split the Ghana 0.92 into anemia and trace with these photos; the honest statement stays "a mix".
+  - Tell Maria: the Ghana Hb results (F19, F22) carry the same trace. The Hb numbers in Moscow and India are the clean
+    ones.
+  - What TabPFN learns from Ghana nails runs backwards on another dataset (0.30 on Moscow).
+- **Run it yourself:** `python -m src.eyelid.trace_free` (~25 min on CPU) and `python -m src.eyelid.trace_free_hb_models`
+  (~8 min). Reports: [`reports/stage31_trace_free.md`](reports/stage31_trace_free.md),
+  [`reports/stage31_hb_models.md`](reports/stage31_hb_models.md).
+
+### F32. The same small photo edits on every dataset, and training on edited copies (Stage 32). Fragile only on Ghana.
+- **Question:** in F30 a small color edit cost TabPFN 0.2 on the Ghana eyelids, and we read that as part of the trace.
+  If TabPFN is just as fragile on the clean datasets, that reading is too strong. And does training on color-edited
+  copies make it robust?
+- **What we did:** answers fixed in `configs/edit_robustness.yaml` before running; same datasets and cutoffs as F31.
+  - F30's seven edits (brightness x0.85 and x1.15, gamma 0.8 and 1.25, 20% less saturation, two 8% white-balance
+    shifts) on the test photos of every dataset; models trained on the photos as they are.
+  - A second TabPFN trained on each training photo plus 3 copies with a random white balance, brightness, gamma and
+    saturation change (copies stay in their photo's fold). The test edits lie inside those ranges.
+  - Fragile edit: AUROC drops by at least 0.05 (range below 0) while the rule moves less than 0.02. Fragile dataset: at
+    least 4 of the 7 edits.
+- **Answers:**
+
+| Dataset | TabPFN | Edits that break it | Average cost | With edited copies | Edits that break it | Average cost | Still jumps? |
+|---|---|---|---|---|---|---|---|
+| Ghana eyelids | 0.919 | **6 of 7** | 0.21 | 0.878 | 4 | 0.05 | yes |
+| Ghana nails | 0.754 | **4 of 7** | 0.08 | 0.740 | 3 | 0.04 | yes |
+| Ghana palms | 0.866 | **7 of 7** | 0.12 | 0.865 | 4 | 0.06 | yes |
+| India eyelids | 0.648 | 0 | 0.02 | 0.575 | 0 | +0.03 | - |
+| Italy eyelids | 0.909 | 0 | 0.00 | 0.901 | 0 | 0.00 | - |
+| Moscow nails | 0.823 | 0 | 0.02 | 0.797 | 0 | 0.01 | - |
+
+  - Logistic regression and the rule hold everywhere (at most 1 edit breaks logistic regression, on India).
+- **Takeaways:**
+  - The fragility is a sign of the Ghana trace, not of TabPFN: the same model on the same numbers shrugs off the same
+    edits on India, Italy and Moscow. This was a test the F30 reading could have failed.
+  - Edited copies make TabPFN much steadier on Ghana for a small price, but the jump stays, so the trace isn't a plain
+    color cast over the whole photo.
+  - On clean data the copies aren't needed and cost a little (India -0.07, range crosses 0).
+- **Run it yourself:** `python -m src.eyelid.edit_robustness` (~65 min on CPU). Report:
+  [`reports/stage32_edit_robustness.md`](reports/stage32_edit_robustness.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -948,7 +1026,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Each palm and nail photo stored 6-12 times (copies and rotations); no Hb, age or link to the eyelid photos | Ghana palm and nails | one row per photo; linked to the eyelids in F24 through a third set |
 | The conjunctiva set re-uses 414 CP-AnemiC photos under nail- and palm-style names, undocumented | Ghana conjunctiva | matched by pixels to get Hb; the file-number link tested by color agreement (F24) |
 | In the 302 linked children, the eyelid cut-outs' size and edge softness alone predict anemia (0.69) | Ghana conjunctiva / CP-AnemiC | checked that the color models don't use it (F25); probably part of the handling trace (F30) |
-| Every model's score jumps at Hb 11.0 instead of following Hb; no-color numbers alone predict the label (0.57-0.62) | CP-AnemiC and the Ghana nail and palm sets (photos stored in Anemic / Non-anemic folders) | reported as a handling trace (F30); Ghana scores are not clean anemia numbers |
+| Every model's score jumps at Hb 11.0 instead of following Hb; no-color numbers alone predict the label (0.57-0.62) | CP-AnemiC and the Ghana nail and palm sets (photos stored in Anemic / Non-anemic folders) | reported as a handling trace (F30); Ghana scores are not clean anemia numbers. It sits in saturation, blue and green, not in the file format; it holds with a hospital held out and survives color-edited training copies (F31, F32) |
 
 ## What worked and what didn't, in one list
 
@@ -966,7 +1044,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   partly a handling trace (F30).
 - Palm photos of Ghana children (0.91 with TabPFN; it carries some Hb inside each group, but also jumps at the cutoff, F30).
 - One model for all three countries: as good as a model per country, and fair after per-country standardization.
-- The Hb number inside a dataset (Ghana error 1.38 g/dL vs 1.71 for the mean), with age and sex helping in adults.
+- The Hb number inside a dataset for adults (Moscow and India: it follows Hb inside each group), with age and sex
+  helping; in Ghana the 1.38 vs 1.71 g/dL is mostly the folder (F31).
 - Photo-quality numbers as a shortcut check (glare flags Italy's anemic batch at 0.89).
 - A vision model (DINOv2) cropping the eyelid from the full photo: nearly as good as the hand mask in Italy.
 - TabPFN for the Hb number on the Moscow nails (error 1.65 -> 1.59 g/dL).
@@ -975,6 +1054,8 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - The no-color control on combined photos: it caught a new eyelid shortcut that the color models turned out not to use
   (F25).
 - The jump test at the cutoff as a shortcut check: it flags all three Ghana sets and passes India, Italy and Moscow (F30).
+- Small photo edits as a second check: they break TabPFN only where the jump test flags a trace (F32).
+- Training TabPFN on color-edited copies: the Ghana eyelid edit cost falls from 0.21 to 0.05, for 0.04 (F32).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
@@ -998,13 +1079,17 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Fingernail and skin numbers together for a trained model (TabPFN +0.002; F28).
 - TabPFN on a differently processed batch of Ghana eyelid photos: 0.59, below the plain rule (0.67; F29).
 - DINOv2 or VisionFM features next to the color numbers: TabPFN gets 0.01-0.02 worse (F26).
-- TabPFN and gradient boosting under small color edits: 0.15-0.26 lost, while the rule holds (F30).
+- TabPFN and gradient boosting under small color edits: 0.15-0.26 lost, while the rule holds (F30); only on the
+  Ghana sets (F32).
+- A within-folder model, to get a Ghana number without the trace: it loses 0.15-0.41 on clean data too (F31).
+- The Hb number in Ghana: no model follows Hb inside the anemic group, and the best one jumps at the cutoff (F31).
 
 **Still open**
 - Why the linked Ghana eyelid cut-outs' shape predicts anemia (0.69; F25).
 - How many Ghana file-number matches are wrong (only the authors' sheet can say; wrong ones inflate the gain, F25).
 - What exactly differs between the Ghana anemic and healthy photo folders (F30 answered F27: the score reads
-  something tied to the label, not only Hb).
+  something tied to the label, not only Hb). F31-F32 narrowed it: saturation, blue and green, not the file format,
+  not one hospital, and not a plain color cast over the whole photo.
 - The deeper eyelid fold in India (F2): real but borderline, needs new Indian photos.
 
 ## What's next
@@ -1016,7 +1101,11 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Catch rate by Hb severity | done (F27): flat across bands; the score doesn't rank by Hb | - |
 | Full audit of the TabPFN result | done (F29): no leak, reads redness; doesn't hold on a differently processed batch | - |
 | Does the score read anemia or photo handling? | done (F30): Ghana partly handling; India, Italy, Moscow pass | - |
-| Re-plan the image side after F30 | proposed, waiting for the team | team |
+| Re-plan the image side after F30 | proposed, waiting for the team (F31-F32 done meanwhile) | team |
+| A Ghana number without the trace | tried (F31): not possible with this data | - |
+| The same photo edits on every dataset; edited training copies | done (F32): fragile only on Ghana; copies help | - |
+| Tell Maria the Ghana Hb results carry the trace (F31) | to do | Jaineel |
+| A paper section on the trace and the two checks (jump test, edit test) | next | team |
 | Fingernails: nail and skin numbers side by side as one input | done (F28): no gain for the models, +0.05 for the untrained rule | - |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |

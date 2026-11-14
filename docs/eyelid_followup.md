@@ -793,3 +793,26 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   So the Ghana scores are partly a handling trace, and "table beats vision" doesn't hold as a claim about anemia.
 - **Checks:** 70 tests pass (4 new); smoke run with stand-in models; Stage 30 at clean commit `1874d5f`, vision
   follow-up at `6e11bd0`.
+
+### Step 29 (Stage 31): can the trace be taken out? Does it reach the Hb number?
+- **Why:** Jaineel (2026-11-14): "try whatever research you think is a good idea for next steps and keep going".
+  After Stage 30: how much of the Ghana score is real, and do the Hb-number models (Stages 16 and 22) carry the trace?
+- **What:** `src/eyelid/trace_free.py`, `configs/trace_free.yaml`: a within-folder ridge (each label group's average
+  taken out before fitting), the jump test on ridge and the TabPFN regressor for Hb, on each single color number, and
+  transfer to another dataset. Follow-up for Stage 16's forest and boosting: `src/eyelid/trace_free_hb_models.py`.
+- **Result:** the within-folder ridge loses 0.15-0.41 on the clean datasets too, so no trace-free Ghana number. No
+  Ghana Hb model follows Hb inside the anemic group; boosting (Stage 16's best, 1.378 g/dL) and the TabPFN regressor
+  jump at the cutoff. Six eyelid numbers (saturation, blue, green, R/G) separate best near the cutoff.
+- **Checks:** 75 tests pass (5 new); smoke run with stand-in TabPFN; Stage 31 at clean commit `82d7e29`, follow-up at
+  `a83ee4c` (smoke-run on Italy first).
+
+### Step 30 (Stage 32): small photo edits on every dataset, and edited training copies
+- **Why:** Stage 30 read TabPFN's 0.2 loss under small edits on Ghana as part of the trace; that reading fails if
+  TabPFN is just as fragile on the clean datasets.
+- **What:** `src/eyelid/edit_robustness.py`, `configs/edit_robustness.yaml`: Stage 30's seven edits on every dataset,
+  and a TabPFN trained on each photo plus 3 randomly color-edited copies.
+- **Result:** TabPFN breaks on 6, 4, 7 of 7 edits on the Ghana eyelids, nails and palms, and on 0 of 7 on India, Italy
+  and Moscow. Edited copies cut the Ghana eyelid cost from 0.21 to 0.05 for 0.04 of AUROC; the jump stays.
+- **Checks:** 79 tests pass (4 new); smoke run with a stand-in TabPFN. The first real run stopped on TabPFN's
+  1000-row CPU guard (the stand-in had hidden it); the guard was lifted for the copies model only, and the run
+  finished at clean commit `a83ee4c`.

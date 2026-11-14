@@ -38,6 +38,8 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Does the Ghana eyelid model catch the sickest children? | **no more than the mild ones**: severe 81%, moderate 73%, mild 79% caught; inside the anemic group the score doesn't follow Hb (Section 6.12) |
 > | Is the TabPFN eyelid result cheating? | **no**: shuffled labels at chance, redness alone 0.88, no model-choice optimism; but on 61 differently processed Ghana photos it drops to 0.59, below the plain rule (0.67) (Section 6.14) |
 > | Does the score read anemia, or how the photos were handled? | **Ghana: partly the handling.** Every model's Ghana score jumps at the Hb 11 cutoff instead of following Hb (TabPFN near the cutoff 0.94, a steady signal would give 0.72); India, Italy and Moscow pass. A 15% brightness change costs TabPFN 0.21. So the Ghana 0.92 is not a clean anemia number (Section 6.15) |
+> | Can the trace be taken out, and does it reach the Hb number? | **No clean Ghana number with this data**: a model trained only on differences inside each folder also loses 0.15-0.41 on the clean datasets. No Ghana Hb model follows Hb inside the anemic group and the best one jumps at the cutoff, so the Ghana Hb error (1.38 vs 1.71 g/dL) is mostly the folder (Section 6.16) |
+> | Is TabPFN fragile everywhere? | **Only on the Ghana sets**: small color edits break it on 4-7 of 7 edits there and on none of 7 in India, Italy and Moscow. Training on color-edited copies cuts the Ghana eyelid cost from 0.21 to 0.05, but the jump stays (Section 6.17) |
 > | Is the combined Ghana result fair and free of shortcuts? | fair: no gap between girls and boys or younger and older children widens. But the eyelid cut-outs' size and shape alone score **0.69**, a shortcut; the color models don't use it (Section 6.10) |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
@@ -502,6 +504,8 @@ everyone, no sex column). TabPFN's regressor is compared with Stage 16's regress
 - **Elsewhere it ties the best Stage 16 regressor.** In Ghana it is 1.44 vs 1.38 for gradient boosting, but it ranks
   a little better (0.821 vs 0.802). That is still well below TabPFN's yes/no model (0.919).
 - So for Ghana the yes/no model stays the better screen; the Hb number is the portable output.
+- **Later caveat (Section 6.16):** the Ghana Hb estimates don't follow Hb inside the anemic group, and those of
+  gradient boosting and TabPFN jump at the cutoff, so the Ghana Hb errors are mostly the folder trace.
 
 **A vision model that crops the eyelid (Stage 23).** The datasets come with the eyelid already cut out by hand. Only
 Eyes-Defy also has the full photos (India 94, Italy 121; 2 broken masks left out).
@@ -746,6 +750,68 @@ Section 6.14 can't see it. The jump test itself is a cheap check for any dataset
 Run: `python -m src.eyelid.handling_check` (~1 h on CPU) and `python -m src.eyelid.handling_check_vision`. Reports:
 [`reports/stage30_handling_check.md`](reports/stage30_handling_check.md), [`reports/stage30_vision.md`](reports/stage30_vision.md).
 
+### 6.16 Can the trace be taken out? And does it reach the Hb number? (Stage 31)
+
+A trace shared by a whole label folder drops out of differences inside the folder. The **within-folder model** uses
+only those: in each training fold each label group's average is taken out of the 29 numbers and out of Hb, ridge is
+fit on what is left, and the test photos are scored as they are. Same datasets, folds and cutoffs as Section 6.15
+(Ghana children **Hb < 11.0 g/dL**; India and Italy **WHO by sex, < 12.0 women, < 13.0 men**; Moscow **< 12.0 g/dL**
+for everyone); answers fixed before running (`configs/trace_free.yaml`). It counts as trusted only if it keeps the
+signal on at least 2 of the 3 clean datasets.
+
+| Dataset | Ridge on Hb | Within-folder ridge | Change [95% CI] | Jumps? |
+|---|---|---|---|---|
+| Ghana eyelids (388) | 0.672 | 0.495 | -0.177 [-0.254, -0.103] | no |
+| Ghana nails (302) | 0.622 | 0.498 | -0.124 [-0.197, -0.050] | no |
+| Ghana palms (302) | 0.652 | 0.531 | -0.121 [-0.206, -0.040] | no |
+| India eyelids (95) | 0.699 | 0.553 | -0.145 [-0.291, -0.002] | no |
+| Italy eyelids (122) | 0.936 | 0.530 | -0.406 [-0.547, -0.265] | no |
+| Moscow nails (250) | 0.803 | 0.557 | -0.246 [-0.335, -0.162] | no |
+
+- **Not trusted, so no trace-free Ghana number.** The model loses as much on the clean datasets as on Ghana: inside
+  one label group Hb spans only a few g/dL, so taking out each group's average throws away real pallor too.
+- **The Hb-number models carry the trace.** None of Stage 16's three regressors or the TabPFN regressor follows Hb
+  inside the Ghana anemic group (eyelids -0.15 to 0.00, every CI crosses 0), while in India (-0.26 to -0.32) and
+  Moscow (-0.45 to -0.63) all four do. Gradient boosting, Stage 16's best Ghana model (error 1.378 g/dL), jumps at the
+  cutoff on the eyelids (0.72 near the cutoff vs 0.62, p = 0.024), as does the TabPFN regressor (0.80 vs 0.63; palms
+  too). So the Ghana Hb error of 1.38 vs 1.71 comes mostly from getting the folder right.
+- **Where the trace sits.** Six single numbers jump on the Ghana eyelids: saturation (mean, median), blue (mean,
+  median), green (median) and R/G. Each separates the groups better near the cutoff (0.67-0.71) than on everyone
+  (0.52-0.62), which no steady signal can do. One number jumps on the nails, none on the palms or the clean datasets.
+  The two eyelid folders store their files the same way (PNG layout, resolution tag, black under transparent pixels;
+  a scratch check), and TabPFN still jumps with one of the 10 hospitals held out (0.922 vs 0.71).
+- **Transfer.** Trained on Ghana nails, TabPFN scores 0.30 on Moscow nails, worse than a coin flip; the within-folder
+  model 0.67, level with the rule (0.70). On eyelids it doesn't help (India 0.51, Italy 0.47).
+
+Run: `python -m src.eyelid.trace_free` (~25 min on CPU), `python -m src.eyelid.trace_free_hb_models` (~8 min).
+Reports: [`reports/stage31_trace_free.md`](reports/stage31_trace_free.md),
+[`reports/stage31_hb_models.md`](reports/stage31_hb_models.md).
+
+### 6.17 Is TabPFN fragile to small photo edits everywhere? (Stage 32)
+
+Section 6.15's seven edits (brightness x0.85 and x1.15, gamma 0.8 and 1.25, 20% less saturation, two 8% white-balance
+shifts) on the test photos of every dataset; models trained on the photos as they are. A second TabPFN is trained on
+each photo plus 3 copies with a random white balance, brightness, gamma and saturation change inside those ranges.
+An edit breaks a model if it costs at least 0.05 (CI below 0) while the rule moves less than 0.02; answers fixed
+before running (`configs/edit_robustness.yaml`).
+
+| Dataset | TabPFN | Edits that break it | Average cost | With edited copies | Edits that break it | Average cost | Still jumps? |
+|---|---|---|---|---|---|---|---|
+| Ghana eyelids | 0.919 | **6 of 7** | 0.21 | 0.878 | 4 | 0.05 | yes |
+| Ghana nails | 0.754 | **4 of 7** | 0.08 | 0.740 | 3 | 0.04 | yes |
+| Ghana palms | 0.866 | **7 of 7** | 0.12 | 0.865 | 4 | 0.06 | yes |
+| India eyelids | 0.648 | 0 | 0.02 | 0.575 | 0 | +0.03 | - |
+| Italy eyelids | 0.909 | 0 | 0.00 | 0.901 | 0 | 0.00 | - |
+| Moscow nails | 0.823 | 0 | 0.02 | 0.797 | 0 | 0.01 | - |
+
+The fragility belongs to the Ghana data, not to TabPFN: the same model on the same numbers shrugs off the same edits
+on India, Italy and Moscow, while logistic regression and the rule hold everywhere. That was a prediction the trace
+reading of Section 6.15 could have failed. Training on edited copies makes TabPFN much steadier on Ghana for a small
+price, but the jump stays, so the trace is not a plain color cast over the whole photo.
+
+Run: `python -m src.eyelid.edit_robustness` (~65 min on CPU). Report:
+[`reports/stage32_edit_robustness.md`](reports/stage32_edit_robustness.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -763,6 +829,8 @@ Run: `python -m src.eyelid.handling_check` (~1 h on CPU) and `python -m src.eyel
 5. Test on a different dataset or country before trusting a number.
 6. Check that the score follows the measured Hb and doesn't jump at the label cutoff (Section 6.15). A jump means the
    photos carry the label in something other than the disease, for example how each label's photos were handled.
+7. Edit the test photos a little (brightness, white balance) and see whether the score holds (Section 6.17). A model
+   that breaks while the plain rule doesn't is reading something more delicate than pallor.
 
 ## 8. Ethics and data use
 
@@ -928,6 +996,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Catch rate by Hb severity; fingernail + skin (Sections 6.12, 6.13) | done: flat catch rate; no gain for the models |
 | Full audit of the TabPFN eyelid result (Section 6.14) | done: no leak; drops on a differently processed batch |
 | Anemia or photo handling? (Section 6.15) | done: the Ghana scores are partly a handling trace; India, Italy, Moscow pass |
+| Taking the trace out; the trace in the Hb models (Section 6.16) | done: no clean Ghana number possible; the Ghana Hb results carry the trace |
+| The same photo edits on every dataset; edited training copies (Section 6.17) | done: TabPFN fragile only on Ghana; copies cut the cost |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 

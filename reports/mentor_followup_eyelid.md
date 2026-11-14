@@ -37,12 +37,14 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Does adding age and sex to the photo help? (2026-11-03) | **Not for yes/no; yes for the Hb number in adults** | Ghana 0.919 -> 0.918; India Hb error 1.45 -> 1.29 g/dL |
 | Does screening out bad photos help? (2026-10-31) | **No gain, but glare flags Italy's anemic batch** | best-model change +0.00 to +0.02; Italy glare alone 0.89 |
 | Can a vision model crop the eyelid itself? (2026-10-31) | **Yes in Italy, looser in India** | overlap with the hand mask 0.75 / 0.66; Italy TabPFN 0.902 vs 0.909 |
-| Does TabPFN estimate the Hb number better? | **Only on the Moscow nails** | error 1.65 -> 1.59 g/dL; Ghana level (1.44 vs 1.38) |
+| Does TabPFN estimate the Hb number better? | **Only on the Moscow nails**; in Ghana the Hb estimates are mostly the folder (Stage 31) | error 1.65 -> 1.59 g/dL; Ghana level (1.44 vs 1.38) |
 | Does the same child's nail and palm add to the eyelid? (2026-11-03) | **A little; pretend pairs overstate it 3x** | TabPFN 0.913 -> 0.931 (CI crosses 0); pretend 0.967 |
 | Is that combined result fair, and free of shortcuts? | **Fair by sex and age; one shortcut, not used** | no gap widens; eyelid cut-out shape alone 0.69; color still 0.90-0.93 inside each shape third |
 | Does DINOv2 help if we fine-tune it, or give its features to TabPFN? (2026-11-03) | **No** | fine-tuned 0.690 (frozen 0.672); color + DINOv2 0.897 vs color alone 0.919 |
 | Is the TabPFN result (0.92) cheating? (Stage 29) | **No leak**, but it drops on a differently processed batch | shuffled labels max 0.58; 61 other Ghana photos 0.59 (rule 0.67) |
 | Is the score reading anemia, or how the photos were handled? (Stage 30) | **Ghana: partly the handling.** Every model's Ghana score (TabPFN and the vision models) jumps at Hb 11.0 instead of following Hb; India, Italy and Moscow don't | Ghana near the cutoff 0.94 vs 0.72 for a steady signal; a 15% brightness change costs TabPFN 0.21 |
+| Can the trace be taken out to give a clean Ghana number? Does it reach the Hb number? (Stage 31) | **No clean number with this data; yes, the Ghana Hb models carry it** | within-folder model loses 0.15-0.41 on clean data too; no Ghana Hb model follows Hb inside the anemic group; boosting Hb model near the cutoff 0.72 vs 0.62 |
+| Is TabPFN fragile to small photo edits everywhere? (Stage 32) | **Only on the Ghana sets** | edits that break it: Ghana 6, 4, 7 of 7; India, Italy, Moscow 0 of 7; color-edited training copies cut the Ghana cost 0.21 -> 0.05 |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak. Stage 30 later showed that part of that color is a trace of
