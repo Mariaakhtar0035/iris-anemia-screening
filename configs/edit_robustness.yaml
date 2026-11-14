@@ -1,0 +1,49 @@
+# Stage 32: is TabPFN fragile to small photo edits on every dataset, or only on Ghana? Do color-edited training copies
+# fix it, and do they take the Ghana folder trace away?
+# Jaineel 2026-11-14: "try whatever research you think is a good idea for next steps and keep going".
+# Why: Stage 30 B found TabPFN loses 0.20-0.26 AUROC on Ghana eyelids when the test photos get a small edit (brightness
+# x0.85 and so on) while the redness rule barely moves, and we read that as part of the folder-trace story. If TabPFN is
+# just as fragile on the clean datasets, the fragility is about reading absolute color, not the trace, and that reading
+# of Stage 30 B is too strong. Either way a phone screener has to survive small lighting changes.
+#
+# Cutoffs, one per dataset, never mixed (as Stage 30):
+#   Ghana eyelids (CP-AnemiC, the 388 photos with no copy), Ghana nails and palms (the 302 linked children of Stage 24):
+#     children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml).
+#   India and Italy eyelids (Eyes-Defy adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml);
+#     pregnancy not recorded.
+#   Moscow fingernails (250 adults, no sex column): Hb < 12.0 g/dL for everyone (nails.yaml, Jaineel 2026-10-23).
+# Input: the same 29 color numbers, recomputed on the edited pixels (eyelid / nail / palm cut-outs; Moscow: the three
+# nail boxes of each photo). Splits: 5-fold CV x 5 repeats by photo / patient / child, scores averaged over repeats.
+#
+# Test edits: Stage 30's seven fixed edits from handling_check.yaml (brightness x0.85 and x1.15, gamma 0.8 and 1.25,
+# saturation 0.8, white balance R x1.08 B x0.92 and the reverse); batch61 is left out (it is Ghana-only). Models are
+# trained on the photos as they are and scored on the edited test photos.
+# Edited training copies: every training photo plus n_copies copies of it, each with its own random white balance,
+# brightness, gamma and saturation edit (applied in that order) drawn from the ranges below (log-uniform for the
+# multiplying ones, uniform for saturation), seeded per photo. A copy keeps the photo's label and stays in its fold, so
+# it is never scored. The fixed test edits all lie inside these ranges: this is the in-range case (lighting changes of
+# a known size), not an unseen kind of change.
+# Models: dummy, the untrained rule (minus mean a*), logistic regression (color.yaml), the TabPFN v2 classifier
+# (ceiling.yaml), and the same TabPFN fit on the photos plus their edited copies.
+#
+# Answers, fixed before running:
+#   - An edit is "fragile" for a model if its AUROC change (edited minus unedited test photos, paired) has CI below 0 and
+#     estimate <= -fragile_drop, while the rule's change is above -rule_stable_drop (Stage 30's definition).
+#   - TabPFN "is fragile on a dataset" if at least min_fragile of the 7 edits are fragile for it.
+#   - The edited copies "make TabPFN robust" on a dataset if none of the 7 edits is fragile for the copies model, and
+#     "keep its accuracy" if its unedited AUROC minus plain TabPFN's (paired) has estimate > -keep_drop.
+#   - On a Ghana set, the copies "remove the jump" if the copies model's Stage 30 jump test gives p >= 0.025
+#     (handling_check.yaml settings).
+datasets: [ghana_eyelid, ghana_nail, ghana_palm, india_eyelid, italy_eyelid, moscow_nail]
+cv: {n_splits: 5, n_repeats: 5}
+n_copies: 3
+ranges:
+  red_gain: [0.9, 1.1]
+  blue_gain: [0.9, 1.1]
+  brightness: [0.8, 1.25]
+  gamma: [0.8, 1.25]
+  saturation: [0.8, 1.0]
+fragile_drop: 0.05
+rule_stable_drop: 0.02
+min_fragile: 4
+keep_drop: 0.05
