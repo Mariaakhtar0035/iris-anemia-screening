@@ -1,0 +1,47 @@
+# Stage 31: how much of the Ghana score is real anemia signal once the folder trace is taken out?
+# Jaineel 2026-11-14: "try whatever research you think is a good idea for next steps and keep going".
+# Why: Stage 30 showed the Ghana scores (eyelids, nails, palms) jump at the Hb cutoff, so part of them reads how each
+# label folder was photographed, edited or picked. The file details are the same in both Ghana eyelid folders (PNG
+# chunks, the resolution tag, black under transparent pixels; scratch check 2026-11-14), so the trace is in the colors.
+#
+# Idea: a folder trace is shared by everyone in that folder, so it drops out of differences inside a folder. Within-folder
+# ridge (a fixed-effects estimator): in each training fold, subtract each label group's mean from the 29 numbers and from
+# Hb minus the cutoff, fit ridge on that, then score the test photos as they are (their label is never used). Its weights
+# come only from how color follows Hb inside each folder, so the folder gap can't be learned as a switch. Linear on
+# purpose: a test photo's folder is unknown, so a model must score raw photos with weights learned on centred ones.
+#
+# Cutoffs, one per dataset, never mixed (as Stage 30):
+#   Ghana eyelids (CP-AnemiC, the 388 photos with no copy), Ghana nails and palms (the 302 linked children of Stage 24):
+#     children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml).
+#   India and Italy eyelids (Eyes-Defy adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml);
+#     pregnancy not recorded.
+#   Moscow fingernails (250 adults, no sex column): Hb < 12.0 g/dL for everyone (nails.yaml, Jaineel 2026-10-23).
+# Regression target: Hb minus the person's own cutoff (the same as Hb in Ghana and Moscow, where everyone shares one
+# cutoff). Score = minus the estimate, so a lower estimated Hb means more likely anemic.
+# Input: the same 29 color numbers. Splits: 5-fold CV x 5 repeats by photo / patient / child (linked Ghana children
+# sharing a photo stay in one fold); Ghana eyelids also leave one hospital out.
+# Models: dummy, the untrained rule (minus mean a*), ridge on Hb (Stage 16, hb_regression.yaml), the TabPFN v2 regressor
+# on Hb (Stage 22), the TabPFN v2 classifier (Stage 9), and the within-folder ridge (new, same ridge settings).
+# Jump test: Stage 30's A1, settings from handling_check.yaml (within 1 g/dL, 2000 reference draws, p < 0.025).
+#
+# Answers, fixed before running:
+#   A. The within-folder ridge is "free of the jump" on a dataset if the jump test gives p >= 0.025.
+#      On the clean datasets (no jump in Stage 30: India, Italy, Moscow) it "keeps the signal" if its AUROC minus the
+#      ridge-on-Hb AUROC (paired bootstrap, same folds) has estimate > -keep_drop and CI upper bound > 0.
+#      Ghana's trace-free number = the within-folder ridge AUROC on a Ghana set, stated only if it is free of the jump
+#      there and keeps the signal on at least min_clean_kept of the 3 clean datasets (else: no trace-free number).
+#   B. Transfer: fit on all of one dataset, apply unchanged to another: Ghana eyelids -> India eyelids and -> Italy
+#      eyelids; Ghana nails -> Moscow nails. The within-folder ridge "transfers better" if its AUROC minus the TabPFN
+#      classifier's AUROC (paired, same test photos) has CI lower bound > 0.
+#   C. A Hb-number model (ridge or TabPFN regressor on Hb) "carries the trace" on a dataset if its score jumps.
+#   D. A single color number jumps if p < p_max / 29 (Bonferroni over the 29 numbers); each number is turned so that
+#      higher = more anemic on that dataset, with its own AUROC as the reference's target.
+datasets: [ghana_eyelid, ghana_nail, ghana_palm, india_eyelid, italy_eyelid, moscow_nail]
+clean: [india_eyelid, italy_eyelid, moscow_nail]
+cv: {n_splits: 5, n_repeats: 5}
+keep_drop: 0.05
+min_clean_kept: 2
+transfer:
+  - [ghana_eyelid, india_eyelid]
+  - [ghana_eyelid, italy_eyelid]
+  - [ghana_nail, moscow_nail]
