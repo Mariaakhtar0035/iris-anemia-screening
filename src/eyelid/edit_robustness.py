@@ -12,6 +12,8 @@ import json
 import numpy as np
 import pandas as pd
 from PIL import Image
+from tabpfn import TabPFNClassifier
+from tabpfn.constants import ModelVersion
 
 from src.common.evaluate import auroc_change, summarize
 from src.common.io import ROOT, load_config, save_results
@@ -96,7 +98,11 @@ def main():
                "ceiling": ceiling_cfg}
     rng = np.random.default_rng(seed)
     ladder = ladder_models(color_cfg, probe_cfg, ceiling_cfg, seed)
-    makers = {m: ladder[m][1] for m in ("dummy", "logistic_regression", "tabpfn")} | {COPIES: ladder["tabpfn"][1]}
+    tab = ceiling_cfg["tabpfn"]
+    makers = {m: ladder[m][1] for m in ("dummy", "logistic_regression", "tabpfn")} | {
+        COPIES: lambda: TabPFNClassifier.create_default_for_version(
+            ModelVersion.V2, model_path=ROOT / tab["model_path"], device=tab["device"], random_state=seed,
+            **cfg["copies_tabpfn"])}
     a_col = feature_names().index(color_cfg["rule_feature"])
     edits = [e for e in edit_list(jump_cfg, (1.0, 1.0, 1.0)) if e[1] != "gains"]  # batch61 is Ghana-only
     data = datasets(cfg, base, color_cfg, seed)

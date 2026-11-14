@@ -43,6 +43,10 @@ ranges:
   brightness: [0.8, 1.25]
   gamma: [0.8, 1.25]
   saturation: [0.8, 1.0]
+# Added after the first run stopped before any result: TabPFN refuses more than 1000 training rows on CPU by default
+# (a speed guard). The copies model trains on up to about 1240 rows (Ghana eyelids, 4 x ~310), well inside TabPFN v2's
+# 10,000-row pretraining range, so the guard is lifted for that model only; plain TabPFN is unchanged (ceiling.yaml).
+copies_tabpfn: {ignore_pretraining_limits: true}
 fragile_drop: 0.05
 rule_stable_drop: 0.02
 min_fragile: 4
