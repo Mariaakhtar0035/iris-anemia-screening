@@ -1,0 +1,57 @@
+# Stage 30: is the score reading anemia (Hb), or how the photos were taken, cut out or saved?
+# Jaineel 2026-11-14: "can we audit this though and make sure it is seeing only anemia" / "yes do stage 30".
+# Why: TabPFN beats the redness rule by about +0.3 only on the Ghana sets (eyelid, palm, nail; one research group, photos
+# stored in Anemic / Non-anemic folders), not on Italy or India; its Ghana score flags 79% of children at Hb 10-11 but 8%
+# at Hb 11-12 (Stage 27), and doesn't follow Hb inside either group. Paleness changes gradually with Hb, so it can't
+# jump at a cutoff that is a convention.
+#
+# Data and labels (one cutoff per dataset, never mixed):
+#   Ghana eyelids: CP-AnemiC, the 388 photos with no copy, children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml).
+#   Ghana nails and palms: the 302 linked children of Stage 24 (ghana_link.yaml), Hb from the CP-AnemiC sheet,
+#     anemic = Hb < 11.0 g/dL. Their eyelids are CP-AnemiC photos, so they are not scored again.
+#   India and Italy eyelids: Eyes-Defy adults, WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml);
+#     pregnancy not recorded.
+#   Moscow fingernails: Yakimov et al. 2024, 250 adults, Hb < 12.0 g/dL for everyone (nails.yaml, no sex column).
+# Input: the same 29 color numbers as every stage. Models: TabPFN v2 and gradient boosting (ceiling.yaml), and the
+# untrained redness rule (minus mean a*). Folds as before: 5-fold CV x 5 repeats by photo / patient / child.
+# Every answer below was fixed before running.
+datasets: [ghana_eyelid, ghana_nail, ghana_palm, india_eyelid, italy_eyelid, moscow_nail]
+cv: {n_splits: 5, n_repeats: 5}
+
+# A1. Jump at the cutoff. z = Hb minus the person's own cutoff. "Near the cutoff" = anemic with z in [-window, 0)
+#     against healthy with z in [0, window). Reference: a score that falls steadily with Hb (score = -z + noise), the
+#     noise set so its AUROC on all people equals the model's own, n_sims draws on the same people. No Hb measurement
+#     error is added, which makes the reference as steep near the cutoff as a steady signal can be (the strictest
+#     comparison for us). Answer: "jumps at the cutoff" if the model's near-cutoff AUROC is above all but p_max of the
+#     reference draws. Also reported: rank correlation of the score with Hb inside each group (a pallor reader stays
+#     negative; the reference's median is shown next to it). Skipped when either side has fewer than min_side people.
+window_g_dl: 1.0
+n_sims: 2000
+p_max: 0.025
+min_side: 8
+
+# A3. Do the photos carry Hb inside each group? TabPFN v2 regressor (hb_tabpfn.yaml weights) on the 29 numbers, trained
+#     and tested inside the anemic group only, then inside the healthy group only (cv_light). Answer: "carries Hb" if
+#     the rank correlation of the held-out estimate with the real Hb has its CI above 0.
+# A2. Handling numbers only, no color: width, height, shape of the cut-out, share of soft-edge pixels, sharpness
+#     (Laplacian variance as Stage 21), region size, file bytes per pixel and per region pixel. TabPFN, cv_light.
+#     Answer: "the photos carry the label outside the color" if the AUROC CI is above 0.5. Not run on Moscow (nail
+#     boxes inside one full photo from a fixed light box, not cut-outs).
+# cv_light: fewer repeats, to keep the run near an hour on CPU.
+cv_light: {n_splits: 5, n_repeats: 1}
+
+# B. Edits (Ghana eyelids only): each fold's models are trained on the photos as they are, then score edited copies of
+#    the test photos. Edits act on the eyelid pixels (RGB in 0-1): brightness gain, gamma (rgb ** g), saturation (blend
+#    with the pixel's gray level), white balance (R and B gains), and batch61: per-channel gains that move the mean
+#    color of the 388 photos to the mean of the 61 never-used photos of Stage 29 (no labels used; that batch is 84%
+#    anemic, so part of its color gap is anemia, not processing).
+#    Answer: TabPFN is "fragile" to an edit if its AUROC change has CI below 0 and estimate <= -fragile_drop while the
+#    rule's change estimate stays above -rule_stable_drop.
+edits:
+  brightness: [0.85, 1.15]
+  gamma: [0.8, 1.25]
+  saturation: [0.8]
+  white_balance: [[1.08, 0.92], [0.92, 1.08]]   # [R gain, B gain]: warmer, cooler
+  batch61: [true]
+fragile_drop: 0.05
+rule_stable_drop: 0.02
