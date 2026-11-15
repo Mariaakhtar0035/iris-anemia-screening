@@ -1,0 +1,37 @@
+# Stage 34: where in the photo is the Ghana folder trace: at the edge of the cut-out, or all through it?
+# Jaineel 2026-11-15: "continue researching!".
+# Why: Stage 30 A2 found the Ghana cut-outs give the label away with no color at all (size, shape, sharpness, file bytes:
+# AUROC 0.57-0.62), and Stage 25 found the eyelid cut-out shape alone gives 0.69. If each folder was cut out by a
+# different hand or tool, the cut-out edge (where the eyelid skin and lashes start) is where the color numbers would
+# pick that up. Stage 32 found a random color cast doesn't take the jump away, which fits an edge trace.
+#
+# Cutoffs, one per dataset, never mixed (as Stages 30-33):
+#   Ghana eyelids (CP-AnemiC, the 388 photos with no copy), Ghana nails and palms (the 302 linked children of Stage 24):
+#     children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml).
+#   India and Italy eyelids (Eyes-Defy adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml);
+#     pregnancy not recorded.
+# Moscow nails are left out: their regions are boxes inside one full light-box photo, not cut-outs, so there is no cut-out
+# edge to test.
+#
+# A. Core and ring. Inside each cut-out (the fully opaque pixels, as every stage), each pixel's distance to the nearest
+#    pixel outside the cut-out. Core = the core_share of pixels farthest from the edge; ring = the rest. The same 29
+#    color numbers on the core only and on the ring only. Models: dummy, the untrained rule (minus mean a*), logistic
+#    regression (color.yaml) and the TabPFN v2 classifier (ceiling.yaml), 5-fold CV x 5 repeats by photo / child, on the
+#    whole cut-out, the core and the ring. Stage 30's jump test (handling_check.yaml settings) on each.
+# B. Which handling number jumps: Stage 30 A2's handling numbers (no color: size, shape, soft-edge share, sharpness,
+#    file bytes), each alone, turned so higher = more anemic, through Stage 30's jump test (as Stage 31 D did for the
+#    color numbers).
+#
+# Answers, fixed before running:
+#   - On a Ghana set, "the trace sits at the cut-out edge" if TabPFN on the core does not jump (p >= p_max) while TabPFN on
+#     the ring does; "all through the cut-out" if both jump; "in the core, not the edge" if only the core jumps; "no
+#     jump in either part" if neither does.
+#   - The core "keeps the clean signal" on India / Italy for a model if its AUROC minus the whole cut-out's (paired) has
+#     estimate > -keep_drop and CI upper end > 0 (Stage 31's rule; the core can't add label information).
+#   - A handling number "jumps" if its p < p_max / (number of handling numbers) (Bonferroni, as Stage 31 D).
+datasets: [ghana_eyelid, ghana_nail, ghana_palm, india_eyelid, italy_eyelid]
+clean: [india_eyelid, italy_eyelid]
+cv: {n_splits: 5, n_repeats: 5}
+models: [dummy, logistic_regression, tabpfn]
+core_share: 0.5
+keep_drop: 0.05
