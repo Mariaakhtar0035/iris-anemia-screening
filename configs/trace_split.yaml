@@ -1,0 +1,64 @@
+# Stage 33: how much of each score is real? Split it into the part that follows Hb smoothly and a step at the cutoff.
+# Jaineel 2026-11-15: "continue researching!" (after Stages 31-32).
+# Why: Stage 31 could not build a model free of the Ghana folder trace (the within-folder ridge also lost on the clean
+# data), so the share of the Ghana score that is real anemia signal is still unknown. Here the trace is measured instead
+# of avoided. Pallor changes smoothly with Hb, so a pallor reader's average score has no step exactly at the anemia
+# cutoff (a convention); a step there is the folder trace (the regression-discontinuity idea). Taking the step out of
+# every anemic person's score leaves the part that follows Hb; its AUROC is the trace-free estimate.
+#
+# Cutoffs, one per dataset, never mixed (as Stages 30-32):
+#   Ghana eyelids (CP-AnemiC, the 388 photos with no copy), Ghana nails and palms (the 302 linked children of Stage 24):
+#     children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml).
+#   India and Italy eyelids (Eyes-Defy adults): WHO by sex, women < 12.0, men < 13.0 g/dL (cross_dataset.yaml);
+#     pregnancy not recorded.
+#   Moscow fingernails (250 adults, no sex column): Hb < 12.0 g/dL for everyone (nails.yaml, Jaineel 2026-10-23).
+# Input: the same 29 color numbers. Models: dummy, logistic regression (color.yaml), gradient boosting and the TabPFN v2
+# classifier (ceiling.yaml), and the untrained rule (minus mean a*). 5-fold CV x 5 repeats by photo / patient / child,
+# held-out scores averaged over repeats (as Stage 30).
+#
+# A. The split, on every dataset. Each model's score is put on one scale (ranks mapped to a standard normal: same order,
+#    same AUROC). z = Hb minus the person's cutoff. Step = anemic side minus healthy side at z = 0, from score = a + b z +
+#    step x anemic (one slope for both sides) fit on everyone within window_g_dl of the cutoff. Trace-free score = score minus the step for every
+#    anemic person. Reported with bootstrap CIs (people resampled, the step refit each time): the step, the AUROC, the
+#    trace-free AUROC, their paired change, and the real-signal share = (trace-free AUROC - 0.5) / (AUROC - 0.5) (only
+#    where the AUROC CI is above 0.5). Scores with fewer distinct values than half the people (the dummy) are not split:
+#    moving their anemic scores by any step reorders the ties by label.
+#    Assumes the trace moves every anemic score by about the same amount and the real signal is close to a straight line
+#    in Hb within the window on each side.
+# B. Planted folder trace, on the clean datasets: the anemic photos only get one mild edit (as if that folder had been
+#    saved differently), the 29 numbers are recomputed on the edited pixels, every model is retrained (same folds). Then:
+#    did the plant raise the model's AUROC (gain = planted minus unplanted, paired), does Stage 30's jump test
+#    (handling_check.yaml settings) flag it, and does the split get back the unplanted AUROC (recovery = trace-free AUROC
+#    of the planted score minus the unplanted AUROC, paired). All three plants lie inside Stage 32's lighting ranges.
+#
+# Answers, fixed before running:
+#   - The split "keeps the clean signal" for a model on a clean dataset if its paired change (trace-free minus actual
+#     AUROC) has |estimate| <= keep_drop and its CI includes 0. Two-sided, unlike Stage 31: a step estimated below 0 by
+#     chance adds label information when taken out, so a rise is a failure too.
+#   - A plant "counts" for a model if its gain estimate is >= plant_min_gain (otherwise there is nothing to remove).
+#     The split "removes" a counting plant if |recovery estimate| <= recover_tol.
+#   - The split is "trusted" for a model if it keeps the clean signal on at least min_clean_kept of the 3 clean datasets
+#     and removes at least min_removed_share of that model's counting plants (with at least one counting plant).
+#   - Only for trusted models is a Ghana trace-free AUROC reported as the answer.
+#   - Also reported, no pass mark: the share of counting plants Stage 30's jump test flags, and whether the step CI is
+#     above 0 on each real dataset (a second jump check).
+datasets: [ghana_eyelid, ghana_nail, ghana_palm, india_eyelid, italy_eyelid, moscow_nail]
+clean: [india_eyelid, italy_eyelid, moscow_nail]
+cv: {n_splits: 5, n_repeats: 5}
+models: [dummy, logistic_regression, hist_gradient_boosting, tabpfn]
+window_g_dl: 2.0
+plants:   # edit_list format (handling_check.edit); applied to the anemic photos only
+  brightness: []
+  gamma: [0.9]
+  saturation: [0.9]
+  white_balance: [[1.04, 0.96]]   # [R gain, B gain]
+  batch61: false
+keep_drop: 0.05
+min_clean_kept: 2
+plant_min_gain: 0.05
+recover_tol: 0.05
+min_removed_share: 0.67
+# Changed after a smoke run (2 folds x 1 repeat, 200 resamples) and before the real run: (1) one shared slope instead of
+# a line on each side (the smoke step estimates swung AUROC by up to 0.15 on India; extrapolating a line from 14-40
+# people to the cutoff is too noisy), (2) the keep rule made two-sided (stricter; see above), (3) tied scores not split
+# (the dummy went 0.50 -> 0.25 / 0.75). The plants, window and pass marks are as first written.
