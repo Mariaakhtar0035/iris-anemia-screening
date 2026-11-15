@@ -816,3 +816,25 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **Checks:** 79 tests pass (4 new); smoke run with a stand-in TabPFN. The first real run stopped on TabPFN's
   1000-row CPU guard (the stand-in had hidden it); the guard was lifted for the copies model only, and the run
   finished at clean commit `a83ee4c`.
+
+### Step 31 (Stage 33): measure the step at the cutoff and take it out; a planted trace
+- **Why:** Stage 31 couldn't avoid the Ghana trace; measure it instead, and test our checks on a trace we plant.
+- **What:** `src/eyelid/trace_split.py`, `configs/trace_split.yaml`: a line in Hb plus a step at the cutoff (within
+  2 g/dL), the step taken off the anemic scores; on India, Italy and Moscow the anemic photos get one mild edit.
+- **Result:** TabPFN steps 1.55, 0.94, 1.80 score SDs on Ghana, none on the clean sets. Taking the step out isn't
+  trusted (it gets 0-1 of each model's plants back, too low on Moscow). The plants add 0.06-0.27; the jump test
+  catches 10 of 24.
+- **Checks:** 90 tests pass (8 new); two smoke runs with the real models (2 folds, 200 resamples) led to three
+  changes before the real run (one slope, two-sided clean check, dummy not split; in the config). The first real run
+  stopped on a division by zero in the real-signal share (one India resample at AUROC 0.5); fixed, rerun at clean
+  commit `0c0c782`.
+
+### Step 32 (Stage 34): where in the photo is the Ghana trace?
+- **Why:** the Ghana cut-outs give the label away without color; a cut-out made differently per folder would put
+  the trace at the edge.
+- **What:** `src/eyelid/trace_location.py`, `configs/trace_location.yaml`: the 29 numbers on the inner half and the
+  outer ring of each cut-out; each no-color number through the jump test.
+- **Result:** core and ring both jump on all three Ghana sets (eyelids 0.900 / 0.893); the core keeps the clean
+  signal on India and Italy; only palm height jumps among the no-color numbers.
+- **Checks:** 3 new tests; smoke run with the real models; a handling number constant inside one label group on Italy
+  broke the in-group rank correlation, so such numbers are skipped and listed. Run at clean commit `0c0c782`.

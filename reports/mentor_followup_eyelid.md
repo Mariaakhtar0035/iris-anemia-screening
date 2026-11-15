@@ -45,6 +45,8 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Is the score reading anemia, or how the photos were handled? (Stage 30) | **Ghana: partly the handling.** Every model's Ghana score (TabPFN and the vision models) jumps at Hb 11.0 instead of following Hb; India, Italy and Moscow don't | Ghana near the cutoff 0.94 vs 0.72 for a steady signal; a 15% brightness change costs TabPFN 0.21 |
 | Can the trace be taken out to give a clean Ghana number? Does it reach the Hb number? (Stage 31) | **No clean number with this data; yes, the Ghana Hb models carry it** | within-folder model loses 0.15-0.41 on clean data too; no Ghana Hb model follows Hb inside the anemic group; boosting Hb model near the cutoff 0.72 vs 0.62 |
 | Is TabPFN fragile to small photo edits everywhere? (Stage 32) | **Only on the Ghana sets** | edits that break it: Ghana 6, 4, 7 of 7; India, Italy, Moscow 0 of 7; color-edited training copies cut the Ghana cost 0.21 -> 0.05 |
+| Can the trace be measured at the cutoff and taken out? Would our checks catch a planted trace? (Stage 33) | **The step confirms the Ghana jump; taking it out isn't trusted** | TabPFN step 1.55 / 0.94 / 1.80 score SDs on Ghana, none elsewhere; a mild one-folder edit in clean data adds 0.06-0.27 and the jump test catches 10 of 24 |
+| Where in the photo is the Ghana trace? (Stage 34) | **All through the cut-out, not its edge** | Ghana eyelid TabPFN on the inner half 0.900, outer ring 0.893, both jump |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak. Stage 30 later showed that part of that color is a trace of

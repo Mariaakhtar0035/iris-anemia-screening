@@ -40,6 +40,8 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Does the score read anemia, or how the photos were handled? | **Ghana: partly the handling.** Every model's Ghana score jumps at the Hb 11 cutoff instead of following Hb (TabPFN near the cutoff 0.94, a steady signal would give 0.72); India, Italy and Moscow pass. A 15% brightness change costs TabPFN 0.21. So the Ghana 0.92 is not a clean anemia number (Section 6.15) |
 > | Can the trace be taken out, and does it reach the Hb number? | **No clean Ghana number with this data**: a model trained only on differences inside each folder also loses 0.15-0.41 on the clean datasets. No Ghana Hb model follows Hb inside the anemic group and the best one jumps at the cutoff, so the Ghana Hb error (1.38 vs 1.71 g/dL) is mostly the folder (Section 6.16) |
 > | Is TabPFN fragile everywhere? | **Only on the Ghana sets**: small color edits break it on 4-7 of 7 edits there and on none of 7 in India, Italy and Moscow. Training on color-edited copies cuts the Ghana eyelid cost from 0.21 to 0.05, but the jump stays (Section 6.17) |
+> | Can the trace be measured, and would our checks catch one? | the score's step at the cutoff is clear on all three Ghana sets and absent elsewhere, but taking it out removes too much, so still **no clean Ghana number**. A mild edit of one folder in clean data adds **0.06-0.27** AUROC, and the jump test catches only 10 of 24 such plants (Section 6.18) |
+> | Where in the photo is the Ghana trace? | **all through the cut-out**, not its edge: the inner half alone (0.90) and the outer ring alone (0.89) both still jump (Section 6.19) |
 > | Is the combined Ghana result fair and free of shortcuts? | fair: no gap between girls and boys or younger and older children widens. But the eyelid cut-outs' size and shape alone score **0.69**, a shortcut; the color models don't use it (Section 6.10) |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
@@ -812,6 +814,61 @@ price, but the jump stays, so the trace is not a plain color cast over the whole
 Run: `python -m src.eyelid.edit_robustness` (~65 min on CPU). Report:
 [`reports/stage32_edit_robustness.md`](reports/stage32_edit_robustness.md).
 
+### 6.18 Can the trace be measured and taken out? Would our checks catch a trace we plant? (Stage 33)
+
+Pallor changes smoothly with Hb, so a step in the score exactly at the cutoff is the trace. Each score is put on one
+scale (ranks mapped to a normal curve) and fit as a straight line in Hb plus a step at the cutoff, using everyone
+within 2 g/dL of it; the trace-free score takes the step off every anemic person. To test this, a fake folder trace is
+planted in the clean datasets: the anemic photos only get one mild edit (gamma 0.9, 10% less saturation, or a 4%
+white-balance shift) and the models are retrained. Answers fixed before running (`configs/trace_split.yaml`; three
+changes after a smoke run, before the real run, are listed there). Cutoffs: Ghana children Hb < 11.0 g/dL;
+India and Italy adults WHO by sex (women < 12.0, men < 13.0 g/dL, pregnancy not recorded); Moscow adults Hb < 12.0
+g/dL for everyone (no sex column).
+
+| Dataset | TabPFN | Step at the cutoff (score SDs) | Trace-free AUROC |
+|---|---|---|---|
+| Ghana eyelids | 0.919 | **1.55** [1.15, 1.95] | 0.41 |
+| Ghana nails | 0.754 | **0.94** [0.27, 1.56] | 0.48 |
+| Ghana palms | 0.866 | **1.80** [1.22, 2.35] | 0.29 |
+| India eyelids | 0.648 | -0.27 [-1.44, 0.85] | 0.72 |
+| Italy eyelids | 0.909 | 0.09 [-1.22, 1.36] | 0.90 |
+| Moscow nails | 0.823 | -0.01 [-0.48, 0.46] | 0.82 |
+
+The step is a second jump check and agrees with Section 6.15: large on all three Ghana sets (gradient boosting too),
+indistinguishable from 0 on the clean ones. But taking it out is not trustworthy: on the planted traces it gets the
+unplanted AUROC back for at most 1 of each model's 4-7 plants and on Moscow lands 0.01-0.10 too low, and on Ghana it
+would put TabPFN below chance. So there is still no clean Ghana number. The planted traces matter more: a mild edit of
+one folder lifts AUROC by 0.06-0.27 on India and Moscow, as much as TabPFN's Ghana lead over the rule (0.27), and the
+jump test catches only 10 of 24 (Moscow 7 of 11, India 3 of 11, Italy 0 of 2). A pass on a small dataset is weak
+evidence.
+
+Run: `python -m src.eyelid.trace_split` (~30 min on CPU). Report:
+[`reports/stage33_trace_split.md`](reports/stage33_trace_split.md).
+
+### 6.19 Where in the photo is the Ghana trace? (Stage 34)
+
+If each folder was cut out by a different hand or tool, the trace would sit at the cut-out's edge. Core = the half of
+each cut-out's pixels farthest from its edge, ring = the other half; the 29 color numbers on each, models retrained,
+Section 6.15's jump test on each (`configs/trace_location.yaml`). Same cutoffs as Section 6.18; Moscow is left out
+(nail boxes in a full photo, no cut-out edge).
+
+| Dataset | TabPFN, whole cut-out | Core only | Ring only | Core jumps? | Ring jumps? |
+|---|---|---|---|---|---|
+| Ghana eyelids | 0.919 | 0.900 | 0.893 | yes | yes |
+| Ghana nails | 0.754 | 0.724 | 0.743 | yes | yes |
+| Ghana palms | 0.868 | 0.873 | 0.836 | yes | yes |
+| India eyelids | 0.642 | 0.636 | 0.585 | no | no |
+| Italy eyelids | 0.910 | 0.903 | 0.913 | no | no |
+
+Core and ring both jump on every Ghana set and keep nearly the whole AUROC, while the core alone keeps the clean signal
+on India and Italy. The no-color numbers (size, shape, sharpness, file bytes) don't jump on their own, except a lone
+flag for palm photo height. So the trace is in the colors all through the region, not in how it was cut out: with
+Sections 6.16-6.17, it fits a difference in how or when each folder's photos were taken or processed, which the data
+doesn't record.
+
+Run: `python -m src.eyelid.trace_location` (~22 min on CPU). Report:
+[`reports/stage34_trace_location.md`](reports/stage34_trace_location.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -829,8 +886,10 @@ Run: `python -m src.eyelid.edit_robustness` (~65 min on CPU). Report:
 5. Test on a different dataset or country before trusting a number.
 6. Check that the score follows the measured Hb and doesn't jump at the label cutoff (Section 6.15). A jump means the
    photos carry the label in something other than the disease, for example how each label's photos were handled.
+   On small sets it misses most planted traces (Section 6.18), so a pass there is weak evidence.
 7. Edit the test photos a little (brightness, white balance) and see whether the score holds (Section 6.17). A model
    that breaks while the plain rule doesn't is reading something more delicate than pallor.
+8. Plant a fake trace (a mild edit of one label's photos) to see whether your checks would catch it (Section 6.18).
 
 ## 8. Ethics and data use
 
@@ -850,6 +909,7 @@ Run: `python -m src.eyelid.edit_robustness` (~65 min on CPU). Report:
 - **Small image test sets.** Eyes-Defy test sets hold 44 photos when split by photo; Italy has few anemic adults.
 - **Replications are not identical recipes.** Replication A uses ImageNet weights and 30 epochs; we do not have either paper's exact split or code; GPU differences (Apple M1 vs NVIDIA) can shift results slightly.
 - **Duplicate detection is not perfect**, and labels on copied CP-AnemiC photos conflict (one photo is recorded with Hb 10.2 and 5.8); there is no patient ID.
+- **The jump test has little power on small sets.** It caught 3 of 11 planted folder traces on India (95 adults) and 0 of 2 on Italy (122), so their pass in Section 6.15 is weak; Moscow (250) is better tested (7 of 11).
 - **Italy is confounded by photo batch.** Its anemic patients were almost all photographed in the first 31 folders, so Italian scores mostly measure the batch; we report the early batch alone (31 photos) as the fairer check.
 - **The fine-tuned ViT, VisionFM and DINOv2 have one seed each**, so their CIs come from the bootstrap only, not from seed variation.
 - **The Chemhaka et al. comparison was done by the survey side** and is not in this branch.
@@ -998,6 +1058,8 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Anemia or photo handling? (Section 6.15) | done: the Ghana scores are partly a handling trace; India, Italy, Moscow pass |
 | Taking the trace out; the trace in the Hb models (Section 6.16) | done: no clean Ghana number possible; the Ghana Hb results carry the trace |
 | The same photo edits on every dataset; edited training copies (Section 6.17) | done: TabPFN fragile only on Ghana; copies cut the cost |
+| Measuring the step at the cutoff; a planted trace in clean data (Section 6.18) | done: the step confirms Ghana; taking it out not trusted; the jump test is weak on small sets |
+| Where in the photo the trace sits (Section 6.19) | done: all through the cut-out |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 
