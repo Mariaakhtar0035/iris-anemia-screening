@@ -1,8 +1,10 @@
 import numpy as np
+import pytest
 
 from src.common.metrics import auroc
 from src.eyelid.handling_check import RULE
-from src.eyelid.trace_split import answers, normal_scores, planted, recovery, split, step_at_cutoff, trace_free
+from src.eyelid.trace_split import (answers, normal_scores, planted, real_share, recovery, split, step_at_cutoff,
+                                    trace_free)
 
 
 def toy(n=4000, step=0.0, seed=0):
@@ -68,3 +70,10 @@ def test_answers_trust_rule():
     assert ans["trusted"] == {"m1": True, RULE: False}  # the rule loses the clean signal on 2 of 3
     assert ans["plants_counting"] == {"m1": 1, RULE: 1} and ans["jump_test_flags_plants"] == [1, 2]
     assert list(ans["trace_free_auroc"]["ghana_x"]) == ["m1"]
+
+
+def test_real_share_is_undefined_without_signal():
+    z, smooth, _ = toy(n=400)
+    assert 0.8 < real_share(z, smooth, 2.0) < 1.2
+    with pytest.raises(ValueError):
+        real_share(z, -smooth, 2.0)

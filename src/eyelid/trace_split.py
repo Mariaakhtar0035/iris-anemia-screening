@@ -58,6 +58,14 @@ def tf_auroc(z, q, window):
     return auroc((z < 0).astype(int), trace_free(z, q, window))
 
 
+def real_share(z, q, window):
+    """(trace-free AUROC - 0.5) / (AUROC - 0.5); undefined (ValueError, so the bootstrap skips it) at AUROC <= 0.5."""
+    gain = auroc((z < 0).astype(int), q) - 0.5
+    if gain <= 0:
+        raise ValueError("no signal above chance in this sample")
+    return (tf_auroc(z, q, window) - 0.5) / gain
+
+
 def split(z, score, window, n_boot, ci, seed):
     """A for one score: step, AUROC, trace-free AUROC, their change and the real-signal share, people resampled."""
     q, y = normal_scores(score), lambda zz: (zz < 0).astype(int)
@@ -69,7 +77,7 @@ def split(z, score, window, n_boot, ci, seed):
             "trace_free_auroc": boot(lambda zz, qq: tf_auroc(zz, qq, window)),
             "change": boot(lambda zz, qq: tf_auroc(zz, qq, window) - auroc(y(zz), qq))}
     if out["auroc"]["lo"] > 0.5:
-        out["share"] = boot(lambda zz, qq: (tf_auroc(zz, qq, window) - 0.5) / (auroc(y(zz), qq) - 0.5))
+        out["share"] = boot(lambda zz, qq: real_share(zz, qq, window))
     return out
 
 
