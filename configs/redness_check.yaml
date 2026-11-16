@@ -1,0 +1,54 @@
+# Stage 35: TabPFN on Ghana with redness only (and larger input sets), through every trace check.
+# Jaineel 2026-11-15: "can we try to do tabpfn on ghana and make sure no other idenifiies it uses, and did we check
+# redness vs tabpfn rednesss on ghana?"; plan shown in chat, go-ahead "continue". From 2026-11-15 new findings are
+# Ghana only (India and Italy dropped for new findings, kept for audits only); none of them is used here.
+# Why: Stage 29 found TabPFN on the 5 redness numbers gives 0.876 on Ghana eyelids, against 0.650 for the untrained
+# redness rule, but the 15 numbers with no redness give 0.917, and Stages 30-34 found every Ghana score carries a folder
+# trace. Not checked yet: does TabPFN on redness only carry the trace, on eyelids, nails and palms? TabPFN only ever
+# sees color numbers (no hospital, file name, child ID or photo size), so a trace can only come in through the colors;
+# here each input set is tested for it.
+#
+# Cutoff, one for every set here: Ghana eyelids (CP-AnemiC, the 388 photos with no copy), Ghana nails and palms (the 302
+# linked children of Stage 24): children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml).
+#
+# Input sets, fewest numbers first (names from color_features / tabpfn_audit.feature_names):
+#   mean_redness        mean a* alone, the number the rule uses
+#   redness_without_rg  the redness group without the red/green ratio (the one redness number that jumps on its own on
+#                       the eyelids, Stage 31 D)
+#   redness             Stage 29's redness group (5 numbers)
+#   without_jumpers     all 29 minus the numbers that jump on their own on this dataset (Stage 31 D's test, Bonferroni
+#                       p < 0.025 / 29, recomputed here); skipped where nothing jumps (then it equals all 29). Chosen
+#                       with the same Hb data the jump test then uses, so its pass is easier than the others'.
+#   all_29              the full set (Stages 14-34)
+# Models on each set: logistic regression (color.yaml) and the TabPFN v2 classifier (ceiling.yaml). Next to them: the
+# dummy and the untrained rule (minus mean a*). 5-fold CV x 5 repeats by photo / child, held-out scores averaged over
+# repeats; the eyelids also leave one hospital out (scores, jump, step; no edits).
+#
+# Checks on every score (5x5 CV):
+#   - AUROC, PR-AUC, sensitivity at 90% specificity; paired AUROC change vs the rule.
+#   - Stage 30's jump test (handling_check.yaml: within 1 g/dL, 2000 steady-reference draws), with the rank correlation
+#     of the score with Hb inside each group.
+#   - Stage 33's step at the cutoff (score = a + b z + step x anemic, one slope, within window_g_dl of the cutoff).
+#   - Stage 32's seven test-photo edits (brightness x0.85 / x1.15, gamma 0.8 / 1.25, saturation 0.8, white balance
+#     R x1.08 B x0.92 and the reverse); an edit breaks a model if its AUROC drops by >= fragile_drop (paired CI below 0)
+#     while the rule moves less than rule_stable_drop.
+#
+# Answers, fixed before running:
+#   - A score "shows no trace we can find" if its jump test gives p >= 0.025, its step CI includes 0, and no edit breaks
+#     it. (For the rule, only the first two.) Passing is not proof: the jump test caught 10 of 24 planted traces in
+#     Stage 33, and a weaker score is harder to flag.
+#   - The Ghana number we would report for a model: the largest input set (all_29 first, then without_jumpers, redness,
+#     redness_without_rg, mean_redness) that shows no trace and beats the rule (paired AUROC change CI above 0). Picked by
+#     this order, not by AUROC. If no set qualifies: "no input set passes on this dataset".
+datasets: [ghana_eyelid, ghana_nail, ghana_palm]
+cv: {n_splits: 5, n_repeats: 5}
+models: [logistic_regression, tabpfn]
+input_sets:
+  mean_redness: [a_mean]
+  redness_without_rg: [a_mean, a_median, a_std, a_minus_b]
+  redness: [a_mean, a_median, a_std, R_over_G, a_minus_b]
+  without_jumpers: all_but_jumpers
+  all_29: all
+window_g_dl: 2.0
+fragile_drop: 0.05
+rule_stable_drop: 0.02
