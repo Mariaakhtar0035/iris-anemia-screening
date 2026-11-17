@@ -1,0 +1,36 @@
+# Stage 36: a model where less red can only mean more anemic (Ghana), through every trace check.
+# Jaineel 2026-11-16: "can u do the think u think is best ... the score doesn't need ot be maxed just stuff we can be
+# sure for that we cna persent"; this is the forced-redness idea from the 2026-11-09 next-steps list.
+# Why: Stage 35 found no TabPFN input set on Ghana free of the folder trace; only logistic regression passed. A flexible
+# model can use any pattern in the color numbers, including ones pallor can't make. Here gradient boosting is only
+# allowed to say "less red = more anemic" for the redness numbers. If it beats the rule and shows no trace, that is a
+# Ghana number we can defend; if it only matches the rule, the extra score of the free models is not pallor.
+#
+# Cutoff, one for every set here: Ghana eyelids (CP-AnemiC, the 388 photos with no copy), Ghana nails and palms (the 302
+# linked children of Stage 24): children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml). Ghana only.
+#
+# Models on each input set: gradient boosting as in ceiling.yaml (free), and the same model with a monotonic
+# constraint: P(anemic) can only fall or stay level as each number in less_red_more_anemic rises; other numbers in the
+# set stay free. Next to them: the dummy and the untrained rule (minus mean a*). 5-fold CV x 5 repeats by photo / child;
+# the eyelids also leave one hospital out. Checks exactly as Stage 35 (jump test, step at the cutoff, seven test-photo
+# edits).
+#
+# Answers, fixed before running (Stage 35's rules):
+#   - A score "shows no trace we can find" if its jump test gives p >= 0.025, its step CI includes 0, and no edit breaks
+#     it. Passing is not proof (Stage 33: the jump test caught 10 of 24 planted traces).
+#   - The number we would report for a model: the largest input set (last listed first) that shows no trace and beats
+#     the rule (paired AUROC change CI above 0); otherwise "no input set passes on this dataset".
+#   - all_29 has free numbers next to the forced ones, so it is not a pure redness reader; it is here to show what the
+#     free numbers add.
+datasets: [ghana_eyelid, ghana_nail, ghana_palm]
+cv: {n_splits: 5, n_repeats: 5}
+models: [hist_gradient_boosting, forced_gradient_boosting]
+less_red_more_anemic: [a_mean, a_median, R_over_G]
+input_sets:
+  mean_redness: [a_mean]
+  two_redness: [a_mean, a_median]
+  three_redness: [a_mean, a_median, R_over_G]
+  all_29: all
+window_g_dl: 2.0
+fragile_drop: 0.05
+rule_stable_drop: 0.02
