@@ -47,6 +47,8 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Is TabPFN fragile to small photo edits everywhere? (Stage 32) | **Only on the Ghana sets** | edits that break it: Ghana 6, 4, 7 of 7; India, Italy, Moscow 0 of 7; color-edited training copies cut the Ghana cost 0.21 -> 0.05 |
 | Can the trace be measured at the cutoff and taken out? Would our checks catch a planted trace? (Stage 33) | **The step confirms the Ghana jump; taking it out isn't trusted** | TabPFN step 1.55 / 0.94 / 1.80 score SDs on Ghana, none elsewhere; a mild one-folder edit in clean data adds 0.06-0.27 and the jump test catches 10 of 24 |
 | Where in the photo is the Ghana trace? (Stage 34) | **All through the cut-out, not its edge** | Ghana eyelid TabPFN on the inner half 0.900, outer ring 0.893, both jump |
+| Is there a Ghana input set where TabPFN carries no trace? (Stage 35) | **No** | redness-only TabPFN 0.876 / 0.697 / 0.779 (eyelids, nails, palms) all jump; logistic regression on nails 0.637 passes |
+| Does a model that can only say "less red = more anemic" beat the rule? (Stage 36) | **No, it matches it; the free models' extra comes with the trace** | forced: 0.62 / 0.45-0.50 / 0.58; free on the same numbers: palms 0.69-0.71, jumps |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak. Stage 30 later showed that part of that color is a trace of

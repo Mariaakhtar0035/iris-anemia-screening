@@ -38,6 +38,8 @@ CP-AnemiC sheet for all three body sites. Stage 26: Ghana Hb < 11.0, India and I
 | 32 | Is TabPFN fragile to small photo edits everywhere? | Only on the Ghana sets; edited training copies cut the cost but the jump stays | edits that break TabPFN: Ghana 6, 4, 7 of 7; India, Italy, Moscow 0 of 7; Ghana eyelid cost 0.21 -> 0.05 with copies | [edits](stage32_edit_robustness.md) |
 | 33 | Can the trace be measured at the cutoff and taken out? Would our checks catch a planted trace? | The step confirms the Ghana jump; taking it out removes too much (not trusted); a mild one-folder edit adds 0.06-0.27 and the jump test catches 10 of 24 | TabPFN step: Ghana 1.55, 0.94, 1.80 score SDs; clean sets -0.27 to 0.09 (all cross 0) | [step](stage33_trace_split.md) |
 | 34 | Where in the photo is the Ghana trace? | All through the cut-out, not its edge | Ghana eyelid TabPFN: whole 0.919, core 0.900, ring 0.893, both jump | [where](stage34_trace_location.md) |
+| 35 | Is there a Ghana input set where TabPFN carries no trace? | No: redness-only TabPFN still jumps, steps and breaks under edits; only logistic regression passes | TabPFN redness: eyelids 0.876, nails 0.697, palms 0.779, all with the trace; logistic regression nails 0.637 passes | [redness](stage35_redness_check.md) |
+| 36 | Does a model that can only say "less red = more anemic" beat the rule on Ghana? | No: it matches the rule and shows no trace on nails and palms; the free model's extra comes with the trace | forced: eyelids 0.62, nails 0.45-0.50, palms 0.58; free on the same numbers: palms 0.69-0.71 (jumps) | [forced](stage36_forced_redness.md) |
 
 ## Across sites (closed: explains why per-location models)
 

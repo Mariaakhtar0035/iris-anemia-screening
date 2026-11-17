@@ -838,3 +838,20 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   signal on India and Italy; only palm height jumps among the no-color numbers.
 - **Checks:** 3 new tests; smoke run with the real models; a handling number constant inside one label group on Italy
   broke the in-group rank correlation, so such numbers are skipped and listed. Run at clean commit `0c0c782`.
+
+### Step 33 (Stage 35): TabPFN on Ghana with redness only, through every trace check
+- **Why:** Jaineel 2026-11-15: make sure TabPFN uses nothing but anemia signal; compare redness with TabPFN on redness.
+  From this step on, new findings are Ghana only (India and Italy for audits).
+- **What:** `src/eyelid/redness_check.py`, `configs/redness_check.yaml`: five input sets, logistic regression and
+  TabPFN, jump test + step + seven photo edits on each; Hb < 11.0 g/dL.
+- **Result:** no TabPFN set passes on eyelids, nails or palms; logistic regression on nails 0.637 passes and beats the rule.
+- **Checks:** 3 new tests; smoke run with the real models (2 folds, 200 resamples); run at clean commit `e222593`.
+
+### Step 34 (Stage 36): a model where less red can only mean more anemic
+- **Why:** the forced-redness idea from the 2026-11-09 next-steps list; Jaineel 2026-11-16: findings we can be sure of,
+  not a higher score.
+- **What:** `src/eyelid/forced_redness.py`, `configs/forced_redness.yaml`: gradient boosting with a monotonic
+  constraint on mean a*, median a* and R/G, next to the free model; Stage 35's checks (its run loop reused).
+- **Result:** the forced model matches the rule and shows no trace on nails and palms; the free model's extra
+  0.10-0.13 comes with the trace; on eyelids nothing passes.
+- **Checks:** 1 new test (the constraint holds on a wiggly pattern); smoke run; run at clean commit `8c0dc75`.

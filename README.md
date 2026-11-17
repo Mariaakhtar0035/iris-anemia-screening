@@ -42,6 +42,7 @@ Every strategy we tried, why, and whether it worked, in plain English: [`PROGRES
 > | Is TabPFN fragile everywhere? | **Only on the Ghana sets**: small color edits break it on 4-7 of 7 edits there and on none of 7 in India, Italy and Moscow. Training on color-edited copies cuts the Ghana eyelid cost from 0.21 to 0.05, but the jump stays (Section 6.17) |
 > | Can the trace be measured, and would our checks catch one? | the score's step at the cutoff is clear on all three Ghana sets and absent elsewhere, but taking it out removes too much, so still **no clean Ghana number**. A mild edit of one folder in clean data adds **0.06-0.27** AUROC, and the jump test catches only 10 of 24 such plants (Section 6.18) |
 > | Where in the photo is the Ghana trace? | **all through the cut-out**, not its edge: the inner half alone (0.90) and the outer ring alone (0.89) both still jump (Section 6.19) |
+> | Is there a Ghana TabPFN number without the trace? | **no**: redness-only TabPFN still carries it, and a model that can only say "less red = more anemic" just matches the rule (about 0.60); Ghana cutoff Hb < 11.0 g/dL (Section 6.20) |
 > | Is the combined Ghana result fair and free of shortcuts? | fair: no gap between girls and boys or younger and older children widens. But the eyelid cut-outs' size and shape alone score **0.69**, a shortcut; the color models don't use it (Section 6.10) |
 >
 > *Research code only. This is not a medical device and must not be used to diagnose anyone.*
@@ -869,6 +870,32 @@ doesn't record.
 Run: `python -m src.eyelid.trace_location` (~22 min on CPU). Report:
 [`reports/stage34_trace_location.md`](reports/stage34_trace_location.md).
 
+### 6.20 TabPFN on Ghana with redness only, and a model forced to read redness one way (Stages 35-36)
+
+Ghana only; anemic = **Hb < 11.0 g/dL** (children 6-59 months) on the eyelids (388 photos), nails and palms (302 linked
+children). TabPFN only ever sees color numbers, so a trace can only come in through them. We gave TabPFN smaller input
+sets (mean redness; the redness numbers; all 29 minus the numbers that jump on their own) and put every score through
+the jump test (Section 6.15), the step at the cutoff (6.18) and the seven photo edits (6.17). Then gradient boosting
+with a monotonic constraint: less red can only mean more anemic (`configs/redness_check.yaml`,
+`configs/forced_redness.yaml`; answers fixed before running). "(trace)" = fails at least one of the three checks.
+
+| Ghana set (Hb < 11.0 g/dL) | Rule | Forced model, mean redness | Free gradient boosting, mean redness | TabPFN, 5 redness numbers | TabPFN, all 29 |
+|---|---|---|---|---|---|
+| Eyelids | 0.650 (trace) | 0.621 (trace) | 0.606 (trace) | 0.876 (trace) | 0.919 (trace) |
+| Nails | 0.493 | 0.453 | 0.542 | 0.697 (trace) | 0.754 (trace) |
+| Palms | 0.597 | 0.580 | 0.697 (trace) | 0.779 (trace) | 0.866 (trace) |
+
+No TabPFN input set passes on any Ghana set, and each set that lifts it above the rule also carries the trace. The
+forced model matches the rule (no trace on nails and palms); the free model on the same numbers gains 0.10-0.13 and
+that gain comes with the trace. On the eyelids even the rule jumps. The one score that passes every check and beats
+the rule is logistic regression on the nails: 0.637 [0.574, 0.699]. So what flexible models add on Ghana is not
+"paler = more anemic", and the Ghana numbers we can defend are the rule and the simple models, about 0.60-0.65.
+Passing the checks is not proof (Section 6.18: the jump test caught 10 of 24 planted traces).
+
+Run: `python -m src.eyelid.redness_check` (~50 min on CPU), `python -m src.eyelid.forced_redness` (~3 min). Reports:
+[`reports/stage35_redness_check.md`](reports/stage35_redness_check.md),
+[`reports/stage36_forced_redness.md`](reports/stage36_forced_redness.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -1060,6 +1087,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | The same photo edits on every dataset; edited training copies (Section 6.17) | done: TabPFN fragile only on Ghana; copies cut the cost |
 | Measuring the step at the cutoff; a planted trace in clean data (Section 6.18) | done: the step confirms Ghana; taking it out not trusted; the jump test is weak on small sets |
 | Where in the photo the trace sits (Section 6.19) | done: all through the cut-out |
+| TabPFN on Ghana with redness only; a model forced to read redness one way (Section 6.20) | done: no TabPFN input passes; the forced model matches the rule |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 
