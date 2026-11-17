@@ -679,6 +679,54 @@ adults, **anemic: Hb < 12.0 g/dL for everyone**, same splits as Section 6.5.
 - No-color control (box sizes) 0.52; dummy 0.47.
 - Run: `python -m src.nails_skin` (~15 min). Report: [`reports/stage28_nails_skin.md`](reports/stage28_nails_skin.md).
 
+### 6.14 Survey feature selection, Zimbabwe only (Stage 29)
+
+Following the mentors' advice to focus on one location, we restarted survey feature selection on Zimbabwe 2015 from
+every column (2026-11-16/17).
+
+- **Anemic (primary):** DHS `v457` 1-3. This is WHO for women on Hb adjusted for altitude and smoking:
+  **< 12.0 g/dL, or < 11.0 g/dL if pregnant.** 9,265 women; 27.3% anemic.
+- **Moderate or severe (second target):** DHS `v457` 1-2. This is adjusted Hb **< 10.0 g/dL for every woman, pregnant
+  or not.** For pregnant women it matches WHO's moderate cutoff; for non-pregnant women it is stricter than WHO's
+  < 11.0. 653 women (7.0%). Pre-registered before any model was run on it.
+- **Split:** 20% of villages (79, 1,849 women) were locked away first, and everything was built on the other 321.
+
+| locked test | any anemia, AUROC | moderate or severe, AUROC | fewer tests per 100 women to still catch 90% (any / mod.-sev.) |
+|---|---|---|---|
+| region share (no model) | 0.538 [0.505, 0.572] | 0.550 [0.495, 0.607] | none / none |
+| base 6 questions | 0.590 [0.555, 0.623] | 0.634 [0.580, 0.688] | 3 [0, 7] / 10 [-1, 17] |
+| **Hb ranking, 482 questions** | **0.614 [0.585, 0.643]** | **0.684 [0.639, 0.726]** | **8 [2, 11] / 17 [11, 28]** |
+
+Random testing needs 90 tests per 100 women to catch 90% of cases.
+
+- **Every method reaches the same ceiling, about 0.60-0.63 for any anemia.**
+  - This holds from 6 to 713 questions, and for L1, top-k and forward selection, gradient boosting and TabPFN 3.5.
+  - The CV winner (top 10) does not beat base 6 on the locked test.
+- **The Hb ranking is the best survey model.**
+  - In 5 x 5 repeated CV it gains +0.037 [+0.022, +0.054] over base 6.
+  - About half of that gain is region, and the rest comes from the other questions used by a flexible model.
+  - With the questions and learner fixed, predicting Hb beats yes/no for gradient boosting (+0.022 [+0.014, +0.030]).
+  - But a TabPFN classifier matches it without the Hb number.
+- **A short version keeps most of it.** Base 6 + region (7 questions) reaches 0.606 for any anemia and 0.646 for
+  moderate or severe (CV, exploratory).
+- **What the models rely on is consistent with proxies for the causes:** contraception, region, pregnancy and
+  postpartum stage, and body measures, from grouped permutation importance.
+  - This does not show mechanism.
+  - Region may also carry differences between survey teams or Hb devices.
+- **It is a weak individual screen.**
+  - At small budgets it finds about twice the random share: testing 20% finds 38% [34, 41] of moderate or severe cases.
+  - To catch 90% of cases, it saves only 6-8 tests per 100 women for any anemia.
+- **It ranks villages better than region alone:** Spearman 0.42 against 0.30. Because of sampling noise, a perfect model
+  could reach at most 0.62.
+- **TabPFN predicting Hb gives the best CV score:** 0.628 [0.613, 0.643] for any anemia, +0.011 [+0.003, +0.019] over
+  the Hb ranking. It is exploratory and likely a little optimistic, and was never scored on the locked test.
+- **What didn't help:**
+  - putting the mostly-blank questions back;
+  - village averages;
+  - combining the Hb ranking with TabPFN (+0.007, below the pre-set bar);
+  - predicting Hb with its uncertainty.
+- **Report:** [`reports/stage29_summary.md`](reports/stage29_summary.md), with links to each step.
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -758,6 +806,18 @@ python -m src.survey.audit                 # DHS audit
 python -m src.survey.train_baselines       # 5.2, ~2 min
 python -m src.survey.transfer              # 5.3, ~2 min
 python -m src.fusion_sim                   # 5.4, ~2 min
+python -m src.survey.select_features       # 6.14, Stage 29 Steps 1-2 and the locked village split
+python -m src.survey.screen_features       # 6.14, Steps 3-4
+python -m src.survey.select_models         # 6.14, Step 5
+python -m src.survey.final_test            # 6.14, Step 6 (locked test)
+python -m src.survey.tabpfn_cv             # 6.14, Step 7 (TabPFN; needs TABPFN_TOKEN in .env)
+python -m src.survey.repeated_cv           # 6.14, Step 8a (several hours, cached in data/processed/stage29_oof/)
+python -m src.survey.area_check            # 6.14, Step 8b
+python -m src.survey.blank_sensitivity     # 6.14, Step 8c
+python -m src.survey.severity              # 6.14, Step 9
+python -m src.survey.hb_sources            # 6.14, Step 8d
+python -m src.survey.hb_vs_class           # 6.14, Step 8e
+python -m src.survey.exploratory           # 6.14, Step 10 (exploratory, CV only)
 python -m src.eyelid.finetune_vit          # 6.1, fine-tuned ViT per population, ~2 h on an M1
 python -m src.eyelid.finetune_vit --model visionfm   # 6.1, fine-tuned VisionFM on CP-AnemiC
 python -m src.eyelid.ceiling               # 6.1, model ladder incl. TabPFN, learning curves, regions, copies (reads the ViT results; VisionFM rung if its weights are present)
@@ -786,7 +846,7 @@ python -m src.summary                      # reports/summary.md
 python -m src.figures                      # reports/figures/replication.png, vit_epochs.png
 ```
 
-Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [TabPFN for Hb](reports/stage22_hb_tabpfn.md), [automatic crop](reports/stage23_auto_crop.md), [eyelid + nail + palm](reports/stage24_ghana_link.md), [cheating and fairness checks](reports/stage25_ghana_checks.md), [DINOv2 next to the color numbers](reports/stage26_tabpfn_image.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
+Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run saves its metrics, config and git commit to `results/*.json`. Detailed reports: [summary](reports/summary.md), [Replication A](reports/replicate_cnn.md), [Replication B](reports/replicate_vit.md), [color baselines](reports/stage3_color.md), [DINOv2 probe](reports/stage4_probe.md), [cross-dataset](reports/stage5_cross_dataset.md), [survey baselines](reports/stage7_survey.md), [survey transfer](reports/stage8_transfer.md), [Stage 29 survey feature selection](reports/stage29_summary.md), [fusion simulation](reports/fusion_simulation.md), [Stage 9 ceiling](reports/stage9_ceiling.md), [Stage 10 populations](reports/stage10_populations.md), [Stage 11 debiasing](reports/stage11_debias.md), [clinical view](reports/clinical_eyelid.md), [fingernails](reports/stage12_nails.md), [Ghana palm and nails](reports/stage13_ghana_sites.md), [TabPFN checks](reports/tabpfn_checks.md), [TabPFN across datasets](reports/tabpfn_transfer.md), [three countries](reports/stage14_three_countries.md), [few local photos](reports/stage15_few_local.md), [Hb number](reports/stage16_hb_regression.md), [Hb across datasets](reports/stage17_hb_cross.md), [Hb local correction](reports/stage18_hb_local.md), [nails across sites](reports/stage19_nails_cross.md), [age and sex](reports/stage20_metadata.md), [photo quality](reports/stage21_quality.md), [TabPFN for Hb](reports/stage22_hb_tabpfn.md), [automatic crop](reports/stage23_auto_crop.md), [eyelid + nail + palm](reports/stage24_ghana_link.md), [cheating and fairness checks](reports/stage25_ghana_checks.md), [DINOv2 next to the color numbers](reports/stage26_tabpfn_image.md), [index: within vs across sites](reports/README.md), [answers for the mentors](reports/mentor_followup_eyelid.md).
 
 ## 11. Key files
 

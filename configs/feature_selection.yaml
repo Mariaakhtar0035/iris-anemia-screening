@@ -1,0 +1,261 @@
+# Stage 29: feature selection from scratch on Zimbabwe 2015 (no transfer). Steps 1-2: inventory every column of the
+# Individual Recode, remove what can't be a feature (with a written reason), and lock away the final-test villages.
+# Every code and label pattern below was checked against ZWIR72FL.DTA's variable and value labels.
+#
+# Anemia label: DHS's own v457, anemic at any severity (codes 1-3), as in survey.yaml. WHO cutoffs for women applied
+# to Hb adjusted for altitude and smoking: < 12.0 g/dL, or < 11.0 g/dL when pregnant. Women without an Hb result
+# (v457 missing) are left out.
+country: zimbabwe            # file path from survey.yaml
+label: v457
+anemic_levels: [1, 2, 3]
+cluster: v001                # village (cluster); every split keeps a village whole
+
+# Extra target: the Hb number itself, a second target and never an input. v456 = Hb adjusted for altitude and smoking,
+# g/dL x 10. With these cutoffs it reproduces v457 for every tested woman (checked in main()).
+hb_target:
+  column: v456
+  divisor: 10
+  pregnant_column: v213      # 1 = currently pregnant
+  cutoff_g_dl: 12.0
+  cutoff_pregnant_g_dl: 11.0
+
+locked_test:
+  n_splits: 5                # StratifiedGroupKFold by village; the first fold (20% of villages) is the final test
+  # Never used for screening, selection or tuning; scored once at the end.
+
+max_share_empty: 0.70        # among women with an Hb result; blanks from skip patterns count as empty
+report_share_empty: [0.10, 0.30, 0.50, 0.70]
+
+# Leakage: any column whose variable label mentions these is part of the blood test or its result (the woman's own
+# Hb, her children's Hb, consent, referral, household selected for the test).
+leakage_label_words: [hemoglobin, haemoglobin, anemia, anaemia]
+
+# Bookkeeping: ids, sampling design, interview process, dates and data-quality flags. Matched on the variable label
+# (case-insensitive); none of these describes the woman.
+admin_label_patterns:
+  - case identification
+  - cluster number
+  - household number
+  - line number
+  - ultimate area unit
+  - primary sampling unit
+  - sample strata
+  - stratification used
+  - sample weight
+  - all woman factor
+  - weight for domestic violence
+  - interviewer
+  - measurer
+  - date measured
+  - keyer
+  - editor
+  - field supervisor
+  - number of visits
+  - date of interview
+  - ^month of interview      # not v210 "births in month of interview", a real answer
+  - day of interview
+  - row of month
+  - length of calendar
+  - time interview
+  - length of interview
+  - century day code
+  - \(cmc\)                  # dates as century-month codes; ages are kept as their own columns
+  - selected for
+  - language of
+  - translator
+  - presence of
+  - flag for
+  - index last child
+  - result of measurement
+  - consent
+
+# DHS marks questions not asked in this country's survey with a label starting "na - ".
+not_asked_label_prefix: "na - "
+
+# DHS repeats some questions for every birth (_01.._20) or every recent child (_1.._6). Keep the first copy only: the
+# most recent birth, which is the one closest to the woman's current state.
+keep_repeat_index: 1
+
+# A numeric column whose value labels say these is a "time = unit digit + number" code (e.g. 1xx days, 3xx months);
+# the number alone is meaningless. DHS usually also gives a computed version (e.g. v226 months since last period).
+unit_coded_label_words: ["days: number missing", "weeks: number missing", "months: number missing",
+                         "years: number missing", "hours: number missing"]
+
+# A column is a category if at least this share of its non-blank values carry a value label (education, water
+# source...). Otherwise it is a number (age, BMI...), and its labelled codes ("don't know", "on premises",
+# "flagged") move to a side column <code>_special so the number stays a number and nothing is lost.
+category_min_labelled_share: 0.5
+
+# Steps 3-4 (src/survey/screen_features.py), on the building villages only (never the locked test).
+screening:
+  cv_splits: 5               # StratifiedGroupKFold by village inside the building villages
+  number_bins: 10            # a number is cut into 10 equal-count groups; blank and each special code are own groups
+  smoothing: 20              # a group's anemia rate is pulled toward the overall rate as if it had 20 more average women
+  # Step 4: a question repeats one already kept if, among women who answered both, knowing the kept answer removes at
+  # least this share of the mistakes in guessing the other (Goodman-Kruskal lambda; 1 = fully fixed by it). One-way on
+  # purpose: "pregnant" is fixed by "exposure" (which has a pregnant category), but urban/rural is not fixed by the
+  # wealth score (the middle wealth group is half urban), so only the first is dropped. Questions are visited from
+  # fewest blanks to most, then strongest in Step 3 first.
+  redundancy_lambda: 0.95
+  redundancy_min_overlap: 200   # women who answered both; fewer and the pair is not compared
+
+# Step 5 (src/survey/select_models.py): models and selection methods compared by cross-validation on the building
+# villages only. Every selection step is fit inside the training folds; the locked test is still not touched.
+models:
+  cv_splits: 5               # StratifiedGroupKFold by village, building villages only
+  cv_repeats: 1
+  onehot_min_frequency: 0.01 # answers given by under 1% of training women, and unseen ones, share one column
+  # The 6 questions of the earlier baseline (Stage 7), as DHS codes: age, pregnant, wealth quintile, education,
+  # contraceptive method, urban/rural. Taken from Steps 1-2 even if Step 4 dropped them as repeats.
+  base_questions: [v012, v213, v190, v106, v312, v025]
+  logistic_regression: {C: 1.0, max_iter: 3000}
+  hist_gradient_boosting: {max_iter: 200, learning_rate: 0.05, max_leaf_nodes: 15, min_samples_leaf: 50}
+  ridge: {alpha: 1.0}        # extra target (Hb number)
+  # (a) L1 logistic regression keeps only questions it gives a non-zero weight; smaller C keeps fewer.
+  l1_C: [0.003, 0.01, 0.03, 0.1]
+  # (b) Rank questions by gradient boosting permutation importance (AUROC drop when a question is shuffled), measured
+  # on 20% of the training villages held out from that fit; keep the top k.
+  importance_top_k: [10, 20, 50, 100]
+  importance_repeats: 3
+  # (c) Start from the 6 base questions and add whole DHS sections one at a time, each time the one that raises
+  # AUROC most (3-fold by village inside the training villages, logistic regression); stop when no section adds at
+  # least min_gain. Sections follow DHS's own numbering; first matching pattern wins.
+  forward_inner_splits: 3
+  forward_min_gain: 0.002
+  sections:
+    background and household (v0xx-v1xx): ^v[01]\d
+    births (v2xx, birth history): ^(v2\d|b\d|bord)
+    contraception (v3xx): ^v3
+    her health, breastfeeding, body measures (v4xx): ^v4\d
+    marriage and sex (v5xx): ^v5\d
+    fertility wishes (v6xx): ^v6\d
+    partner, work, decisions (v70x-v74x): ^v7[0-4]
+    HIV/AIDS and STIs (v75x-v8xx): ^(v7[5-9]|v8\d)
+    child body measures (hw): ^hw\d
+    child health and vaccines (h): ^h\d
+    bed nets (ml): ^ml\d
+    siblings (mm, mmc): ^mm
+    pregnancy and delivery care (m): ^m\d
+    domestic violence (d): ^d\d
+    Zimbabwe-only questions (s): ^s\d
+  # The winner on cross-validation: the highest AUROC, except that a method with fewer questions wins if it is within
+  # this much of the best (simpler to explain, and less fitted to these villages).
+  winner_tolerance: 0.005
+
+# Step 6 (src/survey/final_test.py): fit on all building villages, score ONCE on the locked final test. Both candidates
+# were named here after Step 5's cross-validation and before the locked test was opened.
+final_test:
+  winner: {method: top_k, k: 10, model: logistic_regression}   # Step 5 winner by the winner rule
+  hb_candidate: {questions: all, model: hgb_regressor}         # Step 5's best Hb ranking (0.609 CV), not eligible
+                                                               # under the winner rule, so scored as a second candidate
+  reference: {questions: base, model: logistic_regression}     # the 6-question baseline, for the paired AUROC change
+
+# Step 7 (src/survey/tabpfn_cv.py): TabPFN (pretrained tabular transformer, model 3.5, PyTorch) on the same building
+# villages and the same 5 village folds as Step 5. Weights need a one-time licence acceptance at ux.priorlabs.ai; the
+# API key is read from .env (TABPFN_TOKEN, git-ignored).
+tabpfn:
+  question_sets: [base, top_10, all]   # top_10 = chosen inside each training fold exactly as Step 5's winner
+  ignore_pretraining_limits: true      # 482 questions = 535 model columns, above the 500 TabPFN was pretrained on
+  # Set before any TabPFN result was seen: the locked test (already opened once in Step 6) is scored again only if
+  # TabPFN's best CV AUROC beats Step 5's best CV AUROC by at least this much. If so, the report marks it as a second look.
+  locked_test_min_gain: 0.01
+
+# Step 8 (review follow-ups), written 2026-11-16 BEFORE Step 7's output was opened.
+review:
+  # More power: 5 x 5 repeated village CV on the 7,416 building women (never the locked test). Each woman's score is
+  # the average of her 5 out-of-fold scores; CIs and paired differences come from a village bootstrap of those averaged
+  # scores (2000 resamples), not from fold-to-fold spread, because repeated-CV folds overlap.
+  cv_splits: 5
+  cv_repeats: 5
+  # Amended TabPFN rule (replaces tabpfn.locked_test_min_gain, which compared a point estimate with the best of 19
+  # Step 5 rows). Comparator: logistic regression on the 6 base questions (the Step 6 reference). For each TabPFN
+  # question set (base, top_10, all), the locked test is scored again, once, for the best such set only if on the
+  # repeated CV its paired AUROC gain over that comparator is >= min_gain AND the 95% CI of the gain is above 0.
+  # TabPFN vs logistic regression on the SAME questions is reported too, but does not decide anything.
+  tabpfn_comparator: base_logistic_regression
+  tabpfn_min_gain: 0.01
+  # Area level: villages (and regions) ranked by the mean score of their women vs. their observed anemia share.
+  area_top_share: 0.20          # top-20% overlap: of the truly highest-prevalence 20% of villages, the share the model's top 20% catches
+  split_half_draws: 200         # random half-splits of each village for the noise ceiling (Spearman-Brown corrected)
+  # Blank-rule sensitivity: Steps 1-4 rerun with no emptiness limit; outputs saved separately.
+  sensitivity_max_share_empty: 1.0
+
+# Step 9: second target, pre-registered 2026-11-16 BEFORE any model was run on it (only label counts were looked at).
+# Chosen by the project owner: DHS's own definition, kept whatever the results show. A second analysis next to the
+# main any-anemia result, not a replacement.
+severity_target:
+  label: v457
+  levels: [1, 2]               # 1 severe, 2 moderate (DHS value labels). DHS convention, checked to reproduce v457 for
+                               # all 9,265 women: severe Hb < 7.0 g/dL, moderate 7.0-9.9 g/dL, for every woman
+                               # (pregnant or not), on Hb adjusted for altitude and smoking (v456). NOT the WHO 2011
+                               # cutoffs (non-pregnant: moderate < 11.0, severe < 8.0), which give 1,241 women instead.
+  hb_cutoff_g_dl: 10.0         # for the Hb ranking: score = 10.0 - predicted adjusted Hb
+  # 653 women (7.0%); 528 in the building villages, 125 in the locked test. Severe alone (65; 15 locked) is too few.
+  # Models, fixed now: dummy, "pregnant first" rule, region and region x urban/rural baselines (no model), base 6
+  # logistic regression, all-questions gradient boosting, Hb ranking (Step 8a's Hb regressor, same predictions).
+  # No new feature selection. 5 x 5 repeated village CV on the building villages (review.cv_*), then every model above
+  # scored once on the locked test; no choice depends on the locked test. Same metrics; PR-AUC is read against the
+  # dummy (= 0.07, the share with the outcome).
+
+# Step 8d (src/survey/hb_sources.py), written 2026-11-17 before running: where does the Hb ranking's gain come from,
+# and the number a clinic would use. Same 5 x 5 folds as Step 8a; same gradient boosting regressor settings.
+hb_sources:
+  question_sets:                 # Hb regressor on each; ranked by (her cutoff - predicted Hb)
+    base: base_questions
+    base_region: [base_questions, v024]
+    all: all                     # Step 8a's cached predictions
+  importance_repeats: 3          # permutation importance of the all-questions Hb regressor, on each test fold of repeat 1:
+                                 # rise in Hb error (MAE) when a question is shuffled, summed over its columns
+  importance_top: 20
+  clinic_sensitivity: 0.90       # share of women tested (highest score first) to catch 90% of cases, and the share of
+                                 # those tested who have the outcome; random testing needs 90%
+
+# Step 8e (src/survey/hb_vs_class.py), written 2026-11-17 before running.
+hb_vs_class:
+  # Same 482 questions, same 5 x 5 folds, same gradient boosting settings (models.hist_gradient_boosting): a yes/no
+  # classifier vs. the Hb regressor ranked by (cutoff - predicted Hb). Both targets; paired AUROC differences.
+  # Grouped permutation importance: each group's columns shuffled together (same row order), on the held-out folds of
+  # the first repeat, 3 shuffles each; drop in AUROC (and rise in Hb MAE for the regressor). Groups: the DHS sections in
+  # models.sections, with region taken out as its own group (the region codes kept after Step 4).
+  region_group: [v024, v139, v101]
+  importance_repeats: 3
+  budgets: [0.10, 0.20, 0.30, 0.50, 0.70]   # share of women tested, highest score first -> share of cases found
+
+# Step 10 (src/survey/exploratory.py): EXPLORATORY, pre-registered 2026-11-17 before running, after the main analysis.
+# Cross-validation only, on the building villages, Step 8a's 5 x 5 folds; the locked test is NOT used (it has been
+# used enough; confirmation needs a new survey). Every variant below is reported, including those that do not help.
+# Success for a variant = paired AUROC gain >= min_gain over its stated reference with the 95% CI above 0
+# (village bootstrap of the repeat-averaged scores).
+exploratory:
+  min_gain: 0.01
+  # A. Combine the Hb ranking and TabPFN classification (all questions): each woman's rank under each (0-1, from her
+  #    repeat-averaged score) averaged 50/50, no weights tuned. Any anemia only (TabPFN was not run for moderate or
+  #    severe). Reference: the Hb ranking.
+  combine: [hb__all, tabpfn__all]
+  # B. Hb with its uncertainty: the Hb regressor's mean (Step 8a) plus a spread model. Inside each training fold,
+  #    3-fold inner village CV gives out-of-fold residuals; a gradient boosting regressor on all questions predicts
+  #    |residual|; sigma = sqrt(pi/2) * predicted |residual| (normal errors). P(anemic) = Phi((cutoff - mean) / sigma),
+  #    her own cutoff (12.0 / 11.0 if pregnant; 10.0 for moderate or severe). Also a constant-sigma version (the
+  #    training folds' residual SD). Both targets. Reference for ranking: the Hb ranking; for probabilities: Brier and
+  #    calibration against base 6 logistic regression.
+  spread_inner_splits: 3
+  # C. Short model for moderate or severe: base 6 + region (v024). (i) logistic regression; (ii) ordinal logistic
+  #    regression (proportional odds, fitted by replicating rows per threshold, shared slopes) on the four DHS levels
+  #    from adjusted Hb (severe < 7.0, moderate 7.0-9.9, mild 10.0 up to her cutoff, not anemic), scored as
+  #    P(moderate or severe). Also (i) for any anemia. References: base 6 logistic regression and the Hb ranking on
+  #    all questions.
+  short_questions_extra: [v024]
+  # D. Village averages added to the Hb regressor on all questions: per village, mean wealth factor score (v191), share
+  #    with secondary or higher education (v106), share using a modern method (v313: "modern method"). Computed from
+  #    the answers of the women in that village (answers only, never Hb), so no outcome leaks. Reported for individual
+  #    AUROC (both targets) and village ranking (Spearman, top-20% overlap). Reference: the Hb ranking.
+  village_means:
+    v191: mean
+    v106: [secondary, higher]
+    v313: [modern method]
+  # E. TabPFN 3.5 predicting the Hb number (TabPFNRegressor, all questions), ranked by her cutoff minus predicted Hb,
+  #    both targets. Reference: the gradient boosting Hb ranking. The run condition was stated in chat on 2026-11-17
+  #    BEFORE Step 8e's results ("run only if the Hb regressor beats the classifier with the CI above 0 on either
+  #    target"), and written here after them; it was met (gradient boosting: +0.022 [+0.014, +0.030] any anemia,
+  #    +0.034 [+0.013, +0.054] moderate or severe).
+  tabpfn_hb: true
