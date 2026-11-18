@@ -1,0 +1,74 @@
+# Stage 37: how much of TabPFN's Ghana eyelid score comes from TabPFN, and how much from the 29 color numbers?
+# From the 2026-11-17 mentor meeting (Jaineel's part), Jaineel 2026-11-18: "u can do the 3 things they said to do from
+# my part". The three asks, as said in the meeting:
+#   1. Mentor: "to get a sense of how much of the benefit are you getting from the foundation model versus the feature
+#      extraction, you can train a logistic regression or like an MLP on these extracted 29 features and see how the
+#      model does there as well."
+#   2. Mentor: "you can add the age and sex and BMI ... more demographics"; sex as 0/1, normalized "consistent" with the
+#      other features. The CP-AnemiC sheet has age_months and sex only (columns: id, image_path, hb, anemic, site,
+#      age_months, sex, image_group, photo_group), so no BMI or other demographics exist to add.
+#   3. Jaineel: "if I gave it everything that was not supposed to be useful ... green, blue, anything that's not
+#      brightness and redness, how does it perform?", and "a different combination" of brightness, saturation and
+#      redness, to see if any "were being weird".
+#
+# Cutoff: Ghana eyelids (CP-AnemiC, the 388 photos with no copy, 165 anemic): children 6-59 months, anemic = Hb < 11.0
+# g/dL (default.yaml). Ghana only (India, Italy and Moscow are for audits; not used here).
+#
+# Models on each input set (5-fold CV x 5 repeats by photo; also leave one hospital out, the eyelids' site column):
+#   - logistic regression: color.yaml (standardized columns, C = 1.0), as in every earlier stage
+#   - MLP (new): standardized columns, scikit-learn MLPClassifier (lbfgs, for small data). Its size and L2 penalty are
+#     picked inside each training fold by an inner stratified CV on AUROC (grid below), so the test photos never pick
+#     them. Logistic regression and TabPFN are not tuned (as in every earlier stage).
+#   - gradient boosting: ceiling.yaml, as in Stages 14-36 (the tree model next to the two the mentor named)
+#   - TabPFN v2 classifier: ceiling.yaml, raw numbers (it does its own preprocessing)
+#   Next to them: the dummy and the untrained rule (minus mean a*).
+# Age and sex: age in months and sex as 0/1 (1 = male, metadata.age_sex), appended after the 29 numbers; logistic
+# regression and the MLP standardize every column the same way (the binary one too), TabPFN gets them raw like the rest.
+# Every score also gets Stage 35's checks: jump test, step at the cutoff, seven test-photo edits (edits change only the
+# color numbers; age and sex stay as they are).
+#
+# Answers, fixed before running (5x5 CV; paired AUROC changes with bootstrap 95% CIs, 2000 resamples):
+#   1. TabPFN adds something beyond the feature extraction if, on all 29 numbers, TabPFN minus the best of logistic
+#      regression, MLP and gradient boosting (best by AUROC) has a CI above 0. Otherwise the 29 numbers do the work and
+#      TabPFN is one good model among others. All Ghana scores carry the folder trace (Stages 30-35), so this compares
+#      models, not how much of each score is anemia.
+#   2. Age and sex help a model if (29 numbers + age + sex) minus (29 numbers) has a CI above 0. The photo adds to age
+#      and sex if (29 + age + sex) minus (age + sex alone) has a CI above 0.
+#   3. "Weird" (the model reads something besides paleness) if a model on not_useful scores at least the paleness set's
+#      AUROC minus 0.05 (estimates) and beats the rule (CI above 0). The red channel (R_mean, R_median, R_std) is in
+#      neither set, since it is partly redness.
+datasets: [ghana_eyelid]
+cv: {n_splits: 5, n_repeats: 5}
+models: [logistic_regression, mlp, hist_gradient_boosting, tabpfn]
+mlp:
+  hidden_layer_sizes: [[16], [64]]
+  alpha: [0.1, 1.0, 10.0]
+  inner_folds: 3
+  max_iter: 20000   # smoke run: at 2000, 64 units with alpha 0.1 / 1.0 stopped before converging (they need ~2100-2900)
+  n_jobs: -1
+input_sets:
+  all_29: all
+  all_29_age_sex: {all_plus: [age_months, sex_male]}
+  age_sex_only: [age_months, sex_male]
+  not_useful: [H_mean, H_median, H_std, G_mean, G_median, G_std, B_mean, B_median, B_std, b_mean, b_median, b_std]
+  redness: [a_mean, a_median, a_std, R_over_G, a_minus_b]
+  brightness: [L_mean, L_median, L_std, V_mean, V_median, V_std]
+  saturation: [S_mean, S_median, S_std]
+  redness_brightness: [a_mean, a_median, a_std, R_over_G, a_minus_b, L_mean, L_median, L_std, V_mean, V_median, V_std]
+  redness_saturation: [a_mean, a_median, a_std, R_over_G, a_minus_b, S_mean, S_median, S_std]
+  brightness_saturation: [L_mean, L_median, L_std, V_mean, V_median, V_std, S_mean, S_median, S_std]
+  paleness: [a_mean, a_median, a_std, R_over_G, a_minus_b, L_mean, L_median, L_std, V_mean, V_median, V_std, S_mean,
+             S_median, S_std]
+set_pairs:
+  - [all_29_age_sex, all_29]
+  - [all_29_age_sex, age_sex_only]
+  - [not_useful, paleness]
+model_pairs:
+  - [tabpfn, logistic_regression]
+  - [tabpfn, mlp]
+  - [tabpfn, hist_gradient_boosting]
+  - [mlp, logistic_regression]
+weird_margin: 0.05
+window_g_dl: 2.0
+fragile_drop: 0.05
+rule_stable_drop: 0.02

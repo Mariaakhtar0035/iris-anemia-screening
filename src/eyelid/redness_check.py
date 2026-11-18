@@ -25,15 +25,16 @@ from src.eyelid.train_color import _short_commit
 
 CV, LOHO = "5x5 CV", "leave one hospital out"
 LABELS = {"dummy": "dummy", RULE: "rule (minus mean a*)", "logistic_regression": "logistic regression",
-          "tabpfn": "TabPFN", "hist_gradient_boosting": "gradient boosting",
+          "tabpfn": "TabPFN", "hist_gradient_boosting": "gradient boosting", "mlp": "MLP",
           "forced_gradient_boosting": "gradient boosting, less red can only mean more anemic"}
 STAGE35 = {"result": "stage35_redness_check", "module": "src.eyelid.redness_check", "config": "redness_check",
            "title": "Stage 35: TabPFN on Ghana with redness only, through every trace check",
            "models": "Logistic regression and TabPFN v2 on each input set"}
 
 
-def input_sets(cfg, names, jumpers):
-    """{set: feature names} in the config's order. without_jumpers is skipped when nothing jumps (it equals all 29)."""
+def input_sets(cfg, names, jumpers, extra=()):
+    """{set: feature names} in the config's order. without_jumpers is skipped when nothing jumps (it equals all 29).
+    A set may also use the extra (non-color) columns, or be {"all_plus": [extra columns]}: all 29 plus those."""
     out = {}
     for k, spec in cfg["input_sets"].items():
         if spec == "all":
@@ -41,8 +42,12 @@ def input_sets(cfg, names, jumpers):
         elif spec == "all_but_jumpers":
             if jumpers:
                 out[k] = [n for n in names if n not in jumpers]
+        elif isinstance(spec, dict):
+            assert set(spec["all_plus"]) <= set(extra), f"{k}: not extra columns: {sorted(set(spec['all_plus']) - set(extra))}"
+            out[k] = list(names) + list(spec["all_plus"])
         else:
-            assert set(spec) <= set(names), f"{k}: not color numbers: {sorted(set(spec) - set(names))}"
+            known = set(names) | set(extra)
+            assert set(spec) <= known, f"{k}: not color numbers or extra columns: {sorted(set(spec) - known)}"
             out[k] = list(spec)
     return out
 
@@ -73,7 +78,10 @@ def reported(sets, model):
 
 
 def run(stage, makers_for):
-    """One stage: stage = its names and report header, makers_for(ladder, columns) = {model: factory} per input set."""
+    """One stage: stage = its names and report header, makers_for(ladder, columns) = {model: factory} per input set.
+    Optional: stage["extra"](name, d) -> (column names, array) appended after the 29 numbers (photo edits leave them
+    as they are); stage["write_report"] replaces the report; cfg set_pairs / model_pairs add paired AUROC changes
+    (first minus second) between input sets per model and between models per input set."""
     base, cfg, color_cfg = load_config("default"), load_config(stage["config"]), load_config("color")
     jump_cfg, probe_cfg, ceiling_cfg = load_config("handling_check"), load_config("probe"), load_config("ceiling")
     seed, boot = base["seed"], base["bootstrap"]
@@ -93,7 +101,10 @@ def run(stage, makers_for):
         X, fixed = plant_numbers((roi_pixels(p, alpha) for p in d["paths"]), edits)
         assert np.allclose(X, d["X"], rtol=1e-4, atol=1e-6), f"{name}: pixels don't give the stored numbers"
         jumpers = [r["feature"] for r in feature_jumps(z, X, names, jump_cfg, rng, n_boot, ci, seed) if r["jumps"]]
-        sets = input_sets(cfg, names, jumpers)
+        extra, E = stage["extra"](name, d) if "extra" in stage else ([], np.empty((len(y), 0)))
+        X, fixed = np.hstack([X, E]), {e: np.hstack([Xe, E]) for e, Xe in fixed.items()}
+        columns = names + list(extra)
+        sets = input_sets(cfg, names, jumpers, extra)
         splits = {CV: folds_for(y, d["groups"], cfg["cv"], seed)}
         if name == "ghana_eyelid":
             cp = load_cp_anemic(ceiling_cfg["cp_anemic_subset"])
@@ -108,10 +119,12 @@ def run(stage, makers_for):
         for sp, folds in splits.items():
             dummy = held_out({"dummy": ladder["dummy"][1]}, X, y, folds)["as is"]["dummy"]
             r_sp = {"dummy": summarize(y, dummy, n_boot, ci, seed), "sets": {}}
+            kept = {}
             for k, cols in sets.items():
-                idx = [names.index(c) for c in cols]
+                idx = [columns.index(c) for c in cols]
                 variants = {e: Xe[:, idx] for e, Xe in fixed.items()} if sp == CV else None
                 held = held_out(makers_for(ladder, cols), X[:, idx], y, folds, variants)
+                kept[k] = held["as is"]
                 r_sp["sets"][k] = {}
                 for m in cfg["models"]:
                     r = run(held["as is"][m]) | {
@@ -127,13 +140,20 @@ def run(stage, makers_for):
                                   + (f", fragile {len(r['fragile'])})" if "fragile" in r else ")"))
                 print(f"done {name} {sp} {k}: " + ", ".join(f"{m} {show(r_sp['sets'][k][m])}" for m in cfg["models"]),
                       flush=True)
+            change = lambda a, b: auroc_change(y, a, b, n_boot, ci, seed)
+            for k in sets:
+                for m1, m2 in cfg.get("model_pairs", []):
+                    r_sp["sets"][k][m1].setdefault("vs", {})[m2] = change(kept[k][m1], kept[k][m2])
+            if cfg.get("set_pairs"):
+                r_sp["set_pairs"] = {f"{a} - {b}": {m: change(kept[a][m], kept[b][m]) for m in cfg["models"]}
+                                     for a, b in cfg["set_pairs"]}
             res["splits"][sp] = r_sp
         res["reported"] = {m: reported(res["splits"][CV]["sets"], m) for m in cfg["models"]}
         out["datasets"][name] = res
         save_results(stage["result"], out, configs)
 
     path = save_results(stage["result"], out, configs)
-    write_report(path, cfg, jump_cfg, out, stage)
+    stage.get("write_report", write_report)(path, cfg, jump_cfg, out, stage)
 
 
 def main():
@@ -141,9 +161,13 @@ def main():
     run(STAGE35, lambda ladder, cols: {m: ladder[m][1] for m in cfg["models"]})
 
 
-def write_report(path, cfg, jump_cfg, out, stage):
+def yn(v):
+    return "-" if v is None else ("**yes**" if v else "no")
+
+
+def every_score(out):
+    """Markdown: every score with its checks, then the dummy."""
     D = out["datasets"]
-    yn = lambda v: "-" if v is None else ("**yes**" if v else "no")
 
     def near(j):
         return (f"{fmt(j['auroc_near'])} vs {j['reference']['auroc_near_median']:.3f} (p {j['p']:.4f})"
@@ -165,6 +189,30 @@ def write_report(path, cfg, jump_cfg, out, stage):
             rows += [row(n, sp, k, m, r) for k, ms in s["sets"].items() for m, r in ms.items()]
     dummy = "\n".join(f"| {NAMES[n]} | {sp} | {fmt(s['dummy']['auroc'])} | {fmt(s['dummy']['pr_auc'])} | "
                       f"{fmt(s['dummy']['sens_at_90_spec'])} |" for n, d in D.items() for sp, s in d["splits"].items())
+    return (
+        "## Every score\n\n"
+        "Near-cutoff AUROC vs the steady reference's median (p); step in score SDs; rank correlation of the score with "
+        "Hb minus the cutoff inside each group (negative = follows Hb); edits that break it (average AUROC change over "
+        "the seven).\n\n"
+        "| dataset | split | input set | model | AUROC | PR-AUC | sens @ 90% spec | change vs rule | near-cutoff AUROC | "
+        "step | rho anemic | rho healthy | edits that break it | no trace? |\n"
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
+        "## Dummy\n\n| dataset | split | AUROC | PR-AUC | sens @ 90% spec |\n|---|---|---|---|---|\n" + dummy + "\n")
+
+
+def checks_text(cfg, jump_cfg, out):
+    """Markdown bullets: how each score is checked, and what "no trace" means."""
+    return (
+        f"- **Checks:** Stage 30's jump test (within {jump_cfg['window_g_dl']} g/dL, {jump_cfg['n_sims']} steady draws, "
+        f"jumps if p < {jump_cfg['p_max']}); Stage 33's step at the cutoff (within {cfg['window_g_dl']} g/dL, score "
+        "SDs); Stage 32's seven test-photo edits (" + ", ".join(out["edits"]) + f"), an edit breaks a model if AUROC "
+        f"drops >= {cfg['fragile_drop']} (CI below 0) while the rule moves < {cfg['rule_stable_drop']}.\n"
+        "- **No trace we can find** = jump p >= 0.025, step CI includes 0, no edit breaks it (rule: the first two). "
+        "Not proof: the jump test caught 10 of 24 planted traces in Stage 33.\n")
+
+
+def write_report(path, cfg, jump_cfg, out, stage):
+    D = out["datasets"]
     answers = "\n".join(
         f"| {NAMES[n]} | {LABELS[m]} | " + (f"{k} | {fmt(d['splits'][CV]['sets'][k][m]['scores']['auroc'])} | "
                                            f"{fmt(d['splits'][CV]['sets'][k][m]['vs_rule'])}" if k else
@@ -186,13 +234,7 @@ def write_report(path, cfg, jump_cfg, out, stage):
         f"- **Inputs:** only color numbers (no hospital, file name, child ID or photo size). {stage['models']}"
         "; dummy and the untrained rule (minus mean a*) next to them. 5-fold CV x 5 repeats "
         "by photo / child, scores averaged over repeats; the eyelids also leave one hospital out. Bootstrap 95% CIs, "
-        "2000 resamples.\n"
-        f"- **Checks:** Stage 30's jump test (within {jump_cfg['window_g_dl']} g/dL, {jump_cfg['n_sims']} steady draws, "
-        f"jumps if p < {jump_cfg['p_max']}); Stage 33's step at the cutoff (within {cfg['window_g_dl']} g/dL, score "
-        "SDs); Stage 32's seven test-photo edits (" + ", ".join(out["edits"]) + f"), an edit breaks a model if AUROC "
-        f"drops >= {cfg['fragile_drop']} (CI below 0) while the rule moves < {cfg['rule_stable_drop']}.\n"
-        "- **No trace we can find** = jump p >= 0.025, step CI includes 0, no edit breaks it (rule: the first two). "
-        "Not proof: the jump test caught 10 of 24 planted traces in Stage 33.\n\n"
+        "2000 resamples.\n" + checks_text(cfg, jump_cfg, out) + "\n"
         "## The number we would report (largest input set with no trace that beats the rule)\n\n"
         "| dataset | model | input set | AUROC | change vs rule |\n|---|---|---|---|---|\n" + answers + "\n\n"
         "## No trace we can find? (5x5 CV; " + " / ".join(LABELS[m] for m in cfg["models"]) + ")\n\n"
@@ -200,15 +242,7 @@ def write_report(path, cfg, jump_cfg, out, stage):
         + passes + "\n\n"
         "## Input sets\n\n| set | numbers |\n|---|---|\n" + sets + "\n\n"
         "Numbers that jump on their own (Bonferroni p < 0.025 / 29), left out of without_jumpers:\n\n"
-        "| dataset | numbers |\n|---|---|\n" + jumpers + "\n\n"
-        "## Every score\n\n"
-        "Near-cutoff AUROC vs the steady reference's median (p); step in score SDs; rank correlation of the score with "
-        "Hb minus the cutoff inside each group (negative = follows Hb); edits that break it (average AUROC change over "
-        "the seven).\n\n"
-        "| dataset | split | input set | model | AUROC | PR-AUC | sens @ 90% spec | change vs rule | near-cutoff AUROC | "
-        "step | rho anemic | rho healthy | edits that break it | no trace? |\n"
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n" + "\n".join(rows) + "\n\n"
-        "## Dummy\n\n| dataset | split | AUROC | PR-AUC | sens @ 90% spec |\n|---|---|---|---|---|\n" + dummy + "\n")
+        "| dataset | numbers |\n|---|---|\n" + jumpers + "\n\n" + every_score(out))
     (ROOT / "reports" / f"{stage['result']}.md").write_text(report)
     print(report)
 

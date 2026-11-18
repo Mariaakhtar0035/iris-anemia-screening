@@ -14,6 +14,15 @@ def test_input_sets_drop_jumpers_and_skip_when_nothing_jumps():
         input_sets({"input_sets": {"x": ["a_mean", "made_up"]}}, NAMES, [])
 
 
+def test_input_sets_take_extra_columns_only_where_named():
+    cfg = {"input_sets": {"all_29": "all", "plus": {"all_plus": ["age_months", "sex_male"]},
+                          "meta": ["age_months", "sex_male"]}}
+    sets = input_sets(cfg, NAMES, [], ["age_months", "sex_male"])
+    assert sets == {"all_29": NAMES, "plus": NAMES + ["age_months", "sex_male"], "meta": ["age_months", "sex_male"]}
+    with pytest.raises(AssertionError):  # an extra column must be passed in to be used
+        input_sets(cfg, NAMES, [])
+
+
 def result(p=0.3, step=(-0.2, 0.4), fragile=(), rule_lo=0.02):
     return {"jump": {"p": p}, "split": {"step": {"lo": step[0], "hi": step[1]}}, "fragile": list(fragile),
             "vs_rule": {"lo": rule_lo}}
