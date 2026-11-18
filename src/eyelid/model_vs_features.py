@@ -117,7 +117,7 @@ def write_report(path, cfg, jump_cfg, out, stage):
         "see how the model does there as well.\"\n\n"
         f"**Answer:** the best other model on the 29 numbers is {best}; TabPFN minus {best}: "
         f"{fmt(cv['sets']['all_29']['tabpfn']['vs'][a['best_other']])}. TabPFN adds something beyond the feature "
-        f"extraction: **{yes(a['tabpfn_adds'])}**.\n\n"
+        f"extraction: {yes(a['tabpfn_adds'])}.\n\n"
         "| model, all 29 numbers | AUROC (5x5 CV) | PR-AUC | sens @ 90% spec | one hospital held out | "
         "TabPFN minus this model |\n|---|---|---|---|---|---|\n" + "\n".join(part1) + "\n\n"
         "## 2. Age and sex next to the 29 numbers\n\n"
