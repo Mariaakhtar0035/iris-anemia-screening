@@ -1,0 +1,23 @@
+# Stage 38: numbers for the group talk, from the 2026-11-17 mentor meeting (the advice to the whole group, second part
+# of the transcript). Jaineel 2026-11-18: "keep going in the research and do the next parts".
+#   4. Mentor: "On the X axis severity, on the Y axis AUROC ... maybe top 10% we get something surprisingly high."
+#   5. Mentor: "100 people come in. You only have capacity to test 20. If you randomly pick the 20 ..."
+#
+# Cutoff: Ghana eyelids (CP-AnemiC, the 388 photos with no copy, 165 anemic), children 6-59 months. Every model is
+# trained on anemic = Hb < 11.0 g/dL (default.yaml); folds and models as Stage 9 (ceiling.yaml): 5-fold CV x 5 repeats
+# by photo, held-out scores averaged over repeats. The same score is then checked against lower Hb cutoffs.
+# Ghana only (India, Italy and Moscow are for audits; not used here).
+models: [dummy, logistic_regression, tabpfn]   # on the 29 color numbers; plus the untrained redness rule
+severity_cutoffs: [11.0, 10.0, 9.0, 8.0, 7.0]   # g/dL; children below each vs everyone else: 165, 109, 68, 34, 16
+capacities: [0.2, 0.3]   # share of children who can get a blood test: 20 of 100 (the mentor's example); 30% (survey side)
+sickest_cutoff: 8.0      # Hb < 8.0: 34 children, about the sickest 9% (the mentor's "top 10%")
+
+# Answers, fixed before running (bootstrap 95% CIs, 2000 resamples, paired: same children, same resamples):
+#   4. A score picks out the sickest children better if its AUROC for Hb < 8.0 minus its AUROC for Hb < 11.0 has a CI
+#      above 0. A score that follows Hb should rise there, because far fewer children sit near 8 g/dL than near 11
+#      (Hb 7-9: 52 children, Hb 10-11 alone: 56), so fewer pairs are hard to tell apart. A score that only separates
+#      the anemic and healthy folders falls instead, since the Hb 8-11 children sit in the anemic folder and score as
+#      high (tests/test_presentation_numbers.py).
+#   5. A model is worth using at a capacity if its catch rate (share of the anemic children among those tested) minus
+#      the rule's has a CI above 0. Random picking catches the capacity share (20% / 30%); a perfect score catches
+#      capacity / 42.5% of them (47% / 71%), since 42.5% of these children are anemic.
