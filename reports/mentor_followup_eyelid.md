@@ -49,6 +49,9 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Where in the photo is the Ghana trace? (Stage 34) | **All through the cut-out, not its edge** | Ghana eyelid TabPFN on the inner half 0.900, outer ring 0.893, both jump |
 | Is there a Ghana input set where TabPFN carries no trace? (Stage 35) | **No** | redness-only TabPFN 0.876 / 0.697 / 0.779 (eyelids, nails, palms) all jump; logistic regression on nails 0.637 passes |
 | Does a model that can only say "less red = more anemic" beat the rule? (Stage 36) | **No, it matches it; the free models' extra comes with the trace** | forced: 0.62 / 0.45-0.50 / 0.58; free on the same numbers: palms 0.69-0.71, jumps |
+| How much of TabPFN's score is TabPFN, and how much the 29 numbers? (2026-11-17, Stage 37) | **Mostly the numbers; TabPFN adds about 0.05** | MLP on the same 29 numbers 0.870, TabPFN 0.919 (+0.049 [0.023, 0.078]); logistic regression 0.680 (rule 0.650) |
+| Do age and sex help next to the 29 numbers? (2026-11-17, Stage 37) | **No** (the data has no BMI) | TabPFN 0.919 -> 0.918; MLP 0.870 -> 0.810; age and sex alone 0.58 |
+| How does it do on the numbers that shouldn't be useful? (Jaineel, 2026-11-17, Stage 37) | **Almost as well as on paleness: a sign of the trace** | hue, green, blue, yellow-blue: TabPFN 0.903 vs paleness 0.917; brightness + saturation without redness 0.895 |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak. Stage 30 later showed that part of that color is a trace of

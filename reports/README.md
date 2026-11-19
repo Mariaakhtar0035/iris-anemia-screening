@@ -40,6 +40,7 @@ CP-AnemiC sheet for all three body sites. Stage 26: Ghana Hb < 11.0, India and I
 | 34 | Where in the photo is the Ghana trace? | All through the cut-out, not its edge | Ghana eyelid TabPFN: whole 0.919, core 0.900, ring 0.893, both jump | [where](stage34_trace_location.md) |
 | 35 | Is there a Ghana input set where TabPFN carries no trace? | No: redness-only TabPFN still jumps, steps and breaks under edits; only logistic regression passes | TabPFN redness: eyelids 0.876, nails 0.697, palms 0.779, all with the trace; logistic regression nails 0.637 passes | [redness](stage35_redness_check.md) |
 | 36 | Does a model that can only say "less red = more anemic" beat the rule on Ghana? | No: it matches the rule and shows no trace on nails and palms; the free model's extra comes with the trace | forced: eyelids 0.62, nails 0.45-0.50, palms 0.58; free on the same numbers: palms 0.69-0.71 (jumps) | [forced](stage36_forced_redness.md) |
+| 37 | Ghana eyelids: how much of TabPFN's score is TabPFN, how much the 29 numbers? Do age and sex help? Do the numbers that shouldn't carry paleness score? | Mostly the numbers (an MLP gets 0.87; TabPFN adds 0.05); age and sex help no model; the not-useful numbers nearly match paleness, with the trace | MLP 0.870, TabPFN 0.919 (+0.049 [0.023, 0.078]); age + sex: TabPFN -0.001; not useful 0.903 vs paleness 0.917 | [model vs features](stage37_model_vs_features.md) |
 
 ## Across sites (closed: explains why per-location models)
 

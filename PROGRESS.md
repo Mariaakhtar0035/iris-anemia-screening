@@ -1,6 +1,6 @@
 # Progress: every strategy we tried, why, and what happened
 
-*Last updated 2026-11-14, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
+*Last updated 2026-11-18, branch `jaineel`. Written to present from: plain English, one block per strategy, each with
 why we tried it, what happened, and whether it worked. The full paper-style write-up is the [README](README.md); the
 answers for the mentors are in [`reports/mentor_followup_eyelid.md`](reports/mentor_followup_eyelid.md).*
 
@@ -14,7 +14,7 @@ Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained mode
 (F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
 fingernail photos of Ghanaian children (F16). Then (Stages 16-26): the Hb number, metadata, photo quality, automatic
 cropping, one child's eyelid, nail and palm together with cheating and fairness checks (F24, F25), and DINOv2
-fine-tuned (F26), a severity check that raised a warning (F27), fingernail + skin together (F28), a full audit of the TabPFN eyelid result (F29), a check of whether the Ghana scores read anemia or how the photos were handled (F30: partly the handling), an attempt at a Ghana number without that trace (F31: not possible with this data, and the Hb-number models carry it too), the same small photo edits on every dataset (F32: TabPFN breaks only on the Ghana sets), measuring the step at the cutoff and planting a fake folder trace in clean data (F33: the step confirms the Ghana jump but can't be taken out; a mild one-folder edit adds 0.06-0.27, and the jump test catches fewer than half), and where in the photo the Ghana trace sits (F34: all through the cut-out, not its edge), TabPFN on Ghana with redness only (F35: no input set is free of the trace), and a model where less red can only mean more anemic (F36: it matches the rule; what the flexible models add comes with the trace). From 2026-11-15 new findings are Ghana only; India and Italy are kept for audits. See
+fine-tuned (F26), a severity check that raised a warning (F27), fingernail + skin together (F28), a full audit of the TabPFN eyelid result (F29), a check of whether the Ghana scores read anemia or how the photos were handled (F30: partly the handling), an attempt at a Ghana number without that trace (F31: not possible with this data, and the Hb-number models carry it too), the same small photo edits on every dataset (F32: TabPFN breaks only on the Ghana sets), measuring the step at the cutoff and planting a fake folder trace in clean data (F33: the step confirms the Ghana jump but can't be taken out; a mild one-folder edit adds 0.06-0.27, and the jump test catches fewer than half), and where in the photo the Ghana trace sits (F34: all through the cut-out, not its edge), TabPFN on Ghana with redness only (F35: no input set is free of the trace), and a model where less red can only mean more anemic (F36: it matches the rule; what the flexible models add comes with the trace), then the mentors' three asks from 2026-11-17 (F37: an MLP on the same 29 numbers gets 0.87 and TabPFN adds 0.05 on top; age and sex add nothing; the numbers that shouldn't carry paleness give TabPFN 0.90). From 2026-11-15 new findings are Ghana only; India and Italy are kept for audits. See
 [What's next](#whats-next) for what's left.
 
 ## Best results so far
@@ -42,6 +42,9 @@ The best honest number for each question, kept up to date after every stage. Eve
 | Where in the photo is the Ghana trace? | **all through the cut-out**: TabPFN on the inner half alone (0.90 on eyelids) or the outer ring alone (0.89) still jumps; not the cut-out edge | F34 |
 | Is there a Ghana input set where TabPFN carries no trace? | **No.** Redness only (0.88 eyelids, 0.70 nails, 0.78 palms) still jumps, has a step and breaks under photo edits; with mean redness alone TabPFN only matches the rule on eyelids (0.640 vs 0.650). Only logistic regression passes: nails 0.637 (+0.14 over the rule) | F35 |
 | Does a model that can only say "less red = more anemic" beat the rule on Ghana? | **No: it matches the rule** (eyelids 0.62, nails 0.45-0.50, palms 0.58) and shows no trace on nails and palms; the free model on the same numbers gains 0.10-0.13 and that gain comes with the trace | F36 |
+| How much of TabPFN's Ghana eyelid score is TabPFN, and how much the 29 numbers? | **mostly the 29 numbers:** an MLP on them gets 0.870, TabPFN adds **0.049 [0.023, 0.078]** (0.084 with one hospital held out); logistic regression only 0.680 (rule 0.650). Every flexible model jumps at the cutoff, so the extra over the rule comes with the trace | F37 |
+| Does age and sex help, next to the 29 numbers? | **No:** TabPFN -0.001 [-0.009, 0.006], MLP -0.060; age and sex alone 0.57-0.59, no trace (no BMI in the data) | F37 |
+| Do the numbers that shouldn't carry paleness (hue, green, blue, yellow-blue) score? | **Yes, almost as well:** TabPFN 0.903 vs 0.917 on the paleness numbers, MLP 0.835 vs 0.863, both jump; "weird" by the rule fixed before running | F37 |
 | What it saves a clinic (Ghana) | test 50% of children to catch 90% of the anemic ones (TabPFN), vs 90% at random | F10 |
 
 ## The story in six points
@@ -136,6 +139,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 | F34 | Color numbers on the inner half and the outer ring of each cut-out; each no-color number through the jump test | where in the photo is the trace? | Ghana: core and ring both jump and keep the AUROC (eyelids 0.90 / 0.89); no no-color number jumps except Ghana palm height | **all through the cut-out, not its edge** |
 | F35 | TabPFN and logistic regression on Ghana with mean redness, the redness numbers, all 29 minus the jumping numbers, all 29; every score through the jump test, the step and the photo edits | is there an input set where TabPFN carries no trace? | no TabPFN set passes on eyelids, nails or palms; redness-only TabPFN 0.876 / 0.697 / 0.779 all jump; logistic regression on nails 0.637 passes | **no clean TabPFN number on Ghana; the gain over the rule comes with the trace** |
 | F36 | Gradient boosting where less red can only mean more anemic, same checks | does a pallor-only model beat the rule? | forced model = rule (eyelids 0.62, nails 0.45-0.50, palms 0.58), no trace on nails and palms; free model on the same numbers +0.10-0.13, with the trace | **what the flexible models add on Ghana is not "less red = more anemic"** |
+| F37 | Logistic regression, an MLP, gradient boosting and TabPFN on the same 29 numbers; + age and sex; the numbers that shouldn't carry paleness; redness, brightness and saturation combinations (Ghana eyelids), same checks | mentors 2026-11-17: how much is TabPFN, how much the features? add demographics; Jaineel: give it what shouldn't be useful | MLP 0.870, TabPFN 0.919 (+0.049); logistic regression 0.680; age + sex 0.000 to -0.060; not-useful numbers TabPFN 0.903 vs paleness 0.917 | **the 29 numbers do most of it, TabPFN adds 0.05; the lift over the rule is in every color number and comes with the trace** |
 
 ## Part A: checking the published eyelid results
 
@@ -1136,6 +1140,46 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - **Run it yourself:** `python -m src.eyelid.forced_redness` (~3 min). Report:
   [`reports/stage36_forced_redness.md`](reports/stage36_forced_redness.md).
 
+### F37. TabPFN or the 29 numbers? Age and sex, and the numbers that shouldn't carry paleness (Stage 37). Mostly the numbers; age and sex add nothing; the "not useful" numbers score.
+- **Question (mentor meeting 2026-11-17):** how much of TabPFN's score comes from TabPFN and how much from the 29
+  color numbers ("train a logistic regression or like an MLP on these extracted 29 features")? Does adding age and sex
+  help? Jaineel: if it only gets the numbers that shouldn't be useful (green, blue, anything that isn't brightness or
+  redness), how does it do, and do any combinations of redness, brightness and saturation behave oddly?
+- **What we did:** answers fixed in `configs/model_vs_features.yaml` before running. Ghana eyelids only (388 photos,
+  165 anemic), **Hb < 11.0 g/dL**. Logistic regression, an MLP (size and L2 penalty picked by an inner CV inside each
+  training fold), gradient boosting and TabPFN on the same inputs and folds; 5-fold CV x 5 repeats, and one hospital
+  held out. Age (months) and sex (0/1) next to the 29 numbers; the data has no BMI. Every score through the jump test,
+  the step and the seven photo edits (F35).
+- **Answers:**
+
+| Inputs (Ghana eyelids, Hb < 11.0) | Logistic regression | MLP | Gradient boosting | TabPFN |
+|---|---|---|---|---|
+| All 29 numbers | 0.680 | 0.870 (trace) | 0.846 (trace) | 0.919 (trace) |
+| 29 + age + sex | 0.686 | 0.810 (trace) | 0.833 (trace) | 0.918 (trace) |
+| Age + sex alone | 0.591 | 0.576 | 0.571 | 0.576 |
+| Not useful: hue, green, blue, yellow-blue (12) | 0.641 | 0.835 (trace) | 0.788 (trace) | 0.903 (trace) |
+| Paleness: redness, brightness, saturation (14) | 0.667 | 0.863 (trace) | 0.846 (trace) | 0.917 (trace) |
+| Brightness + saturation, no redness (9) | 0.628 | 0.812 (trace) | 0.797 (trace) | 0.895 (trace) |
+
+  - **Mostly the 29 numbers.** An MLP on them gets 0.870; TabPFN adds **0.049 [0.023, 0.078]** on top (0.084 with one
+    hospital held out). Logistic regression stays at the rule's level (0.680 vs 0.650, +0.030 [-0.019, 0.074]). So the
+    lift over the rule needs a flexible model, and every flexible-model score carries the trace (5-6 of the 7 edits
+    break each one; all but one jump at the cutoff).
+  - **Age and sex help no model:** TabPFN -0.001 [-0.009, 0.006]; the MLP gets worse, -0.060 [-0.089, -0.031]. Alone
+    they score 0.57-0.59 (rule 0.650) with no trace, and inside the anemic group that score follows Hb (rho -0.25
+    [-0.39, -0.10]).
+  - **The numbers that shouldn't carry paleness nearly match the ones that should:** TabPFN 0.903 vs 0.917
+    (-0.014 [-0.030, 0.001]), MLP 0.835 vs 0.863. "Weird" for both by the rule fixed before running.
+  - **Combinations:** TabPFN on redness alone 0.876, brightness alone 0.785, saturation alone 0.698, but brightness +
+    saturation (no redness) 0.895. Saturation alone makes even logistic regression jump (step 0.73 [0.26, 1.22]).
+  - Logistic regression passes every check on brightness, the not-useful set, paleness and three of the combinations,
+    but none of them beats the rule (best: redness + brightness, +0.018 [-0.014, 0.051]).
+- **Takeaways:** TabPFN is the best of four models at picking up what the 29 numbers carry, by about 0.05. What lifts
+  Ghana above the rule is in every color number, including the ones that shouldn't carry paleness, so it fits the
+  folder trace (F30) better than paleness. Age and sex don't change that.
+- **Run it yourself:** `python -m src.eyelid.model_vs_features` (~2.5 h on CPU). Report:
+  [`reports/stage37_model_vs_features.md`](reports/stage37_model_vs_features.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -1181,6 +1225,10 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Training TabPFN on color-edited copies: the Ghana eyelid edit cost falls from 0.21 to 0.05, for 0.04 (F32).
 - The step in the score at the cutoff as a second jump check: big on all three Ghana sets, none on the clean sets (F33).
 - Planting a fake folder trace in clean data, to test our own checks (F33).
+- Putting other models on TabPFN's exact inputs, to split the model from the features: an MLP gets 0.87 of TabPFN's
+  0.92 (F37).
+- The numbers that shouldn't carry paleness as a check: they nearly match the paleness numbers on Ghana, a sign of
+  the trace (F37).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
@@ -1213,6 +1261,9 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - The jump test on small sets: it misses most planted traces on India (3 of 11) and Italy (0 of 2) (F33).
 - TabPFN on redness only, or without the numbers that jump on their own: still carries the trace (F35).
 - Forcing "less red = more anemic": removes the trace on nails and palms but only matches the rule (F36).
+- Age and sex next to the 29 numbers on the Ghana eyelids, for any of four models (TabPFN -0.001, MLP -0.060; F37).
+- Logistic regression above the rule on the Ghana eyelids: it passes the checks on six color sets, but those score
+  0.63-0.67, never clearly above the rule (F37).
 
 **Still open**
 - Why the linked Ghana eyelid cut-outs' shape predicts anemia (0.69; F25).
@@ -1238,6 +1289,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Where in the photo is the trace? | done (F34): all through the cut-out | - |
 | TabPFN on Ghana with redness only, through every trace check | done (F35): no input set passes | - |
 | A model where less red can only mean more anemic | done (F36): matches the rule; the free models' extra comes with the trace | - |
+| The mentors' asks from 2026-11-17: an MLP on the 29 numbers, age and sex, the numbers that shouldn't be useful | done (F37): mostly the numbers, TabPFN +0.05; age and sex nothing; the not-useful numbers score 0.90 | - |
 | More Ghana modelling | stop: the honest Ghana numbers are the rule and simple models, 0.60-0.65 (F35-F36); from 2026-11-15 new findings are Ghana only, India and Italy for audits | - |
 | Tell Maria the Ghana Hb results carry the trace (F31) | to do | Jaineel |
 | A paper section on the trace and the checks (jump test, step, edit test, planted trace) | next | team |

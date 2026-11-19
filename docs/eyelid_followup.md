@@ -855,3 +855,16 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **Result:** the forced model matches the rule and shows no trace on nails and palms; the free model's extra
   0.10-0.13 comes with the trace; on eyelids nothing passes.
 - **Checks:** 1 new test (the constraint holds on a wiggly pattern); smoke run; run at clean commit `8c0dc75`.
+
+### Step 35 (Stage 37): TabPFN or the 29 numbers? Age and sex; the numbers that shouldn't carry paleness
+- **Why:** the 2026-11-17 mentor meeting (Jaineel's part): "train a logistic regression or like an MLP on these
+  extracted 29 features"; "you can add the age and sex and BMI"; Jaineel: give it everything that shouldn't be useful,
+  and combinations of redness, brightness and saturation.
+- **What:** `src/eyelid/model_vs_features.py`, `configs/model_vs_features.yaml`: logistic regression, an MLP (inner-CV
+  tuned), gradient boosting and TabPFN on 11 input sets of the Ghana eyelids (Hb < 11.0 g/dL); Stage 35's run loop and
+  checks, extended with extra columns (age, sex) and paired model and set comparisons.
+- **Result:** MLP 0.870, TabPFN 0.919 (+0.049 [0.023, 0.078]), logistic regression 0.680; age and sex help no model;
+  the not-useful numbers give TabPFN 0.903 vs 0.917 on paleness ("weird" for MLP and TabPFN).
+- **Checks:** 4 new tests (98 pass); smoke run (2 folds) found MLP convergence warnings, fixed with max_iter 20000;
+  full run at clean commit `7715628`, exit 0, no warnings; Stage 35 and 36 reports rebuilt with the shared code and
+  unchanged.

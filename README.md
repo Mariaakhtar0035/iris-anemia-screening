@@ -896,6 +896,33 @@ Run: `python -m src.eyelid.redness_check` (~50 min on CPU), `python -m src.eyeli
 [`reports/stage35_redness_check.md`](reports/stage35_redness_check.md),
 [`reports/stage36_forced_redness.md`](reports/stage36_forced_redness.md).
 
+### 6.21 TabPFN or the 29 numbers? Age and sex, and the numbers that shouldn't carry paleness (Stage 37)
+
+Ghana eyelids only (388 photos, 165 anemic); anemic = **Hb < 11.0 g/dL** (children 6-59 months). The three asks from
+the 2026-11-17 mentor meeting: put a logistic regression and an MLP on TabPFN's exact 29 numbers, to split the model
+from the features; add age (months) and sex (0/1) next to them (the data has no BMI); and give the models only the
+numbers that shouldn't carry paleness (hue, green, blue, yellow-blue) and combinations of redness, brightness and
+saturation. Gradient boosting sits next to them; the MLP's size and L2 penalty are picked by an inner CV inside each
+training fold. Same folds and checks as Section 6.20 (`configs/model_vs_features.yaml`; answers fixed before running).
+
+| Inputs (Ghana eyelids, Hb < 11.0) | Logistic regression | MLP | Gradient boosting | TabPFN |
+|---|---|---|---|---|
+| All 29 numbers | 0.680 | 0.870 (trace) | 0.846 (trace) | 0.919 (trace) |
+| 29 + age + sex | 0.686 | 0.810 (trace) | 0.833 (trace) | 0.918 (trace) |
+| Age + sex alone | 0.591 | 0.576 | 0.571 | 0.576 |
+| Not useful: hue, green, blue, yellow-blue | 0.641 | 0.835 (trace) | 0.788 (trace) | 0.903 (trace) |
+| Paleness: redness, brightness, saturation | 0.667 | 0.863 (trace) | 0.846 (trace) | 0.917 (trace) |
+
+Most of TabPFN's score is in the 29 numbers: the MLP gets 0.870, and TabPFN adds 0.049 [0.023, 0.078] (0.084 with one
+hospital held out). Logistic regression stays at the rule's level (0.680 vs 0.650), so the lift needs a flexible model,
+and every flexible-model score carries the trace. Age and sex help no model (TabPFN -0.001 [-0.009, 0.006], MLP
+-0.060 [-0.089, -0.031]). The numbers that shouldn't carry paleness nearly match the ones that should (TabPFN 0.903 vs
+0.917, -0.014 [-0.030, 0.001]), and brightness + saturation without any redness gives TabPFN 0.895. What lifts Ghana
+above the rule is in every color number, which fits the folder trace (Section 6.15) better than paleness.
+
+Run: `python -m src.eyelid.model_vs_features` (~2.5 h on CPU). Report:
+[`reports/stage37_model_vs_features.md`](reports/stage37_model_vs_features.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
