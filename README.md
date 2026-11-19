@@ -923,6 +923,25 @@ above the rule is in every color number, which fits the folder trace (Section 6.
 Run: `python -m src.eyelid.model_vs_features` (~2.5 h on CPU). Report:
 [`reports/stage37_model_vs_features.md`](reports/stage37_model_vs_features.md).
 
+### 6.22 Severity on the x axis, and a fixed number of blood tests (Stage 38)
+
+Ghana eyelids (388, 165 anemic); every model trained on anemic = **Hb < 11.0 g/dL** (children 6-59 months), 5x5 CV.
+The mentors' advice to the whole group (2026-11-17): plot AUROC against severity, and count how many anemic children a
+score catches when only 20 of 100 can be tested. The same held-out score is checked against Hb < 10, 9, 8 and 7
+(`configs/presentation_numbers.yaml`; answers fixed before running).
+
+![AUROC by Hb cutoff](reports/figures/stage38_severity_auroc.png)
+
+No score picks out the sickest 9% (Hb < 8) better than all anemic children. TabPFN falls from 0.919 to 0.749
+(-0.170 [-0.235, -0.108]), about as much as a score that knows only the anemic and healthy folder falls on these
+children (1.00 -> 0.82), while a score that
+follows Hb should rise there (far fewer children sit near 8 g/dL than near 11). With 20 tests per 100 children,
+TabPFN catches 43% [38%, 48%] of the anemic ones (at most 47% is possible), the rule 29% and random picking 20%.
+
+Run: `python -m src.eyelid.presentation_numbers` (~10 min on CPU). Report:
+[`reports/stage38_presentation_numbers.md`](reports/stage38_presentation_numbers.md). Slide outline for the group talk:
+[`docs/talk_outline_image_side.md`](docs/talk_outline_image_side.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.

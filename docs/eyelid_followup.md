@@ -868,3 +868,13 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **Checks:** 4 new tests (98 pass); smoke run (2 folds) found MLP convergence warnings, fixed with max_iter 20000;
   full run at clean commit `7715628`, exit 0, no warnings; Stage 35 and 36 reports rebuilt with the shared code and
   unchanged.
+
+### Step 36 (Stage 38): severity curve and a fixed number of blood tests, for the group talk
+- **Why:** the mentors' advice to the whole group on 2026-11-17 (second part of the transcript); Jaineel 2026-11-18:
+  "keep going ... do the next parts".
+- **What:** `src/eyelid/presentation_numbers.py`, `configs/presentation_numbers.yaml`: the rule, logistic regression
+  and TabPFN (dummy next to them) on Hb < 11, 10, 9, 8, 7 and at 20% / 30% tested; `docs/talk_outline_image_side.md`
+  for the slides (both splits, transfer as a negative result, the triage story).
+- **Result:** no score is better for the sickest (TabPFN 0.919 -> 0.749 at Hb < 8); 20 tests: TabPFN 43%, rule 29%.
+- **Checks:** 2 new tests (100 pass); one claim in the config corrected by a test before running (a pallor score only
+  rises where fewer children sit near the cutoff); smoke run with the fast models; run at clean commit `07466bd`.
