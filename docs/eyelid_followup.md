@@ -878,3 +878,14 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
 - **Result:** no score is better for the sickest (TabPFN 0.919 -> 0.749 at Hb < 8); 20 tests: TabPFN 43%, rule 29%.
 - **Checks:** 2 new tests (100 pass); one claim in the config corrected by a test before running (a pallor score only
   rises where fewer children sit near the cutoff); smoke run with the fast models; run at clean commit `07466bd`.
+
+### Step 37 (Stage 39): does any Ghana body site read severity beyond the folder?
+- **Why:** Stage 38 showed TabPFN's eyelid score falling at lower cutoffs about as much as a folder-only score; Jaineel
+  2026-11-19 "keep going for research", picked this stage on 2026-11-20.
+- **What:** `src/eyelid/severity_reference.py`, `configs/severity_reference.yaml`: Stage 38's curve on the 388 eyelids
+  and the 302 linked eyelids, nails and palms, with a folder-only line (exact formula) and a follows-Hb line (the jump
+  test's steady score) per score.
+- **Result:** no score on any site beats the folder line at Hb < 8; TabPFN sits on it (eyelids, palms) or below it
+  (nails, -0.107 [-0.213, -0.009]).
+- **Checks:** 3 new tests (103 pass), including that the folder line matches a simulated folder-only score; smoke run
+  (the 388 eyelid numbers reproduce Stage 38); run at clean commit `bf4be20`.

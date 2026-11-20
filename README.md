@@ -942,6 +942,25 @@ Run: `python -m src.eyelid.presentation_numbers` (~10 min on CPU). Report:
 [`reports/stage38_presentation_numbers.md`](reports/stage38_presentation_numbers.md). Slide outline for the group talk:
 [`docs/talk_outline_image_side.md`](docs/talk_outline_image_side.md).
 
+### 6.23 Does any Ghana body site read severity beyond the folder? (Stage 39)
+
+Ghana eyelids (388) and the 302 children with a linked eyelid, nail and palm photo; models trained on anemic =
+**Hb < 11.0 g/dL** (children 6-59 months), 5x5 CV. Each score's severity curve is drawn next to two lines matched to its
+own AUROC at Hb < 11: a score that knows only the anemic or healthy folder (every anemic-healthy pair ordered right with
+the same chance, two anemic children a coin flip: at cutoff t, (H x A + 0.5 x M) / (H + M)) and a score that follows Hb
+(the jump test's steady score). Answer fixed before running (`configs/severity_reference.yaml`): a score reads severity
+if its AUROC at Hb < 8 beats the folder line, CI above 0.
+
+![TabPFN against the two reference lines](reports/figures/stage39_severity_reference.png)
+
+No score passes on any site. At Hb < 8 TabPFN sits on the folder line on the eyelids (0.749 vs 0.764) and palms (0.713
+vs 0.734), about 0.2 below a score that follows Hb (0.958, 0.928); on the nails it falls below even the folder line
+(-0.107 [-0.213, -0.009]). So on every Ghana body site the scores carry the anemic or healthy label and nothing about
+how low Hb is, which fits the folder trace (Section 6.15) and not paleness.
+
+Run: `python -m src.eyelid.severity_reference` (~35 min on CPU). Report:
+[`reports/stage39_severity_reference.md`](reports/stage39_severity_reference.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.

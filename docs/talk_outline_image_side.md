@@ -19,6 +19,10 @@ likely severe cases; the eyelid photo is the last, cheap check before a blood te
 
 Chart for slide 5: [`reports/figures/stage38_severity_auroc.png`](../reports/figures/stage38_severity_auroc.png).
 
+Better chart for slide 5, with the two reference lines: the top-left panel of
+[`reports/figures/stage39_severity_reference.png`](../reports/figures/stage39_severity_reference.png): TabPFN follows a score that
+knows only the folder, not one that follows Hb (Stage 39).
+
 **For the mentors' "top 10% surprisingly high":** no. On the sickest 9% (Hb < 8) no score does better than on all
 anemic children. TabPFN clearly drops (0.92 to 0.75, -0.17 [-0.24, -0.11]), about as much as a score that knows only
 the anemic and healthy folder falls on these children (1.00 to 0.82); the rule and logistic regression don't clearly change (Stage 38).
