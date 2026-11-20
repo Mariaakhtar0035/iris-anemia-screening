@@ -1,0 +1,28 @@
+# Stage 39: does any Ghana body site's score read how sick a child is, beyond the anemic / healthy folder?
+# Jaineel 2026-11-19: "keep going for research"; picked this stage on 2026-11-20. It follows Stage 38, where no Ghana
+# eyelid score picked out the sickest children better, and TabPFN fell at lower cutoffs about as much as a score that
+# knows only the folder.
+#
+# Cutoff: Ghana children 6-59 months; every model is trained on anemic = Hb < 11.0 g/dL (default.yaml), and the same
+# held-out score is checked against lower cutoffs. Ghana only. Sets:
+#   ghana_eyelid: CP-AnemiC, the 388 photos with no copy (165 anemic), folds by photo, as Stage 38
+#   linked_eyelid / linked_nail / linked_palm: the 302 children with an eyelid, a nail and a palm photo linked by file
+#     number (Stage 24; 125 anemic), Hb from the CP-AnemiC sheet, folds by child group. The link is probable, not
+#     certain (Stage 25).
+# Folds: 5-fold CV x 5 repeats (ceiling.yaml), held-out scores averaged over repeats.
+datasets: [ghana_eyelid, linked_eyelid, linked_nail, linked_palm]
+models: [dummy, logistic_regression, tabpfn]   # on the 29 color numbers; plus the untrained rule (minus mean a*)
+severity_cutoffs: [11.0, 10.0, 9.0, 8.0, 7.0]   # g/dL; below each vs everyone else. 388: 165/109/68/34/16; 302: 125/77/52/25/14
+answer_cutoff: 8.0
+n_sims: 2000   # draws of the follows-Hb score per score
+
+# Two reference lines for every score, each matched to that score's own AUROC A at Hb < 11:
+#   folder only: knows only anemic vs healthy. Every anemic-healthy pair is ordered right with chance A, two anemic
+#     children are a coin flip. At cutoff t: (H * A + 0.5 * M) / (H + M), with H healthy children and M anemic children
+#     with Hb in [t, 11). It falls as t drops.
+#   follows Hb: -(Hb - 11) + noise, the noise set so its AUROC at Hb < 11 is A (the jump test's steady reference,
+#     handling_check.steady_reference); median and 2.5-97.5% of the draws. It rises where fewer children sit near t.
+#
+# Answer, fixed before running: a score reads severity beyond the folder if its AUROC at Hb < 8 minus the folder-only
+# line has a bootstrap 95% CI above 0 (2000 resamples; the line is recomputed in every resample from that resample's
+# A, H and M).
