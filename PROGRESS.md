@@ -1366,7 +1366,7 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Does any Ghana body site read severity beyond the folder? | done (F39): no, on any site; TabPFN on the folder-only line | - |
 | More Ghana modelling | stop: the honest Ghana numbers are the rule and simple models, 0.60-0.65 (F35-F36); from 2026-11-15 new findings are Ghana only, India and Italy for audits | - |
 | Tell Maria the Ghana Hb results carry the trace (F31) | to do | Jaineel |
-| A paper section on the trace and the checks (jump test, step, edit test, planted trace) | next | team |
+| A paper section on the trace and the checks (jump test, step, edit test, planted trace) | drafted: [`docs/paper_section_trace.md`](docs/paper_section_trace.md), seven checks in one table; for the team to review | team |
 | Fingernails: nail and skin numbers side by side as one input | done (F28): no gain for the models, +0.05 for the untrained rule | - |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |
@@ -1381,5 +1381,6 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | Full paper-style write-up | [`README.md`](README.md) |
 | Answers for the mentors | [`reports/mentor_followup_eyelid.md`](reports/mentor_followup_eyelid.md) |
 | The mentors' suggestions and the step log | [`docs/eyelid_followup.md`](docs/eyelid_followup.md) |
+| Draft paper section on the folder trace and the checks | [`docs/paper_section_trace.md`](docs/paper_section_trace.md) |
 | Stage reports with every number and range | [`reports/`](reports/) |
 | Settings, seeds and cutoffs | [`configs/`](configs/) |

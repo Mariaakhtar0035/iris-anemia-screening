@@ -1153,6 +1153,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Measuring the step at the cutoff; a planted trace in clean data (Section 6.18) | done: the step confirms Ghana; taking it out not trusted; the jump test is weak on small sets |
 | Where in the photo the trace sits (Section 6.19) | done: all through the cut-out |
 | TabPFN on Ghana with redness only; a model forced to read redness one way (Section 6.20) | done: no TabPFN input passes; the forced model matches the rule |
+| One paper section on the trace and the seven checks (Sections 6.14-6.23) | drafted for the team: [`docs/paper_section_trace.md`](docs/paper_section_trace.md) |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 
