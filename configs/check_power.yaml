@@ -1,0 +1,29 @@
+# Stage 40: do the two newest trace checks pass clean data, and do they catch a trace we plant?
+# Jaineel 2026-11-20: "keep going"; picked this stage on 2026-11-21. The draft paper section (docs/paper_section_trace.md)
+# ran the folder-only line (Stage 39) and the "not useful" numbers (Stage 37) on Ghana only, so we don't know whether
+# they flag clean data or how often they catch a real trace.
+#
+# Audit controls only, no new Ghana claims. Cutoffs as in Stages 30-33: India and Italy eyelids (Eyes-Defy adults), WHO
+# by sex, women < 12.0 and men < 13.0 g/dL (pregnancy not recorded); Moscow nails, Hb < 12.0 g/dL for everyone (no sex
+# column). Same models, folds and planted traces as Stage 33: the plants (one mild edit of the anemic photos only) and
+# plant_min_gain are read from trace_split.yaml; the input sets from model_vs_features.yaml.
+datasets: [india_eyelid, italy_eyelid, moscow_nail]
+cv: {n_splits: 5, n_repeats: 5}
+models: [dummy, logistic_regression, hist_gradient_boosting, tabpfn]   # plus the untrained rule (minus mean a*);
+                                                                  # the dummy is shown, not counted in the answer
+depth_g_dl: 2.0   # folder line 2 g/dL below each person's own cutoff (Ghana's 11 -> 8 is 3 below, but Italy has 7 people
+                  # there). People more than 2 below: India 28, Italy 9, Moscow 38
+weird_margin: 0.05   # as Stage 37
+
+# The two checks, as on Ghana:
+#   folder line: flags a score if its AUROC more than depth_g_dl below the cutoff minus the folder-only line
+#     (H * A + 0.5 * M) / (H + M) does not have its bootstrap 95% CI above 0 (Stage 39's rule).
+#   not useful: flags a model if, on hue, green, blue and yellow-blue only, it scores at least its paleness-numbers AUROC
+#     minus weird_margin (estimates) and beats the rule (paired CI above 0) (Stage 37's rule). Trained models only.
+#
+# Answer, fixed before running. A check is useful if both hold:
+#   it flags at most max_false_flags of the 9 clean scores (3 datasets x the 3 trained models, nothing planted), and
+#   it catches at least min_caught of the planted traces that count (gain >= plant_min_gain; Stage 33 had 24, 4 of
+#     them on the rule, which the not-useful check can't test and so counts as missed). The jump test caught 10 of 24.
+max_false_flags: 1
+min_caught: 11
