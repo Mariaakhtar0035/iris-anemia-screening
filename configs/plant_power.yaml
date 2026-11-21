@@ -1,0 +1,26 @@
+# Stage 41: do the photo-edit test, the step at the cutoff and Hb inside the anemic group catch a trace we plant?
+# Jaineel 2026-11-21: "keep going"; picked this stage the same day. Stage 40: none of the checks tried on planted traces
+# (jump test, folder-only line, not-useful numbers) catches the gamma and saturation plants on India, and three checks
+# in the paper draft's table (docs/paper_section_trace.md) were never run on planted traces.
+#
+# Audit controls only, no new Ghana claims. Data, folds, models, the plants and the answer thresholds are Stage 40's
+# (check_power.yaml: India and Italy eyelids, WHO by sex, women < 12.0 and men < 13.0 g/dL, pregnancy not recorded;
+# Moscow nails, Hb < 12.0 g/dL for everyone, no sex column; 5x5 CV; logistic regression, gradient boosting, TabPFN,
+# dummy and rule; at most max_false_flags = 1 of the 9 clean scores flagged, at least min_caught = 11 plants caught;
+# trace_split.yaml: the 3 plants and plant_min_gain). Stage 40's per-plant flags for its three checks are read from
+# results/stage40_check_power.json.
+#
+# The three checks, as in their own stages:
+#   edit test (Stage 32): the 7 test edits of handling_check.yaml (no batch61); an edit breaks a model if it costs at
+#     least fragile_drop (paired CI below 0) while the rule moves less than rule_stable_drop (edit_robustness.yaml).
+#     The plant is part of the photo, the test edit goes on top. Trained models only.
+#   step at the cutoff (Stage 33): flags if the step's CI is above 0 (window_g_dl of trace_split.yaml).
+#   Hb inside the anemic group (Stage 30): flags if the score's rank correlation with Hb inside the anemic group does
+#     not have its CI below 0 (the score doesn't clearly rise as Hb falls).
+edit_min_broken: 1   # the edit test flags a score if at least this many of the 7 edits break it
+#
+# Answers, fixed before running:
+#   1. Each of the three checks is useful by Stage 40's rule.
+#   2. Combined: the union of every check (these three and Stage 40's three) that flags at most max_false_flags clean
+#      scores on its own; report its clean flags and plants caught.
+#   3. How many of India's 8 gamma and saturation plants any check catches.
