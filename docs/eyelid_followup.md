@@ -899,3 +899,13 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   together with the jump test 12 of 24; none catch India's gamma or saturation plants.
 - **Checks:** 3 new tests (106 pass); smoke run with the fast models; run at clean commit `435f16e`; the 24 counting
   plants and the jump test's 10 match Stage 33.
+
+### Step 39 (Stage 41): do the edit test, the step and Hb inside the anemic group catch a planted trace?
+- **Why:** Stage 40 left India's gamma and saturation plants uncaught, and three checks in the paper draft had never
+  been run on plants; Jaineel 2026-11-21 "keep going", picked this stage the same day.
+- **What:** `src/eyelid/plant_power.py`, `configs/plant_power.yaml`: the three checks on Stage 40's clean scores and
+  planted traces, then all six combined.
+- **Result:** the step at the cutoff is the one useful check (0 of 9 clean flagged, 17 of 24 caught); the edits catch
+  4 of India's 8 missed plants (2 clean flags); all six together 20 of 24 with 7 of 9 clean flagged.
+- **Checks:** 3 new tests (109 pass); smoke run with the fast models on the full CV (gains match Stage 40); run at
+  clean commit `6653130`; the clean edit breaks match Stage 32.

@@ -56,6 +56,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | 100 children come in, capacity to test 20 (2026-11-17, Stage 38) | **TabPFN catches 43% of the anemic children, the rule 29%, random 20%** | at most 47% is possible (42.5% are anemic); 30 tests: TabPFN 62%, rule 42% |
 | Does any Ghana body site's score (eyelid, nail, palm) read how sick a child is? (Stage 39) | **No: on every site TabPFN follows a score that knows only the anemic/healthy folder** | Hb < 8: eyelids 0.749 vs folder-only 0.764 vs follows-Hb 0.958; palms 0.713 / 0.734 / 0.928 |
 | Are the numbers that shouldn't carry paleness a fair check elsewhere? (Stage 40) | **On eyelids yes, on nails no** | India and Italy eyelids pass; on Moscow nails hue and blue carry pallor too (TabPFN 0.818 vs 0.822); caught 11 of 24 planted traces, the jump test 10 |
+| Which trace check would we trust most? (Stage 41) | **The step in the score at the cutoff** | no clean score flagged, 17 of 24 planted traces caught (jump test 10); all six checks together flag 7 of 9 clean scores |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak. Stage 30 later showed that part of that color is a trace of

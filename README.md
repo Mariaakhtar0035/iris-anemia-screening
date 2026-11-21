@@ -986,6 +986,34 @@ catch 12 of 24, and no check catches the gamma or saturation plants on India's 9
 Run: `python -m src.eyelid.check_power` (~1.5 h on CPU). Report:
 [`reports/stage40_check_power.md`](reports/stage40_check_power.md).
 
+### 6.25 Do the edit test, the step at the cutoff and Hb inside the anemic group catch a trace we plant? (Stage 41)
+
+Section 6.24 tested three checks on Section 6.18's planted traces. Here the other three color checks go on the same
+24 plants and 9 clean scores (logistic regression, gradient boosting and TabPFN on India and Italy eyelids, **WHO by
+sex, women < 12.0, men < 13.0 g/dL**, and Moscow nails, **Hb < 12.0 g/dL** for everyone): the photo edits of Section
+6.17 (the plant is part of the photo, the test edit goes on top), the step at the cutoff of Section 6.18, and whether
+the score falls as Hb falls inside the anemic group (Section 6.15). Same bar, fixed before running
+(`configs/plant_power.yaml`): at most 1 clean score flagged, at least 11 plants caught.
+
+| Check | Clean scores flagged | Planted traces caught | India gamma and saturation plants |
+|---|---|---|---|
+| Step at the cutoff | 0 of 9 | **17 of 24** | 1 of 8 |
+| Photo edits | 2 of 9 | 13 of 24 | 4 of 8 |
+| Not-useful numbers (6.24) | 2 of 9 | 11 of 24 | 0 of 8 |
+| Jump test (6.24) | 0 of 9 | 10 of 24 | 0 of 8 |
+| Hb inside the anemic group | 3 of 9, all Italy | 7 of 24 | 0 of 8 |
+| Folder-only line (6.24) | 3 of 9, all Italy | 5 of 24 | 0 of 8 |
+| All six together | 7 of 9 | 20 of 24 | 4 of 8 |
+
+The step at the cutoff is the one check that clears the bar: no clean score flagged, and every plant the jump test
+catches plus 7 more. The photo edits are the only check that reaches India's gamma and saturation plants (4 of 8), but
+break logistic regression on 1 edit on clean India and gradient boosting on 3 on clean Moscow. Adding checks mostly
+adds false alarms: all six together flag 7 of the 9 clean scores. Even so, 4 plants on India's 95 adults pass every
+check.
+
+Run: `python -m src.eyelid.plant_power` (~45 min on CPU). Report:
+[`reports/stage41_plant_power.md`](reports/stage41_plant_power.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -1007,8 +1035,8 @@ Run: `python -m src.eyelid.check_power` (~1.5 h on CPU). Report:
 7. Edit the test photos a little (brightness, white balance) and see whether the score holds (Section 6.17). A model
    that breaks while the plain rule doesn't is reading something more delicate than pallor.
 8. Plant a fake trace (a mild edit of one label's photos) to see whether your checks would catch it (Section 6.18).
-9. Run more than one check. Together the jump test and the not-useful numbers caught 12 of 24 planted traces, and
-   none of our checks caught the gamma and saturation plants on India's 95 adults (Section 6.24).
+9. If Hb is measured, fit the step at the cutoff first: on planted traces it flagged no clean score and caught 17 of
+   24 (Section 6.25). Add the photo edits for the traces it misses; piling on every check mostly adds false alarms.
 
 ## 8. Ethics and data use
 
@@ -1182,6 +1210,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | TabPFN on Ghana with redness only; a model forced to read redness one way (Section 6.20) | done: no TabPFN input passes; the forced model matches the rule |
 | One paper section on the trace and the seven checks (Sections 6.14-6.23) | drafted for the team: [`docs/paper_section_trace.md`](docs/paper_section_trace.md) |
 | The two newest checks on clean data and planted traces (Section 6.24) | done: neither works alone; with the jump test 12 of 24 plants caught |
+| The edit test, the step and Hb inside the anemic group on planted traces (Section 6.25) | done: the step is the one useful check (0 of 9 clean flagged, 17 of 24 caught) |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 

@@ -44,6 +44,7 @@ CP-AnemiC sheet for all three body sites. Stage 26: Ghana Hb < 11.0, India and I
 | 38 | Ghana eyelids: does the score pick out the sickest children better? How many anemic children do 20 tests per 100 catch? | No score is better for the sickest; TabPFN fills the tests well | TabPFN 0.919 -> 0.749 at Hb < 8; 20 tests: TabPFN 43%, rule 29%, random 20% | [presentation numbers](stage38_presentation_numbers.md) |
 | 39 | Does any Ghana body site's score read how sick a child is, beyond the anemic/healthy folder? | No, on any site: TabPFN follows a folder-only line on eyelids, nails and palms | Hb < 8, TabPFN vs folder line vs follows Hb: eyelids 0.749 / 0.764 / 0.958; palms 0.713 / 0.734 / 0.928; nails 0.556 / 0.663 / 0.835 | [severity reference](stage39_severity_reference.md) |
 | 40 | Do the folder-only line and the not-useful numbers pass clean data (India, Italy, Moscow) and catch planted traces? | Neither works alone; together with the jump test 12 of 24 plants caught | clean flagged: folder line 3 of 9 (Italy), not useful 2 of 9 (Moscow nails); caught 5 and 11 of 24 (jump test 10) | [check power](stage40_check_power.md) |
+| 41 | Do the photo-edit test, the step at the cutoff and Hb inside the anemic group catch planted traces? | The step at the cutoff is the one useful check; the edits catch half of India's missed plants | clean flagged: step 0, edits 2, Hb inside 3 of 9; caught 17, 13, 7 of 24; all six together 20 of 24, 7 of 9 clean flagged | [plant power](stage41_plant_power.md) |
 
 ## Across sites (closed: explains why per-location models)
 
