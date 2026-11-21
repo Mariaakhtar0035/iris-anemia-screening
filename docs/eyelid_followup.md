@@ -889,3 +889,13 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   (nails, -0.107 [-0.213, -0.009]).
 - **Checks:** 3 new tests (103 pass), including that the folder line matches a simulated folder-only score; smoke run
   (the 388 eyelid numbers reproduce Stage 38); run at clean commit `bf4be20`.
+
+### Step 38 (Stage 40): do the two newest trace checks pass clean data, and catch a planted trace?
+- **Why:** the draft paper section (`docs/paper_section_trace.md`) ran the folder-only line and the not-useful numbers
+  on Ghana only; Jaineel 2026-11-20 "keep going", picked this stage on 2026-11-21.
+- **What:** `src/eyelid/check_power.py`, `configs/check_power.yaml`: both checks on India, Italy and Moscow (audit
+  controls), as they are and with Stage 33's planted traces, next to the jump test.
+- **Result:** neither works alone (clean flagged: 3 of 9 and 2 of 9; plants caught: 5 and 11 of 24, jump test 10);
+  together with the jump test 12 of 24; none catch India's gamma or saturation plants.
+- **Checks:** 3 new tests (106 pass); smoke run with the fast models; run at clean commit `435f16e`; the 24 counting
+  plants and the jump test's 10 match Stage 33.

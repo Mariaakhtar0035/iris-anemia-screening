@@ -24,13 +24,14 @@ that is a convention.
 | **Jump test**: AUROC within 1 g/dL of the cutoff vs a steady score with the same overall AUROC ([6.15](../README.md#615-does-the-score-read-anemia-or-how-the-photos-were-handled-stage-30)) | at or below the steady score | 0.938 vs 0.72 (top 2.5%: 0.81); nails and palms jump too | below the steady score | Hb |
 | **Hb inside the anemic group** ([6.15](../README.md#615-does-the-score-read-anemia-or-how-the-photos-were-handled-stage-30)) | score falls as Hb rises | +0.11 (a steady score: -0.69); nails and palms don't follow Hb either | India -0.32, Moscow -0.51 (Italy -0.28, CI crosses 0) | Hb |
 | **Step at the cutoff** in a line-plus-step fit ([6.18](../README.md#618-can-the-trace-be-measured-and-taken-out-would-our-checks-catch-a-trace-we-plant-stage-33)) | about 0 | 1.55 score SDs [1.15, 1.95]; palms 1.80, nails 0.94 | -0.27 to 0.09, all CIs cross 0 | Hb |
-| **Severity against a folder-only line**: AUROC at Hb < 8 vs (H·A + 0.5·M)/(H + M) ([6.23](../README.md#623-does-any-ghana-body-site-read-severity-beyond-the-folder-stage-39)) | above the line, toward a score that follows Hb | 0.749 vs 0.764 (follows Hb: 0.958); no score passes on any Ghana site | not run | Hb |
+| **Severity against a folder-only line**: AUROC at Hb < 8 vs (H·A + 0.5·M)/(H + M) ([6.23](../README.md#623-does-any-ghana-body-site-read-severity-beyond-the-folder-stage-39)) | above the line, toward a score that follows Hb | 0.749 vs 0.764 (follows Hb: 0.958); no score passes on any Ghana site | 2 g/dL below: the trained models pass on Moscow and India (Moscow's rule just misses, 0.062 [-0.001, 0.127]); Italy fails (9 people that far) ([6.24](../README.md#624-do-the-two-newest-trace-checks-pass-clean-data-and-catch-a-trace-we-plant-stage-40)) | Hb, and enough people well below the cutoff |
 | **Small photo edits** (brightness, gamma, saturation, white balance) on the test photos ([6.17](../README.md#617-is-tabpfn-fragile-to-small-photo-edits-everywhere-stage-32)) | holds, like the rule | 6 of 7 edits break it (average cost 0.21); nails 4, palms 7 | 0 of 7 on each | photos only |
 | **Numbers with no color** (size, shape, sharpness, file bytes) ([6.15](../README.md#615-does-the-score-read-anemia-or-how-the-photos-were-handled-stage-30)) | chance | 0.57-0.62 across the Ghana sets | Italy 0.86 (its known early batch) | photos only |
-| **Numbers that shouldn't carry paleness** (hue, green, blue, yellow-blue) ([6.21](../README.md#621-tabpfn-or-the-29-numbers-age-and-sex-and-the-numbers-that-shouldnt-carry-paleness-stage-37)) | well below the paleness numbers | 0.903 vs 0.917 | not run | photos only |
+| **Numbers that shouldn't carry paleness** (hue, green, blue, yellow-blue) ([6.21](../README.md#621-tabpfn-or-the-29-numbers-age-and-sex-and-the-numbers-that-shouldnt-carry-paleness-stage-37)) | well below the paleness numbers | 0.903 vs 0.917 | India and Italy eyelids pass; Moscow nails fail (TabPFN 0.818 vs 0.822: hue and blue carry pallor on nails) ([6.24](../README.md#624-do-the-two-newest-trace-checks-pass-clean-data-and-catch-a-trace-we-plant-stage-40)) | eyelid photos |
 
-Every Ghana set fails every check we ran on it. The clean sets pass, except Italy on the no-color numbers, which
-picks up its known early photo batch. The checks also flag
+Every Ghana set fails every check we ran on it. The clean sets pass, with three exceptions: Italy on the no-color
+numbers (its known early photo batch), Italy on the folder line (too few people far below the cutoff), and Moscow nails
+on the not-useful numbers. The checks also flag
 gradient boosting, the MLP and the fine-tuned vision models on Ghana (near the cutoff: ViT 0.727, DINOv2 0.679,
 VisionFM 0.781, against steady scores of 0.57-0.61). So the trace comes from the data, not from TabPFN.
 
@@ -39,6 +40,9 @@ saturation, or a 4% white-balance shift) on the anemic photos only
 ([6.18](../README.md#618-can-the-trace-be-measured-and-taken-out-would-our-checks-catch-a-trace-we-plant-stage-33)). It
 lifted AUROC by 0.06-0.27 on India and Moscow, as much as TabPFN's Ghana lead over the rule (0.27). The jump test caught 10 of 24 plants:
 Moscow (250 adults) 7 of 11, India (95) 3 of 11, Italy (122) 0 of 2. On a small set, a pass is weak evidence.
+The two newest checks do no better alone ([6.24](../README.md#624-do-the-two-newest-trace-checks-pass-clean-data-and-catch-a-trace-we-plant-stage-40)): the not-useful numbers caught 11 of 24, the folder line 5 (it
+flags only a score with nothing beyond the label, and a trace mixed with real pallor still beats it). Together with
+the jump test they caught 12 of 24, and no check caught the gamma or saturation plants on India (+0.06 to +0.27).
 
 ## What the trace explains
 
@@ -63,13 +67,13 @@ Moscow (250 adults) 7 of 11, India (95) 3 of 11, Italy (122) 0 of 2. On a small 
 
 ## What we recommend
 
-1. If Hb is measured, run the jump test and the folder-only line. Both are cheap, and the folder line needs no
-   simulation.
-2. If only photos exist, run the edit test and the no-color numbers.
+1. If Hb is measured, run the jump test. The folder-only line then says whether a score carries anything beyond the
+   label, if enough people sit well below the cutoff; it is not a trace test on its own.
+2. If only photos exist, run the edit test and the no-color numbers, and on eyelid photos the not-useful numbers.
 3. Plant a trace at your own sample size, to learn what a pass is worth.
 4. For new data: photograph anemic and healthy people the same way and in mixed order, record Hb, and don't sort the
    files by label.
 
 **Limits.** The checks give evidence, not proof. The Ghana photos still carry some real Hb signal, and it can't be
-separated from the trace. The nail and palm results rest on a probable file-number link (Stage 24). The folder line
-and the "not useful" numbers were run only on Ghana.
+separated from the trace. The nail and palm results rest on a probable file-number link (Stage 24). No single check, nor
+all of them together, caught the planted gamma and saturation traces on India's 95 adults.

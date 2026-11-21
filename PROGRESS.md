@@ -14,7 +14,7 @@ Since then: fingernails under fixed lighting (F13, F15), the eye-pretrained mode
 (F11), a proper check of the deeper eyelid fold (F2), TabPFN, the model the mentors named (F14), and palm and
 fingernail photos of Ghanaian children (F16). Then (Stages 16-26): the Hb number, metadata, photo quality, automatic
 cropping, one child's eyelid, nail and palm together with cheating and fairness checks (F24, F25), and DINOv2
-fine-tuned (F26), a severity check that raised a warning (F27), fingernail + skin together (F28), a full audit of the TabPFN eyelid result (F29), a check of whether the Ghana scores read anemia or how the photos were handled (F30: partly the handling), an attempt at a Ghana number without that trace (F31: not possible with this data, and the Hb-number models carry it too), the same small photo edits on every dataset (F32: TabPFN breaks only on the Ghana sets), measuring the step at the cutoff and planting a fake folder trace in clean data (F33: the step confirms the Ghana jump but can't be taken out; a mild one-folder edit adds 0.06-0.27, and the jump test catches fewer than half), and where in the photo the Ghana trace sits (F34: all through the cut-out, not its edge), TabPFN on Ghana with redness only (F35: no input set is free of the trace), and a model where less red can only mean more anemic (F36: it matches the rule; what the flexible models add comes with the trace), then the mentors' three asks from 2026-11-17 (F37: an MLP on the same 29 numbers gets 0.87 and TabPFN adds 0.05 on top; age and sex add nothing; the numbers that shouldn't carry paleness give TabPFN 0.90), and the numbers the mentors asked the whole group for (F38: no score gets better for the sickest children; with 20 tests per 100 children, TabPFN catches 43% of the anemic ones), and the same check on every Ghana body site against two reference lines (F39: on eyelids, nails and palms TabPFN's score follows a score that knows only the anemic/healthy folder, far below one that follows Hb). From 2026-11-15 new findings are Ghana only; India and Italy are kept for audits. See
+fine-tuned (F26), a severity check that raised a warning (F27), fingernail + skin together (F28), a full audit of the TabPFN eyelid result (F29), a check of whether the Ghana scores read anemia or how the photos were handled (F30: partly the handling), an attempt at a Ghana number without that trace (F31: not possible with this data, and the Hb-number models carry it too), the same small photo edits on every dataset (F32: TabPFN breaks only on the Ghana sets), measuring the step at the cutoff and planting a fake folder trace in clean data (F33: the step confirms the Ghana jump but can't be taken out; a mild one-folder edit adds 0.06-0.27, and the jump test catches fewer than half), and where in the photo the Ghana trace sits (F34: all through the cut-out, not its edge), TabPFN on Ghana with redness only (F35: no input set is free of the trace), and a model where less red can only mean more anemic (F36: it matches the rule; what the flexible models add comes with the trace), then the mentors' three asks from 2026-11-17 (F37: an MLP on the same 29 numbers gets 0.87 and TabPFN adds 0.05 on top; age and sex add nothing; the numbers that shouldn't carry paleness give TabPFN 0.90), and the numbers the mentors asked the whole group for (F38: no score gets better for the sickest children; with 20 tests per 100 children, TabPFN catches 43% of the anemic ones), and the same check on every Ghana body site against two reference lines (F39: on eyelids, nails and palms TabPFN's score follows a score that knows only the anemic/healthy folder, far below one that follows Hb), and whether those two newest checks hold up on clean data and planted traces (F40: neither works alone; with the jump test they catch 12 of 24 planted traces). From 2026-11-15 new findings are Ghana only; India and Italy are kept for audits. See
 [What's next](#whats-next) for what's left.
 
 ## Best results so far
@@ -47,6 +47,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 | Do the numbers that shouldn't carry paleness (hue, green, blue, yellow-blue) score? | **Yes, almost as well:** TabPFN 0.903 vs 0.917 on the paleness numbers, MLP 0.835 vs 0.863, both jump; "weird" by the rule fixed before running | F37 |
 | Does the Ghana score pick out the sickest children better? | **No:** for Hb < 8 (the sickest 9%) TabPFN falls from 0.919 to 0.749 (-0.170 [-0.235, -0.108]), about as much as a score that knows only the folder (1.00 -> 0.82); the rule and logistic regression don't clearly change | F38 |
 | Does any Ghana body site's score read how sick a child is? | **No, on any site.** At Hb < 8 TabPFN sits on the line of a score that knows only the folder (eyelids 0.749 vs 0.764, palms 0.713 vs 0.734) and far below one that follows Hb (0.958, 0.928); nails fall below even the folder line | F39 |
+| Do the two newest trace checks work on clean data? | **Not alone.** The folder-only line flags 3 of 9 clean scores (all on Italy, 9 people far below the cutoff) and catches 5 of 24 planted traces; the not-useful numbers flag 2 of 9 (Moscow nails) and catch 11 of 24. With the jump test 12 of 24; none catch India's gamma or saturation plants | F40 |
 | 100 Ghana children, blood tests for 20 | TabPFN catches **43%** of the anemic ones [38%, 48%] (at most 47% possible), the rule 29%, random 20%; same trace caveat | F38 |
 | What it saves a clinic (Ghana) | test 50% of children to catch 90% of the anemic ones (TabPFN), vs 90% at random | F10 |
 
@@ -145,6 +146,7 @@ The best honest number for each question, kept up to date after every stage. Eve
 | F37 | Logistic regression, an MLP, gradient boosting and TabPFN on the same 29 numbers; + age and sex; the numbers that shouldn't carry paleness; redness, brightness and saturation combinations (Ghana eyelids), same checks | mentors 2026-11-17: how much is TabPFN, how much the features? add demographics; Jaineel: give it what shouldn't be useful | MLP 0.870, TabPFN 0.919 (+0.049); logistic regression 0.680; age + sex 0.000 to -0.060; not-useful numbers TabPFN 0.903 vs paleness 0.917 | **the 29 numbers do most of it, TabPFN adds 0.05; the lift over the rule is in every color number and comes with the trace** |
 | F38 | The same held-out score against Hb < 11, 10, 9, 8, 7; the share of anemic children caught when 20% or 30% get a blood test (Ghana eyelids) | mentors 2026-11-17, advice to the whole group: severity on the x axis, AUROC on the y; "capacity to test 20" | TabPFN 0.919 -> 0.749 at Hb < 8; 20 tests: TabPFN 43%, rule 29%, random 20% | **no score is better for the sickest; TabPFN fills the tests well, with the trace** |
 | F39 | F38's severity curve on the Ghana eyelids (388) and the linked eyelids, nails and palms (302), each score next to a folder-only line and a follows-Hb line matched to its AUROC at Hb < 11 | F38: is TabPFN's drop just the folder? Is the palm different? | at Hb < 8 TabPFN vs folder line: eyelids -0.015, linked eyelids +0.036, palms -0.020, nails -0.107 (CI below 0); follows-Hb line 0.16-0.28 higher | **no Ghana score reads severity beyond the folder, on any body site** |
+| F40 | The folder-only line and the not-useful numbers on India, Italy and Moscow, as they are and with F33's planted traces (audit controls) | the paper draft: do the two newest checks hold up? | clean flagged: folder line 3 of 9 (Italy), not useful 2 of 9 (Moscow nails); plants caught 5 and 11 of 24 (jump test 10) | **neither works alone; together with the jump test 12 of 24** |
 
 ## Part A: checking the published eyelid results
 
@@ -1246,6 +1248,36 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   [`reports/stage39_severity_reference.md`](reports/stage39_severity_reference.md); chart
   [`reports/figures/stage39_severity_reference.png`](reports/figures/stage39_severity_reference.png).
 
+### F40. Do the two newest trace checks pass clean data, and catch a trace we plant? (Stage 40). Not alone.
+- **Question:** the draft paper section lists seven trace checks, but the folder-only line (F39) and the numbers that
+  shouldn't carry paleness (F37) were run on Ghana only. Do they wrongly flag clean data, and how many planted traces
+  do they catch next to the jump test (10 of 24 in F33)?
+- **What we did:** answer fixed in `configs/check_power.yaml` before running. Audit controls only: India and Italy
+  eyelids (**WHO by sex, women < 12.0, men < 13.0 g/dL**) and Moscow nails (**Hb < 12.0 g/dL**, no sex column).
+  Logistic regression, gradient boosting and TabPFN (dummy and rule next to them), 5x5 CV, as they are and with F33's
+  planted traces (one mild edit of the anemic photos only). Folder line 2 g/dL below each person's own cutoff (India
+  28 people that far, Italy 9, Moscow 38). "Useful" = at most 1 of the 9 clean scores flagged and at least 11 of the
+  24 counting plants caught.
+- **Answers:**
+
+| Check | Clean scores flagged | Planted traces caught | Useful? |
+|---|---|---|---|
+| Jump test (F30) | - | 10 of 24 (same as F33) | - |
+| Folder-only line (F39) | 3 of 9: all Italy | 5 of 24 | no |
+| Not-useful numbers (F37) | 2 of 9: Moscow nails (TabPFN 0.818 vs paleness 0.822) | 11 of 24 | no |
+
+  - **The folder line** flags only a score that carries nothing beyond the label. On Moscow (38 people far below the
+    cutoff) every trained model beats it (+0.08 to +0.10, CIs above 0), but Italy's 9 are too few. A planted trace
+    mixed with real pallor still beats the line, so it caught only 1 plant that the clean score didn't already fail.
+  - **The not-useful numbers** pass on India and Italy eyelids, but on Moscow nails hue and blue carry pallor too.
+  - **Together** the jump test and the not-useful numbers catch 12 of 24. No check catches the gamma or saturation
+    plants on India (8 plants, +0.06 to +0.27).
+- **Takeaways:** neither new check is a stand-alone trace test. On Ghana the folder line still says what F39 said (the
+  scores carry nothing about severity beyond the label; Ghana has 34 children below Hb 8). The not-useful numbers
+  hold as a check on eyelid photos, not on nails. A pass on a small set stays weak evidence.
+- **Run it yourself:** `python -m src.eyelid.check_power` (~1.5 h on CPU). Report:
+  [`reports/stage40_check_power.md`](reports/stage40_check_power.md).
+
 ## Data problems we found along the way
 
 | Problem | Where | What we did |
@@ -1294,11 +1326,11 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 - Putting other models on TabPFN's exact inputs, to split the model from the features: an MLP gets 0.87 of TabPFN's
   0.92 (F37).
 - The numbers that shouldn't carry paleness as a check: they nearly match the paleness numbers on Ghana, a sign of
-  the trace (F37).
+  the trace (F37); on eyelid photos they pass India and Italy (F40).
 - A fixed number of blood tests as the clinic number: TabPFN 43% of the anemic children with 20 tests per 100, vs
   29% for the rule (F38).
 - A folder-only reference line on the severity curve, as a trace check: it needs no simulation and shows at a
-  glance that the Ghana scores carry only the label (F39).
+  glance that the Ghana scores carry only the label (F39). Not a stand-alone trace check (F40).
 
 **Didn't work**
 - Bigger image models (DINOv2, a fine-tuned ViT, the eye-pretrained VisionFM, frozen or fine-tuned) instead of
@@ -1336,6 +1368,10 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
   0.63-0.67, never clearly above the rule (F37).
 - Any Ghana score picking out the sickest children better: TabPFN 0.92 -> 0.75 at Hb < 8 (F38).
 - Any Ghana body site reading severity beyond the folder, the palm included (F39).
+- The folder-only line as a stand-alone trace check: it flags all of Italy's clean scores (9 people far below the
+  cutoff) and misses a trace mixed with real pallor (5 of 24 plants; F40).
+- The not-useful numbers on nails: hue and blue carry pallor there, so they flag Moscow's clean scores (F40).
+- Any of our checks on India's planted gamma and saturation traces (8 plants, +0.06 to +0.27; F40).
 
 **Still open**
 - Why the linked Ghana eyelid cut-outs' shape predicts anemia (0.69; F25).
@@ -1364,9 +1400,10 @@ The mentors said VLMs don't fit: the photos come with no text or metadata. We ag
 | The mentors' asks from 2026-11-17: an MLP on the 29 numbers, age and sex, the numbers that shouldn't be useful | done (F37): mostly the numbers, TabPFN +0.05; age and sex nothing; the not-useful numbers score 0.90 | - |
 | The mentors' advice to the whole group: severity curve, a fixed number of tests, both splits, transfer as a negative result, a slide outline | done (F38): no score better for the sickest; TabPFN 43% with 20 tests; outline in `docs/talk_outline_image_side.md` | - |
 | Does any Ghana body site read severity beyond the folder? | done (F39): no, on any site; TabPFN on the folder-only line | - |
+| Do the two newest checks pass clean data and catch planted traces? | done (F40): not alone; with the jump test 12 of 24 | - |
 | More Ghana modelling | stop: the honest Ghana numbers are the rule and simple models, 0.60-0.65 (F35-F36); from 2026-11-15 new findings are Ghana only, India and Italy for audits | - |
 | Tell Maria the Ghana Hb results carry the trace (F31) | to do | Jaineel |
-| A paper section on the trace and the checks (jump test, step, edit test, planted trace) | drafted: [`docs/paper_section_trace.md`](docs/paper_section_trace.md), seven checks in one table; for the team to review | team |
+| A paper section on the trace and the checks (jump test, step, edit test, planted trace) | drafted: [`docs/paper_section_trace.md`](docs/paper_section_trace.md), seven checks in one table, clean-data cells filled by F40; for the team to review | team |
 | Fingernails: nail and skin numbers side by side as one input | done (F28): no gain for the models, +0.05 for the untrained rule | - |
 | Indian IEEE DataPort set | skipped: paid subscription | - |
 | Comparison with Chemhaka et al. (survey) | reproduced by the survey side (see their meeting notes) | survey side |

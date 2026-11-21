@@ -961,6 +961,31 @@ how low Hb is, which fits the folder trace (Section 6.15) and not paleness.
 Run: `python -m src.eyelid.severity_reference` (~35 min on CPU). Report:
 [`reports/stage39_severity_reference.md`](reports/stage39_severity_reference.md).
 
+### 6.24 Do the two newest trace checks pass clean data, and catch a trace we plant? (Stage 40)
+
+The folder-only line (Section 6.23) and the numbers that shouldn't carry paleness (Section 6.21) were run on Ghana
+only. Here both go on the clean sets as audit controls: India and Italy eyelids (**WHO by sex, women < 12.0, men < 13.0
+g/dL**, pregnancy not recorded) and Moscow nails (**Hb < 12.0 g/dL** for everyone, no sex column), as they are and with
+Section 6.18's planted traces. Logistic regression, gradient boosting and TabPFN, 5x5 CV; folder line 2 g/dL below each
+person's own cutoff (India 28 people that far, Italy 9, Moscow 38). Answer fixed before running
+(`configs/check_power.yaml`): a check is useful if it flags at most 1 of the 9 clean scores and catches at least 11 of
+the 24 planted traces.
+
+| Check | Clean scores flagged | Planted traces caught | Useful? |
+|---|---|---|---|
+| Jump test (Section 6.15) | - | 10 of 24 | - |
+| Folder-only line (Section 6.23) | 3 of 9, all on Italy | 5 of 24 | no |
+| Not-useful numbers (Section 6.21) | 2 of 9, Moscow nails | 11 of 24 | no |
+
+Neither new check works alone. The folder line flags only a score that carries nothing beyond the label: every
+trained model beats it on Moscow (+0.08 to +0.10, CIs above 0), but Italy has too few people far below the cutoff, and
+a planted trace mixed with real pallor still beats the line. The not-useful numbers pass India and Italy eyelids, but on
+Moscow nails hue and blue carry pallor too (TabPFN 0.818 vs 0.822). Together the jump test and the not-useful numbers
+catch 12 of 24, and no check catches the gamma or saturation plants on India's 95 adults (+0.06 to +0.27).
+
+Run: `python -m src.eyelid.check_power` (~1.5 h on CPU). Report:
+[`reports/stage40_check_power.md`](reports/stage40_check_power.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -982,6 +1007,8 @@ Run: `python -m src.eyelid.severity_reference` (~35 min on CPU). Report:
 7. Edit the test photos a little (brightness, white balance) and see whether the score holds (Section 6.17). A model
    that breaks while the plain rule doesn't is reading something more delicate than pallor.
 8. Plant a fake trace (a mild edit of one label's photos) to see whether your checks would catch it (Section 6.18).
+9. Run more than one check. Together the jump test and the not-useful numbers caught 12 of 24 planted traces, and
+   none of our checks caught the gamma and saturation plants on India's 95 adults (Section 6.24).
 
 ## 8. Ethics and data use
 
@@ -1154,6 +1181,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | Where in the photo the trace sits (Section 6.19) | done: all through the cut-out |
 | TabPFN on Ghana with redness only; a model forced to read redness one way (Section 6.20) | done: no TabPFN input passes; the forced model matches the rule |
 | One paper section on the trace and the seven checks (Sections 6.14-6.23) | drafted for the team: [`docs/paper_section_trace.md`](docs/paper_section_trace.md) |
+| The two newest checks on clean data and planted traces (Section 6.24) | done: neither works alone; with the jump test 12 of 24 plants caught |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 
