@@ -909,3 +909,13 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   4 of India's 8 missed plants (2 clean flags); all six together 20 of 24 with 7 of 9 clean flagged.
 - **Checks:** 3 new tests (109 pass); smoke run with the fast models on the full CV (gains match Stage 40); run at
   clean commit `6653130`; the clean edit breaks match Stage 32.
+
+### Step 40 (Stage 42): is the step at the cutoff solid, at other windows and on fewer people?
+- **Why:** Stage 41 made the step the main trace check and the paper draft leads with it, but it was run at one window
+  and on full sets only; Jaineel 2026-11-23 "keep going", picked this stage the same day.
+- **What:** `src/eyelid/step_power.py`, `configs/step_power.yaml`: the step at 1, 1.5, 2 and 3 g/dL on Stage 40's
+  clean scores and plants, then at 2 g/dL on 200 random sets of 95 and 150 people.
+- **Result:** no clean score flagged at any window, but plants caught 11, 8, 17, 16 of 24 (fails the bar at 1.5);
+  on 95 Moscow people 46% of what all 250 catch, on 150 65%.
+- **Checks:** 3 new tests (112 pass); smoke run with the fast models on the full CV (gains match Stage 40); run at
+  clean commit `46f358e`; at 2 g/dL the flags match Stage 41 on all 33 scores.

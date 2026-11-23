@@ -1014,6 +1014,29 @@ check.
 Run: `python -m src.eyelid.plant_power` (~45 min on CPU). Report:
 [`reports/stage41_plant_power.md`](reports/stage41_plant_power.md).
 
+### 6.26 Is the step at the cutoff solid, at other windows and on fewer people? (Stage 42)
+
+Section 6.25 made the step at the cutoff the main trace check, but ran it at one window (2 g/dL) and on each set's full
+size. Here the same 9 clean scores and 24 plants (India and Italy eyelids, **WHO by sex, women < 12.0, men < 13.0
+g/dL**; Moscow nails, **Hb < 12.0 g/dL** for everyone) go through the step at windows of 1, 1.5, 2 and 3 g/dL, and at
+2 g/dL through 200 random sets of 95 and 150 people (models not refit). Bar fixed before running
+(`configs/step_power.yaml`): at every window at most 1 clean score flagged and at least 11 plants caught.
+
+| Window | Clean scores flagged | Planted traces caught |
+|---|---|---|
+| 1 g/dL | 0 of 9 | 11 of 24 |
+| 1.5 g/dL | 0 of 9 | 8 of 24 |
+| 2 g/dL | 0 of 9 | **17 of 24** |
+| 3 g/dL | 0 of 9 | 16 of 24 |
+
+The step never flags a clean score, but what it catches moves with the window, and it fails the bar at 1.5 g/dL. Only
+7 plants, all on Moscow, are caught at every window. On 95 Moscow people it catches 46% [42%, 49%] of the plants all 250
+catch, and 65% [61%, 68%] on 150. So a step flag is believable, while a pass at one window, or on fewer than about 150
+people, is weak evidence.
+
+Run: `python -m src.eyelid.step_power` (~17 min on CPU). Report:
+[`reports/stage42_step_power.md`](reports/stage42_step_power.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -1036,7 +1059,9 @@ Run: `python -m src.eyelid.plant_power` (~45 min on CPU). Report:
    that breaks while the plain rule doesn't is reading something more delicate than pallor.
 8. Plant a fake trace (a mild edit of one label's photos) to see whether your checks would catch it (Section 6.18).
 9. If Hb is measured, fit the step at the cutoff first: on planted traces it flagged no clean score and caught 17 of
-   24 (Section 6.25). Add the photo edits for the traces it misses; piling on every check mostly adds false alarms.
+   24 (Section 6.25). Fix its window before looking: its flags hold at every window, but what it catches moves with
+   the window, and below about 150 people a pass is weak (Section 6.26). Add the photo edits for the traces it
+   misses; piling on every check mostly adds false alarms.
 
 ## 8. Ethics and data use
 
@@ -1211,6 +1236,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | One paper section on the trace and the seven checks (Sections 6.14-6.23) | drafted for the team: [`docs/paper_section_trace.md`](docs/paper_section_trace.md) |
 | The two newest checks on clean data and planted traces (Section 6.24) | done: neither works alone; with the jump test 12 of 24 plants caught |
 | The edit test, the step and Hb inside the anemic group on planted traces (Section 6.25) | done: the step is the one useful check (0 of 9 clean flagged, 17 of 24 caught) |
+| The step at other windows and on fewer people (Section 6.26) | done: never flags clean data; catches 8-17 of 24 by window, under half on 95 people |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 

@@ -59,6 +59,10 @@ flags only a score with nothing beyond the label, so a trace mixed with real pal
 is the only check that reaches India's gamma and saturation plants (4 of 8), at the cost of 2 clean flags. All six
 together catch 20 of 24 but flag 7 of the 9 clean scores, so piling on checks mostly adds false alarms.
 
+The step's flags hold up better than its catches ([6.26](../README.md#626-is-the-step-at-the-cutoff-solid-at-other-windows-and-on-fewer-people-stage-42)). At windows of 1, 1.5, 2 and 3 g/dL it flags no
+clean score but catches 11, 8, 17 and 16 of 24 plants, and only 7 at every window. On 95 randomly drawn Moscow
+adults it catches 46% of the plants all 250 catch, on 150 adults 65%.
+
 ## What the trace explains
 
 - **Where it sits.** The trace is in the colors, mostly saturation, blue and green
@@ -84,7 +88,8 @@ together catch 20 of 24 but flag 7 of the 9 clean scores, so piling on checks mo
 
 1. If Hb is measured, start with the step at the cutoff. On planted traces it flagged no clean score and caught 17 of
    24, and the jump test adds nothing to it. The folder-only line then says whether a score carries anything beyond
-   the label, if enough people sit well below the cutoff; it is not a trace test on its own.
+   the label, if enough people sit well below the cutoff; it is not a trace test on its own. Fix the step's window
+   before looking, and below about 150 people treat a pass as weak.
 2. Add the photo-edit test, which needs only photos and catches some traces the step misses. On eyelid photos, add
    the not-useful numbers too, and the no-color numbers for a trace outside the color.
 3. Plant a trace at your own sample size, to learn what a pass is worth.
