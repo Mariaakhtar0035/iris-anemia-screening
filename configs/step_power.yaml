@@ -1,0 +1,25 @@
+# Stage 42: is the step at the cutoff solid, at other windows and on fewer people?
+# Jaineel 2026-11-23: "keep going"; picked this stage the same day. Stage 41: the step at the cutoff is the one useful
+# trace check (0 of 9 clean scores flagged, 17 of 24 planted traces caught) and the paper draft now leads with it, but it
+# was run at one window (2 g/dL) and on each set's full size only, and all 4 plants every check missed are on India's 95
+# adults.
+#
+# Audit controls only, no new Ghana claims. Data, folds, models, plants and thresholds as Stages 40-41 (check_power.yaml:
+# India and Italy eyelids, WHO by sex, women < 12.0 and men < 13.0 g/dL, pregnancy not recorded; Moscow nails, Hb < 12.0
+# g/dL for everyone, no sex column; 5x5 CV; logistic regression, gradient boosting, TabPFN and the rule; at most
+# max_false_flags = 1 of the 9 clean scores flagged, at least min_caught = 11 plants caught; trace_split.yaml: the 3
+# plants, plant_min_gain and window_g_dl = 2.0). Plants count by Stage 40's gain (results/stage40_check_power.json).
+# The step flags a score if its bootstrap 95% CI is above 0 (Stage 33).
+windows_g_dl: [1.0, 1.5, 2.0, 3.0]   # 2.0 is Stages 33 and 41's
+sizes: [95, 150]   # people per random subset, on the sets with more people (Italy 122 at 95; Moscow 250 at both).
+                   # 95 is India's size; 250 is Moscow's full set
+draws: 200   # random subsets per size, each keeping the set's anemic share; the step uses window_g_dl. The models are
+             # not refit: this is how many people the check needs to see a trace of this size
+half: 0.5
+#
+# Answers, fixed before running:
+#   1. The step is robust to the window if at every window it flags at most max_false_flags of the 9 clean scores and
+#      catches at least min_caught of the 24 counting plants.
+#   2. Per size: the share of draws in which the step flags each counting plant on the sets with more people than the
+#      size (catch rate, averaged over plants) and each clean trained score (false-flag rate), CIs over draws. The
+#      smallest size whose catch rate is at least `half`, or "more than 150".
