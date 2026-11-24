@@ -1,57 +1,71 @@
 # Survey reports: reading order
 
+The reports are grouped by the question they answer, in the same order as Section 3 of the
+[main README](../README.md). File names still carry the stage in which each report was written (7, 8, 29, 30). The
+[stage history](../README.md#38-stage-history) maps stages to sections.
+
 Every report is written by the script named at its top, and every number in it comes from that script's
-`results/<name>.json`. Start at the top; each row says what you get from reading it.
+`results/<name>.json`.
 
 ## Start here
 
 | Report | What it answers |
 |---|---|
 | [../README.md](../README.md) | the whole survey project on one page: data, cutoffs, results, limits |
-| [stage30_mentor_summary.md](stage30_mentor_summary.md) | Stage 30 in plain language for the mentors, and why it uses no feature selection |
-| [stage30_countries.md](stage30_countries.md) | the latest results: random vs village split, each country on its own, transfer, calibration |
-| [stage29_summary.md](stage29_summary.md) | Stage 29 in one page, with links to every step |
+| [stage30_mentor_summary.md](stage30_mentor_summary.md) | the latest results in plain language, for the mentors |
 
-## How it was done, in plain language
+## 3.1 Data and cleaning
 
 | Report | What it answers |
 |---|---|
-| [stage29_data_cleaning.md](stage29_data_cleaning.md) | how 4,944 columns became 482 questions, and how blank answers are handled |
-| [stage29_feature_selection_methods.md](stage29_feature_selection_methods.md) | exactly how the computer chose questions, and what it picked |
+| [stage29_data_cleaning.md](stage29_data_cleaning.md) | plain language: how 4,944 Zimbabwe columns became 482 questions, and how blanks are handled |
+| [stage29_feature_selection.md](stage29_feature_selection.md) | Zimbabwe Steps 1-2: every cleaning rule, and the locked village split |
+| [stage29_screening.md](stage29_screening.md) | Zimbabwe Steps 3-4: each question on its own, and which questions repeat each other |
+| [stage30_malawi_cleaning.md](stage30_malawi_cleaning.md), [stage30_zambia_cleaning.md](stage30_zambia_cleaning.md) | the same cleaning rules on the 2024 surveys |
+| [stage30_malawi_screening.md](stage30_malawi_screening.md), [stage30_zambia_screening.md](stage30_zambia_screening.md) | the same single-question screen and repeat rule, per country |
 
-## Stages 7-8: the first baselines
+Column-by-column detail: `stage29_inventory.csv`, `stage30_malawi_inventory.csv` and `stage30_zambia_inventory.csv`
+(every column, kept or dropped and why); `stage29_univariate.csv` and the matching Malawi and Zambia files (each
+question's strength on its own). They hold labels and summary statistics only.
+
+## 3.2 How far do six routine questions get?
 
 | Report | What it answers |
 |---|---|
-| [stage7_survey.md](stage7_survey.md) | six questions in Zimbabwe, next to the dummy and simple rules |
-| [stage8_transfer.md](stage8_transfer.md) | the same model unchanged in Malawi and Zambia, and recalibration on 200 local women |
+| [stage7_survey.md](stage7_survey.md) | 6 basic questions in Zimbabwe, next to the dummy and simple rules |
 
-## Stage 29: Zimbabwe, every step
+## 3.3 Can more questions, or better models, do better?
+
+| Report | What it answers |
+|---|---|
+| [stage29_feature_selection_methods.md](stage29_feature_selection_methods.md) | plain language: exactly how the computer chose questions, and what it picked |
+| [stage29_summary.md](stage29_summary.md) | all of Stage 29 on one page, with links to every step |
+| [stage29_models.md](stage29_models.md) | Step 5: three ways of choosing questions vs. baselines (cross-validation) |
+| [stage29_final_test.md](stage29_final_test.md) | Step 6: the one-time locked-test score |
+| [stage29_repeated_cv.md](stage29_repeated_cv.md) | Step 8a: the headline cross-validation numbers, with region baselines |
+
+## 3.4 Is it better for the sickest women?
+
+| Report | What it answers |
+|---|---|
+| [stage29_severity.md](stage29_severity.md) | Step 9: moderate or severe anemia in Zimbabwe, pre-registered |
+
+The other countries' moderate-or-severe results are in [stage30_countries.md](stage30_countries.md).
+
+## 3.5 Does it work in other countries? and 3.6 Is the village split too harsh?
+
+| Report | What it answers |
+|---|---|
+| [stage8_transfer.md](stage8_transfer.md) | the Zimbabwe model unchanged in Malawi and Zambia; recalibration on 200 local women |
+| [stage30_countries.md](stage30_countries.md) | each country on its own, locked tests, home vs Zimbabwe-trained, random vs village split, calibration |
+
+## 3.7 Supporting checks and exploratory variants
 
 | Step | Report | What it answers |
 |---|---|---|
-| 1-2 | [stage29_feature_selection.md](stage29_feature_selection.md) | the cleaning rules and the locked village split |
-| 3-4 | [stage29_screening.md](stage29_screening.md) | each question on its own; which questions repeat each other |
-| 5 | [stage29_models.md](stage29_models.md) | three ways of choosing questions vs. baselines (cross-validation) |
-| 6 | [stage29_final_test.md](stage29_final_test.md) | the one-time locked-test score |
 | 7 | [stage29_tabpfn.md](stage29_tabpfn.md) | TabPFN on the same folds |
-| 8a | [stage29_repeated_cv.md](stage29_repeated_cv.md) | the headline cross-validation numbers, with region baselines |
 | 8b | [stage29_area_check.md](stage29_area_check.md) | does it rank villages, or only repeat region? |
 | 8c | [stage29_blank_sensitivity.md](stage29_blank_sensitivity.md) | did the 70%-blank rule throw away signal? |
 | 8d | [stage29_hb_sources.md](stage29_hb_sources.md) | where the Hb ranking's gain comes from; tests saved per 100 women |
 | 8e | [stage29_hb_vs_class.md](stage29_hb_vs_class.md) | predicting Hb vs. yes/no; what the model leans on; budget curves |
-| 9 | [stage29_severity.md](stage29_severity.md) | the second target, moderate or severe anemia |
 | 10 | [stage29_exploratory.md](stage29_exploratory.md) | four pre-registered exploratory variants (none is a headline) |
-
-Column-by-column detail: [stage29_inventory.csv](stage29_inventory.csv) (every column, why it was kept or dropped) and
-[stage29_univariate.csv](stage29_univariate.csv) (each question's strength on its own). Both hold labels and summary
-statistics only.
-
-## Stage 30: Malawi and Zambia cleaning
-
-| Report | What it answers |
-|---|---|
-| [stage30_malawi_cleaning.md](stage30_malawi_cleaning.md), [stage30_zambia_cleaning.md](stage30_zambia_cleaning.md) | the Stage 29 cleaning rules applied to each 2024 survey |
-| [stage30_malawi_screening.md](stage30_malawi_screening.md), [stage30_zambia_screening.md](stage30_zambia_screening.md) | each question on its own, and the repeat rule, per country |
-
-The matching `stage30_{malawi,zambia}_{inventory,univariate}.csv` files hold the same column-by-column detail.

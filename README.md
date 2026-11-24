@@ -93,10 +93,45 @@ model on the Zimbabwe DHS.
 
 ## 3. Results
 
-### 3.1 Stage 7: six questions in Zimbabwe
+The results are ordered by the question each part answers. The project ran in numbered stages (7, 8, 29, 30; the
+missing numbers were the eyelid work). [3.8](#38-stage-history) maps each stage to the part where it now appears.
 
-Base 6 questions: age, pregnancy, wealth quintile, education, contraceptive method, urban/rural. 9,265 women; 5 x 5
-cross-validation by village.
+### 3.1 Data and cleaning: what we kept
+
+We started from every column of each survey file. Columns were dropped only for written reasons that never look at
+anemia:
+
+- the anemia label and anything from the blood test (leakage);
+- questions not asked in that country;
+- bookkeeping (IDs, sample weights, interviewer, dates);
+- repeated copies for older children (only the most recent birth is kept);
+- free text, and times stored as codes;
+- constant columns, and columns more than 70% blank.
+
+Then a question was dropped when another kept question already predicts its answer almost perfectly (Goodman-Kruskal
+lambda ≥ 0.95). Blank answers are kept as an answer of their own, because in DHS a blank usually means "skipped, did not
+apply".
+
+| | Zimbabwe 2015 | Malawi 2024 | Zambia 2024 |
+|---|---|---|---|
+| Columns in the file | 4,944 | 5,879 | 6,140 |
+| After the drop rules | 552 | 586 | 635 |
+| After removing repeats | 482 | 500 | 554 |
+| Used in the main models (without `v861`, see 3.5) | 482 | 499 | 553 |
+| Locked test: villages / women | 79 / 1,849 | 157 / 2,001 | 109 / 1,368 |
+
+- **Did the 70%-blank rule throw away anything useful?** No. Putting back every mostly-blank question changed AUROC by
+  at most +0.005 [+0.000, +0.009].
+- **One older pipeline remains.** Sections 3.2 and 3.5a (Stages 7-8) came first and use a simpler pipeline that builds only
+  the 6 basic questions (`src/survey/build_dataset.py`). Everything else uses the from-scratch cleaning above. The 6
+  questions score about the same either way.
+- Reports: [stage29_data_cleaning.md](reports/stage29_data_cleaning.md) (plain language),
+  [stage30_malawi_cleaning.md](reports/stage30_malawi_cleaning.md), [stage30_zambia_cleaning.md](reports/stage30_zambia_cleaning.md).
+
+### 3.2 How far do six routine questions get?
+
+The 6 basic questions ("base 6"): age, pregnancy, wealth quintile, education, contraceptive method, urban/rural.
+Zimbabwe, 9,265 women, 5 x 5 cross-validation by village.
 
 | Model | AUROC | PR-AUC | Recall, top 30% tested | Brier |
 |---|---|---|---|---|
@@ -113,9 +148,65 @@ cross-validation by village.
 - Survey weights change nothing.
 - Report: [stage7_survey.md](reports/stage7_survey.md).
 
-### 3.2 Stage 8: the same model in Malawi and Zambia
+### 3.3 Can more questions, or better models, do better?
 
-Fit on all of Zimbabwe 2015 and applied **unchanged** to the 2024 surveys. Logistic regression:
+Zimbabwe only, choosing from all 482 questions. Three selection methods were tried: L1 logistic regression, top-k by
+importance, and forward selection by survey section. Questions were always chosen inside the training villages. The
+winner was then scored once on the locked test (79 villages, 1,849 women).
+
+| Locked test, any anemia | AUROC | Tests saved per 100 women, still catching 90% |
+|---|---|---|
+| Region share (no model) | 0.538 [0.505, 0.572] | none |
+| Base 6 questions | 0.590 [0.555, 0.623] | 3 [0, 7] |
+| Selection winner: top 10 questions | 0.596 [0.563, 0.626] | - |
+| **Hb ranking, 482 questions** | **0.614 [0.585, 0.643]** | **8 [2, 11]** |
+
+*Hb ranking:* gradient boosting predicts each woman's Hb, and women are ranked by how far below her cutoff the prediction
+falls. Random testing needs 90 tests per 100 women to catch 90% of cases.
+
+- **Every method reaches the same ceiling, about 0.60-0.63.**
+  - This holds from 6 to 713 questions, for all three selection methods, and for gradient boosting and TabPFN 3.5.
+  - The selection winner does not beat base 6 on the locked test: +0.006 [-0.022, +0.036].
+- **The Hb ranking is the best survey model.**
+  - It gains +0.037 [+0.022, +0.054] over base 6 in 5 x 5 cross-validation.
+  - About half of the gain is region. The rest comes from the other questions in a flexible model.
+- **A short version keeps most of it.** Base 6 + region (7 questions) reaches 0.606 (cross-validation).
+- **What the models lean on:** contraception, region, pregnancy and postpartum stage, and body measures. This is
+  consistent with proxies for known causes, but it doesn't show mechanism. Region may also carry differences between
+  survey teams or Hb devices.
+- **It ranks villages better than region alone:** Spearman 0.42 vs 0.30. Because of sampling noise, even a perfect model
+  could reach only 0.62.
+- **What didn't help:**
+  - putting back the mostly-blank questions;
+  - village averages;
+  - combining the Hb ranking with TabPFN;
+  - predicting Hb with its uncertainty.
+- Reports: [stage29_feature_selection_methods.md](reports/stage29_feature_selection_methods.md) (plain language),
+  [stage29_summary.md](reports/stage29_summary.md) (every step).
+
+![Calibration, Zimbabwe locked test](reports/figures/stage29_calibration.png)
+
+### 3.4 Is it better for the sickest women?
+
+Moderate or severe anemia: adjusted Hb **< 10.0 g/dL for every woman** (Section 1). This target was pre-registered
+before any model was run on it.
+
+| Locked test, moderate or severe | Zimbabwe AUROC | Tests saved per 100 women, still catching 90% |
+|---|---|---|
+| Region share (no model) | 0.550 [0.495, 0.607] | none |
+| Base 6 questions | 0.634 [0.580, 0.688] | 10 [-1, 17] |
+| **Hb ranking, 482 questions** | **0.684 [0.639, 0.726]** | **17 [11, 28]** |
+
+- **Yes, somewhat.** At small budgets it finds about twice the random share: testing 20% finds 38% [34, 41] of cases.
+- **The same in the other countries** (cross-validation, Hb ranking): Zimbabwe 0.666, Malawi 0.677, Zambia 0.665.
+- On Malawi's and Zambia's locked tests it scores 0.60-0.66, with wide CIs (about 100 cases each).
+- Reports: [stage29_severity.md](reports/stage29_severity.md), [stage30_countries.md](reports/stage30_countries.md).
+
+### 3.5 Does it work in other countries?
+
+#### a) The Zimbabwe model, unchanged, in Malawi and Zambia
+
+Base 6 logistic regression fit on all of Zimbabwe 2015 and applied **unchanged** to the 2024 surveys:
 
 | Country | Anemic | AUROC | Recall, top 30% tested | Brier | Calibration slope (ideal 1) | Calibration intercept (ideal 0) |
 |---|---|---|---|---|---|---|
@@ -131,74 +222,11 @@ Fit on all of Zimbabwe 2015 and applied **unchanged** to the 2024 surveys. Logis
   - But with a signal this weak the fitted slope is noisy, so the Brier score doesn't improve.
 - Report: [stage8_transfer.md](reports/stage8_transfer.md).
 
-### 3.3 Stage 29: choosing from every question, Zimbabwe only
+#### b) Each country trained on its own
 
-Following the mentors' advice to focus on one country, we restarted on Zimbabwe 2015 from every column.
-
-- **Cleaning:** 4,944 columns → 552 questions → 482 after removing questions that repeat each other. Every removal has a
-  written reason, and blanks are kept as an answer of their own. See
-  [stage29_data_cleaning.md](reports/stage29_data_cleaning.md).
-- **Selection:** three methods (L1 logistic regression, top-k by importance, forward selection by survey section),
-  always chosen inside the training villages. See
-  [stage29_feature_selection_methods.md](reports/stage29_feature_selection_methods.md).
-- **Locked test:** 79 villages, 1,849 women, scored once.
-
-| Locked test | Any anemia, AUROC | Moderate or severe, AUROC | Tests saved per 100 women, still catching 90% (any / mod.-sev.) |
-|---|---|---|---|
-| Region share (no model) | 0.538 [0.505, 0.572] | 0.550 [0.495, 0.607] | none / none |
-| Base 6 questions | 0.590 [0.555, 0.623] | 0.634 [0.580, 0.688] | 3 [0, 7] / 10 [-1, 17] |
-| **Hb ranking, 482 questions** | **0.614 [0.585, 0.643]** | **0.684 [0.639, 0.726]** | **8 [2, 11] / 17 [11, 28]** |
-
-*Hb ranking:* gradient boosting predicts each woman's Hb, and women are ranked by how far below her cutoff the prediction
-falls.
-
-- **Every method reaches the same ceiling, about 0.60-0.63 for any anemia.**
-  - This holds from 6 to 713 questions, for all three selection methods, and for gradient boosting and TabPFN 3.5.
-  - The cross-validation winner (top 10 questions) does not beat base 6 on the locked test.
-- **The Hb ranking is the best survey model.**
-  - It gains +0.037 [+0.022, +0.054] over base 6 in 5 x 5 cross-validation.
-  - About half of the gain is region. The rest comes from the other questions in a flexible model.
-- **A short version keeps most of it.** Base 6 + region (7 questions) reaches 0.606 for any anemia and 0.646 for moderate
-  or severe (cross-validation).
-- **What the models lean on:** contraception, region, pregnancy and postpartum stage, and body measures. This is
-  consistent with proxies for known causes, but it doesn't show mechanism. Region may also carry differences between
-  survey teams or Hb devices.
-- **It ranks villages better than region alone:** Spearman 0.42 vs 0.30. Because of sampling noise, even a perfect model
-  could reach only 0.62.
-- **What didn't help:**
-  - putting back the mostly-blank questions;
-  - village averages;
-  - combining the Hb ranking with TabPFN;
-  - predicting Hb with its uncertainty.
-- Report: [stage29_summary.md](reports/stage29_summary.md), with links to each step.
-
-![Calibration, Zimbabwe locked test](reports/figures/stage29_calibration.png)
-
-### 3.4 Stage 30: random vs village split, and each country on its own
-
-These are the two follow-ups the mentors asked for on 2026-11-23. Malawi and Zambia were cleaned with the Stage 29
-rules:
-
-- Malawi: 5,879 columns → 499 questions.
-- Zambia: 6,140 → 553.
-
-The models were fixed in advance, with no feature selection. `v861`, a woman's self-reported result of her last HIV
-test, is asked only in 2024. It is left out of the main models and added back in one extra row.
-
-**Random vs village split (5 x 5 cross-validation, best model = Hb ranking):**
-
-| | Any anemia: village → random | Moderate or severe: village → random |
-|---|---|---|
-| Zimbabwe | 0.617 → 0.617 (−0.000 [−0.005, +0.004]) | 0.666 → 0.666 (+0.001 [−0.007, +0.009]) |
-| Malawi | 0.630 → 0.637 (+0.007 [+0.002, +0.011]) | 0.677 → 0.679 (+0.001 [−0.006, +0.009]) |
-| Zambia | 0.610 → 0.615 (+0.004 [−0.001, +0.010]) | 0.665 → 0.677 (+0.012 [+0.003, +0.021]) |
-
-- The random split gains at most +0.017, for any model other than the dummy, in any country. The largest gains are for
-  the models on all questions in Zambia.
-- **So the village split is not what holds the scores down.** The model sees each woman's own answers, not her village,
-  so having her neighbours in training gives it little to use.
-
-**Each country on its own (5 x 5 cross-validation, village split):**
+Fixed models, no feature selection (3.3 showed it doesn't help), 5 x 5 cross-validation by village. `v861`, a woman's
+self-reported result of her last HIV test, is asked only in 2024. It is left out of the main models and added back in
+one extra column.
 
 | | Base 6 | Base 6 + place | Hb ranking, all questions | + HIV self-report |
 |---|---|---|---|---|
@@ -213,32 +241,74 @@ test, is asked only in 2024. It is left out of the main models and added back in
 - **Place helps when it is fine enough.** Malawi's 3 regions add nothing. Its districts (`sdistrict`) add +0.033
   [+0.020, +0.045].
 - **A known HIV status adds almost nothing** (+0.000 to +0.006).
+- **On the locked tests, scored once (any anemia):**
+  - **Malawi:** the Hb ranking scores 0.625 [0.595, 0.653], beating base 6 (0.581) by +0.043 [+0.011, +0.078].
+    Base 6 + district scores 0.619.
+  - **Zambia:** lower than in cross-validation, and no model beats base 6. Base 6 scores 0.562 and the Hb ranking 0.566
+    (+0.004 [-0.031, +0.040]). The test holds 109 villages, so the big models' small edge is not dependable.
 
-**Locked tests, scored once (any anemia):**
+#### c) Trained at home vs trained on Zimbabwe
 
-- **Malawi:** the Hb ranking scores 0.625 [0.595, 0.653], beating base 6 (0.581) by +0.043 [+0.011, +0.078]. Base 6 +
-  district scores 0.619.
-- **Zambia:** lower than in cross-validation, and no model beats base 6. Base 6 scores 0.562 and the Hb ranking 0.566
-  (+0.004 [−0.031, +0.040]). The test holds 109 villages, so the big models' small edge is not dependable.
-- **Moderate or severe:** 0.60-0.66 in both countries, with wide CIs (about 100 cases each).
-
-**Transfer, on the same locked tests:** base 6 trained on Zimbabwe 2015 does as well as base 6 trained on the country's
-own women. Home minus Zimbabwe-trained AUROC:
+Base 6 trained on Zimbabwe 2015, or on the country's own women, both scored on that country's locked test. Home minus
+Zimbabwe-trained AUROC:
 
 | | Any anemia | Moderate or severe |
 |---|---|---|
-| Malawi | −0.003 [−0.031, +0.028] | −0.013 [−0.051, +0.023] |
-| Zambia | +0.010 [−0.025, +0.044] | −0.014 [−0.065, +0.037] |
+| Malawi | -0.003 [-0.031, +0.028] | -0.013 [-0.051, +0.023] |
+| Zambia | +0.010 [-0.025, +0.044] | -0.014 [-0.065, +0.037] |
 
-**So transfer is limited by weak questions, not by Zimbabwe's model failing to fit other countries.** Training at home
-doesn't help.
+**Training at home doesn't help.** Transfer is limited by weak questions, not by Zimbabwe's model failing to fit other
+countries.
 
 ![Calibration on the Malawi and Zambia locked tests](reports/figures/stage30_calibration.png)
 
 - **Calibration:** logistic regression stays close to the diagonal in both countries and for both targets, whether
   trained at home or on Zimbabwe. Gradient boosting is a little too extreme: it predicts too low at the bottom and too
   high at the top.
+- Reports: [stage30_countries.md](reports/stage30_countries.md) (every table),
+  [stage30_mentor_summary.md](reports/stage30_mentor_summary.md) (plain language).
+
+### 3.6 Is the village split too harsh?
+
+We hold out whole villages, so the test measures new villages. A random split over women instead measures new women
+from villages already surveyed. Best model (Hb ranking), 5 x 5 cross-validation, with the paired difference:
+
+| | Any anemia: village → random | Moderate or severe: village → random |
+|---|---|---|
+| Zimbabwe | 0.617 → 0.617 (-0.000 [-0.005, +0.004]) | 0.666 → 0.666 (+0.001 [-0.007, +0.009]) |
+| Malawi | 0.630 → 0.637 (+0.007 [+0.002, +0.011]) | 0.677 → 0.679 (+0.001 [-0.006, +0.009]) |
+| Zambia | 0.610 → 0.615 (+0.004 [-0.001, +0.010]) | 0.665 → 0.677 (+0.012 [+0.003, +0.021]) |
+
+- **No.** The random split gains at most +0.017, for any model other than the dummy, in any country. The largest gains
+  are for the models on all questions in Zambia.
+- **The village split is not what holds the scores down.** The model sees each woman's own answers, not her village, so
+  having her neighbours in training gives it little to use.
 - Report: [stage30_countries.md](reports/stage30_countries.md).
+
+### 3.7 Supporting checks and exploratory variants
+
+These back up the parts above. None of them changes a headline.
+
+| Check | Answer | Report |
+|---|---|---|
+| Does TabPFN, a pretrained model for tables, do better? | it matches the Hb ranking: 0.617 in cross-validation, 0.607 [0.577, 0.634] on the locked test | [stage29_tabpfn.md](reports/stage29_tabpfn.md) |
+| Does the model rank villages, or only repeat region? | it ranks villages: Spearman 0.42 vs 0.30 for region | [stage29_area_check.md](reports/stage29_area_check.md) |
+| Did the 70%-blank rule throw away signal? | no: at most +0.005 | [stage29_blank_sensitivity.md](reports/stage29_blank_sensitivity.md) |
+| Where does the Hb ranking's gain come from? | about half region, half the other questions | [stage29_hb_sources.md](reports/stage29_hb_sources.md) |
+| Is it predicting Hb, or just many questions in a flexible model? | both: predicting Hb beats yes/no for gradient boosting (+0.022 [+0.014, +0.030]), but a TabPFN yes/no classifier matches it; also what the model leans on, and budget curves | [stage29_hb_vs_class.md](reports/stage29_hb_vs_class.md) |
+| Four pre-registered exploratory variants | TabPFN predicting Hb scores 0.628 (cross-validation only); the others don't help | [stage29_exploratory.md](reports/stage29_exploratory.md) |
+
+### 3.8 Stage history
+
+| Stage | Date | What it did | Now in |
+|---|---|---|---|
+| 7 | 2026-10-14 | 6 basic questions in Zimbabwe | 3.2 |
+| 8 | 2026-10-14 | the Zimbabwe model unchanged in Malawi and Zambia | 3.5a |
+| 29, Steps 1-4 | 2026-11-16 | Zimbabwe cleaning from every column; locked test | 3.1 |
+| 29, Steps 5-6, 8a | 2026-11-16/17 | selection methods, locked test, repeated cross-validation | 3.3 |
+| 29, Step 9 | 2026-11-16/17 | moderate or severe target | 3.4 |
+| 29, Steps 7, 8b-8e, 10 | 2026-11-16/17 | TabPFN, reviewer checks, exploratory variants | 3.7 |
+| 30 | 2026-11-23/24 | Malawi and Zambia cleaning; each country on its own; random vs village split; calibration | 3.1, 3.4, 3.5b-c, 3.6 |
 
 ## 4. What it means
 
@@ -334,7 +404,8 @@ Every script writes `results/<name>.json` (metrics, config, git commit) and a re
 
 ## 8. Reports and files
 
-**Suggested reading order:** [reports/README.md](reports/README.md) lists every survey report, most important first.
+**Suggested reading order:** [reports/README.md](reports/README.md) lists every survey report by part, in the same order
+as Section 3.
 
 | File | What it does |
 |---|---|
