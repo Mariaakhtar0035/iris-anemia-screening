@@ -7,6 +7,8 @@
 #   make stage8      Stage 8  (README 3.5a)
 #   make stage29     Stage 29 (README 3.1, 3.3, 3.4, 3.7); Step 8a takes several hours, Step 7 needs TABPFN_TOKEN
 #   make stage30     Stage 30 (README 3.1, 3.4-3.6); about 1.5 hours
+#   make severity    severity curve from the saved Stage 30 predictions (README 3.4); a few minutes
+#   make trisha      Trisha's checks: data funnel, within-country overfit test, rules vs models (README 1, 3.5d, 3.7)
 #   make all         everything above
 #   make -n stage30  show what would run, without running it
 
@@ -14,12 +16,12 @@ PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
 RUN = $(PYTHON) -m src.survey
 R = results
 
-.PHONY: all test stage7 stage8 stage29 stage30 help
+.PHONY: all test stage7 stage8 stage29 stage30 severity trisha help
 
 help:
-	@sed -n "5,11p" Makefile
+	@sed -n "5,13p" Makefile
 
-all: stage7 stage8 stage29 stage30
+all: stage7 stage8 stage29 stage30 severity trisha
 
 test:
 	$(PYTHON) -m pytest -q
@@ -76,3 +78,18 @@ $(R)/stage30_countries.json: | $(R)/stage29_screening.json $(R)/stage30_malawi_s
 	$(RUN).countries
 
 stage30: $(R)/stage30_countries.json
+
+$(R)/severity_curve.json: | $(R)/stage30_countries.json
+	$(RUN).severity_curve
+
+severity: $(R)/severity_curve.json
+
+# Trisha's checks (2026-10-26/27), on the 6-question pipeline of Stages 7-8
+$(R)/funnel.csv: | data/processed/zimbabwe.parquet
+	$(RUN).funnel
+$(R)/within_country.json: | data/processed/zimbabwe.parquet
+	$(RUN).within_country
+$(R)/rules_transfer.json: | data/processed/zimbabwe.parquet
+	$(RUN).rules_transfer
+
+trisha: $(R)/funnel.csv $(R)/within_country.json $(R)/rules_transfer.json

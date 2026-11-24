@@ -84,3 +84,17 @@ def test_short_commit_flags_uncommitted_changes(tmp_path):
     dirty.write_text(json.dumps({"git": {"commit": "abcdef1234", "dirty": True}}))
     assert short_commit(clean) == "abcdef1"
     assert short_commit(dirty) == "abcdef1 + uncommitted changes"
+
+
+def test_severity_curve_perfect_score_and_too_few_cases():
+    from src.survey.severity_curve import curve_points
+
+    rng = np.random.default_rng(0)
+    hb = rng.uniform(6.0, 15.0, 600)
+    villages = np.repeat(np.arange(60), 10)
+    boot = {"n_resamples": 100, "ci": 0.95}
+    rows = curve_points(hb, -hb, villages, [12.0, 10.0, 6.5], control=12.0, min_cases=30, boot=boot, seed=0)
+    assert [r["cases"] for r in rows] == [int((hb < c).sum()) for c in (12.0, 10.0, 6.5)]
+    for r in rows[:2]:                      # lower true Hb = higher score: perfect separation at every cutoff
+        assert r["vs_rest"]["estimate"] == r["vs_not_anemic"]["estimate"] == 1.0
+    assert rows[2]["cases"] < 30 and rows[2]["vs_rest"] is None   # too few cases: no point drawn

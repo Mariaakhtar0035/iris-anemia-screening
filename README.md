@@ -42,7 +42,8 @@ model on the Zimbabwe DHS.
 | | Zimbabwe 2015 | Malawi 2024 | Zambia 2024 |
 |---|---|---|---|
 | File (DHS Individual Recode [2]) | ZWIR72FL | MWIR81FL | ZMIR81FL |
-| Women 15-49 with an Hb test | 9,265 | 10,000 | 6,829 |
+| Women 15-49 interviewed | 9,955 | 21,587 | 13,951 |
+| Women 15-49 with an Hb test | 9,265 (93%) | 10,000 (46%) | 6,829 (49%) |
 | Villages (DHS clusters) with a tested woman | 400 | 793 | 545 |
 | Any anemia | 27.3% | 26.1% | 31.1% |
 | Moderate or severe (Hb < 10.0) | 7.0% | 5.8% | 6.9% |
@@ -63,7 +64,9 @@ model on the Zimbabwe DHS.
 
 - Every variable of the 6-question baseline exists in all three surveys with the same codes.
 - Zimbabwe's survey is **9 years older** than the other two, so transfer mixes country with time.
-- Half of the 2024 households were never selected for the Hb test; only tested women are used.
+- Half of the 2024 households were never selected for the Hb test, so only 46-49% of the women interviewed in 2024
+  have an Hb result (93% in Zimbabwe). Only tested women are used. Counts from Trisha's data funnel
+  (`src/survey/funnel.py`, [figure](reports/figures/funnel.png)).
 - Malawi's wealth index is missing for 408 tested women, all in the Central region.
 - The DHS wealth index is built separately for each survey, so "richest fifth" doesn't mean the same wealth in each
   country.
@@ -200,7 +203,28 @@ before any model was run on it.
 - **Yes, somewhat.** At small budgets it finds about twice the random share: testing 20% finds 38% [34, 41] of cases.
 - **The same in the other countries** (cross-validation, Hb ranking): Zimbabwe 0.666, Malawi 0.677, Zambia 0.665.
 - On Malawi's and Zambia's locked tests it scores 0.60-0.66, with wide CIs (about 100 cases each).
-- Reports: [stage29_severity.md](reports/stage29_severity.md), [stage30_countries.md](reports/stage30_countries.md).
+
+**The severity curve** (mentor request): the same Hb-ranking predictions, scored against stricter and stricter Hb
+cutoffs. One cutoff for every woman, pregnant or not; cross-validated, building villages, village split; no model
+refit. Settings were written in `configs/countries.yaml` before running.
+
+![Severity curve](reports/figures/severity_curve.png)
+
+| AUROC, below the cutoff vs everyone else | < 12 | < 10 | < 8 | < 7 |
+|---|---|---|---|---|
+| Zimbabwe | 0.640 [0.625, 0.656] | 0.666 [0.643, 0.688] | 0.679 [0.636, 0.721] | 0.725 [0.662, 0.787] |
+| Malawi | 0.660 [0.645, 0.674] | 0.677 [0.653, 0.702] | 0.698 [0.651, 0.745] | 0.635 [0.562, 0.707] |
+| Zambia | 0.637 [0.621, 0.653] | 0.665 [0.638, 0.693] | 0.661 [0.606, 0.711] | 0.702 [0.618, 0.781] |
+
+- **A slow rise, the same in all three countries:** from about 0.64 to about 0.66-0.70 as cases get more severe.
+  The survey answers lean toward the sickest women, but only modestly; it is not a severe-anemia detector.
+- **The < 7 point is too uncertain to read:** 35-50 cases per country (under 1% of women).
+- Against women who are not anemic at all (right panel, mild cases left out) the scores are about 0.03-0.04 higher.
+  That is an easier question, so it is not the headline.
+- The < 12 point (0.640 in Zimbabwe) is above the 0.617 for any anemia because here pregnant women with Hb 11-12
+  also count as cases, and pregnancy is easy to predict from the survey.
+- Reports: [stage29_severity.md](reports/stage29_severity.md), [stage30_countries.md](reports/stage30_countries.md),
+  [severity_curve.md](reports/severity_curve.md).
 
 ### 3.5 Does it work in other countries?
 
@@ -268,6 +292,29 @@ countries.
 - Reports: [stage30_countries.md](reports/stage30_countries.md) (every table),
   [stage30_mentor_summary.md](reports/stage30_mentor_summary.md) (plain language).
 
+#### d) Do simple rules travel as well as the model?
+
+*Trisha's analysis (`src/survey/rules_transfer.py`, 2026-10-27), rerun here with identical results.* Rules need no
+training. "Older first" and "richer first" take their direction from Zimbabwe, where older and richer women were slightly
+more often anemic; the models are fit on all of Zimbabwe and applied unchanged. Zimbabwe is cross-validated by village.
+
+| | Zimbabwe (cross-validated) | Malawi (untouched) | Zambia (untouched) |
+|---|---|---|---|
+| Random order (rule) | 0.493 [0.480, 0.507] | 0.502 [0.489, 0.515] | 0.502 [0.487, 0.516] |
+| Pregnant women first (rule) | 0.504 [0.490, 0.517] | 0.515 [0.503, 0.528] | 0.512 [0.497, 0.527] |
+| Older women first (rule, direction from Zimbabwe) | 0.517 [0.503, 0.530] | 0.484 [0.471, 0.497] | 0.483 [0.466, 0.499] |
+| Richer women first (rule, direction from Zimbabwe) | 0.506 [0.490, 0.522] | 0.488 [0.475, 0.503] | 0.483 [0.466, 0.499] |
+| **Base 6, logistic regression (trained on Zimbabwe)** | **0.580 [0.566, 0.593]** | **0.568 [0.555, 0.581]** | **0.565 [0.549, 0.580]** |
+| Base 6, gradient boosting (trained on Zimbabwe) | 0.570 [0.556, 0.583] | 0.548 [0.534, 0.561] | 0.545 [0.529, 0.559] |
+
+- **The one-question rules don't travel.** In Zimbabwe "older first" helps a little (0.517) and "richer first" barely
+  (0.506, CI includes 0.5). In Malawi and Zambia both **flip** to at or below a coin flip (0.48-0.49): there, younger and
+  poorer women are, if anything, the slightly riskier ones.
+- **The model does travel:** 0.57 in both countries, ahead of every rule.
+- So a model on several questions is the safer choice across countries, even though each question alone is weak.
+
+![Rules vs models across countries](reports/figures/rules_transfer.png)
+
 ### 3.6 Is the village split too harsh?
 
 We hold out whole villages, so the test measures new villages. A random split over women instead measures new women
@@ -308,7 +355,9 @@ These back up the parts above. None of them changes a headline.
 | 29, Steps 5-6, 8a | 2026-11-16/17 | selection methods, locked test, repeated cross-validation | 3.3 |
 | 29, Step 9 | 2026-11-16/17 | moderate or severe target | 3.4 |
 | 29, Steps 7, 8b-8e, 10 | 2026-11-16/17 | TabPFN, reviewer checks, exploratory variants | 3.7 |
+| Trisha | 2026-10-26/27 | data funnel; within-country overfit test; rules vs models across countries | 1, 3.5d, 3.7 |
 | 30 | 2026-11-23/24 | Malawi and Zambia cleaning; each country on its own; random vs village split; calibration | 3.1, 3.4, 3.5b-c, 3.6 |
+| severity curve | 2026-11-24 | AUROC against stricter and stricter Hb cutoffs (mentor request) | 3.4 |
 
 ## 4. What it means
 

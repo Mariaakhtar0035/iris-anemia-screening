@@ -22,6 +22,7 @@ Every report is written by the script named at its top, and every number in it c
 | [stage29_feature_selection.md](stage29_feature_selection.md) | Zimbabwe Steps 1-2: every cleaning rule, and the locked village split |
 | [stage29_screening.md](stage29_screening.md) | Zimbabwe Steps 3-4: each question on its own, and which questions repeat each other |
 | [stage30_malawi_cleaning.md](stage30_malawi_cleaning.md), [stage30_zambia_cleaning.md](stage30_zambia_cleaning.md) | the same cleaning rules on the 2024 surveys |
+| [figures/funnel.png](figures/funnel.png) | Trisha: women interviewed, tested and complete, per country |
 | [stage30_malawi_screening.md](stage30_malawi_screening.md), [stage30_zambia_screening.md](stage30_zambia_screening.md) | the same single-question screen and repeat rule, per country |
 
 Column-by-column detail: `stage29_inventory.csv`, `stage30_malawi_inventory.csv` and `stage30_zambia_inventory.csv`
@@ -50,6 +51,8 @@ question's strength on its own). They hold labels and summary statistics only.
 |---|---|
 | [stage29_severity.md](stage29_severity.md) | Step 9: moderate or severe anemia in Zimbabwe, pre-registered |
 
+| [severity_curve.md](severity_curve.md) | how well the model picks out women below stricter and stricter Hb cutoffs, three countries |
+
 The other countries' moderate-or-severe results are in [stage30_countries.md](stage30_countries.md).
 
 ## 3.5 Does it work in other countries? and 3.6 Is the village split too harsh?
@@ -58,6 +61,7 @@ The other countries' moderate-or-severe results are in [stage30_countries.md](st
 |---|---|
 | [stage8_transfer.md](stage8_transfer.md) | the Zimbabwe model unchanged in Malawi and Zambia; recalibration on 200 local women |
 | [stage30_countries.md](stage30_countries.md) | each country on its own, locked tests, home vs Zimbabwe-trained, random vs village split, calibration |
+| [figures/rules_transfer.png](figures/rules_transfer.png) | Trisha: one-question rules vs the model in each country (numbers in README 3.5d) |
 
 ## 3.7 Supporting checks and exploratory variants
 

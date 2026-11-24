@@ -40,3 +40,16 @@ transfer_model: lr_base_stage7
 # classifier and Hb ranking on all questions + v861) to show what a known HIV status adds.
 excluded_from_main: [v861]
 extra_with: [v861]
+
+# Severity curve (mentor request, 2026-11-23 meeting), written 2026-11-24 BEFORE it was run: how well the Hb ranking
+# (all questions, Stage 30 village-split out-of-fold predictions on the building villages, averaged over the 5 repeats)
+# separates women below each Hb cutoff. One cutoff for every woman, pregnant or not, on adjusted Hb (v456 / 10).
+# Main comparison: women below the cutoff vs everyone else (mild cases included). Second comparison: women below the
+# cutoff vs women not anemic at all (Hb >= control_g_dl), dropping those in between; easier, so labelled separately.
+# A point is drawn only with at least min_cases cases in that country. No locked test is used.
+severity_curve:
+  cutoffs_g_dl: [12.0, 11.0, 10.0, 9.0, 8.0, 7.0]
+  control_g_dl: 12.0
+  min_cases: 30
+  split: village
+  model: hb_all
