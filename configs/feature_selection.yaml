@@ -1,3 +1,18 @@
+# Settings for Stage 29 (Zimbabwe) and, through src/survey/countries.py, the cleaning and models of Stage 30.
+# Blocks are in the order they were written; each pre-registered block keeps the date it was written, before its
+# results were seen. Do not move or edit a dated block after its run: add a new one.
+#
+#   Part                                    Block(s)                                    README
+#   1. Cleaning and the locked test         country ... category_min_labelled_share     3.1
+#   2. Single-question screen, repeat rule  screening                                   3.1
+#   3. Models and selection methods         models, final_test                          3.3
+#   4. TabPFN and reviewer checks           tabpfn, review, hb_sources, hb_vs_class     3.3, 3.7
+#   5. Second target                        severity_target                             3.4
+#   6. Exploratory variants                 exploratory                                 3.7
+#
+# ====================================================================================================================
+# 1. Cleaning and the locked test (Steps 1-2)
+# ====================================================================================================================
 # Stage 29: feature selection from scratch on Zimbabwe 2015 (no transfer). Steps 1-2: inventory every column of the
 # Individual Recode, remove what can't be a feature (with a written reason), and lock away the final-test villages.
 # Every code and label pattern below was checked against ZWIR72FL.DTA's variable and value labels.
@@ -86,6 +101,9 @@ unit_coded_label_words: ["days: number missing", "weeks: number missing", "month
 # "flagged") move to a side column <code>_special so the number stays a number and nothing is lost.
 category_min_labelled_share: 0.5
 
+# ====================================================================================================================
+# 2. Single-question screen and the repeat rule (Steps 3-4)
+# ====================================================================================================================
 # Steps 3-4 (src/survey/screen_features.py), on the building villages only (never the locked test).
 screening:
   cv_splits: 5               # StratifiedGroupKFold by village inside the building villages
@@ -99,6 +117,9 @@ screening:
   redundancy_lambda: 0.95
   redundancy_min_overlap: 200   # women who answered both; fewer and the pair is not compared
 
+# ====================================================================================================================
+# 3. Models and selection methods (Steps 5-6)
+# ====================================================================================================================
 # Step 5 (src/survey/select_models.py): models and selection methods compared by cross-validation on the building
 # villages only. Every selection step is fit inside the training folds; the locked test is still not touched.
 models:
@@ -150,6 +171,9 @@ final_test:
                                                                # under the winner rule, so scored as a second candidate
   reference: {questions: base, model: logistic_regression}     # the 6-question baseline, for the paired AUROC change
 
+# ====================================================================================================================
+# 4. TabPFN and the reviewer checks (Steps 7, 8a-8e)
+# ====================================================================================================================
 # Step 7 (src/survey/tabpfn_cv.py): TabPFN (pretrained tabular transformer, model 3.5, PyTorch) on the same building
 # villages and the same 5 village folds as Step 5. Weights need a one-time licence acceptance at ux.priorlabs.ai; the
 # API key is read from .env (TABPFN_TOKEN, git-ignored).
@@ -180,6 +204,9 @@ review:
   # Blank-rule sensitivity: Steps 1-4 rerun with no emptiness limit; outputs saved separately.
   sensitivity_max_share_empty: 1.0
 
+# ====================================================================================================================
+# 5. Second target: moderate or severe (Step 9)
+# ====================================================================================================================
 # Step 9: second target, pre-registered 2026-11-16 BEFORE any model was run on it (only label counts were looked at).
 # Chosen by the project owner: DHS's own definition, kept whatever the results show. A second analysis next to the
 # main any-anemia result, not a replacement.
@@ -197,6 +224,9 @@ severity_target:
   # scored once on the locked test; no choice depends on the locked test. Same metrics; PR-AUC is read against the
   # dummy (= 0.07, the share with the outcome).
 
+# ====================================================================================================================
+# 4, continued. Reviewer checks (Steps 8d-8e)
+# ====================================================================================================================
 # Step 8d (src/survey/hb_sources.py), written 2026-11-17 before running: where does the Hb ranking's gain come from,
 # and the number a clinic would use. Same 5 x 5 folds as Step 8a; same gradient boosting regressor settings.
 hb_sources:
@@ -221,6 +251,9 @@ hb_vs_class:
   importance_repeats: 3
   budgets: [0.10, 0.20, 0.30, 0.50, 0.70]   # share of women tested, highest score first -> share of cases found
 
+# ====================================================================================================================
+# 6. Exploratory variants (Step 10)
+# ====================================================================================================================
 # Step 10 (src/survey/exploratory.py): EXPLORATORY, pre-registered 2026-11-17 before running, after the main analysis.
 # Cross-validation only, on the building villages, Step 8a's 5 x 5 folds; the locked test is NOT used (it has been
 # used enough; confirmation needs a new survey). Every variant below is reported, including those that do not help.

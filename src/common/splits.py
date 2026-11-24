@@ -1,6 +1,6 @@
 """Cross-validation folds. Every function returns a list of (repeat, train_idx, test_idx)."""
 import numpy as np
-from sklearn.model_selection import LeaveOneGroupOut, RepeatedStratifiedKFold, StratifiedGroupKFold
+from sklearn.model_selection import RepeatedStratifiedKFold, StratifiedGroupKFold
 
 
 def repeated_stratified(y, n_splits, n_repeats, seed):
@@ -17,5 +17,3 @@ def repeated_stratified_grouped(y, groups, n_splits, n_repeats, seed):
     return folds
 
 
-def leave_one_group_out(groups):
-    return [(0, tr, te) for tr, te in LeaveOneGroupOut().split(np.zeros(len(groups)), groups=groups)]

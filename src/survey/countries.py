@@ -29,7 +29,8 @@ from src.common.splits import repeated_stratified, repeated_stratified_grouped
 from src.common.report import markdown_table
 from src.common.report import short_commit as _short_commit
 from src.survey.build_dataset import clean, read_raw
-from src.survey.repeated_cv import group_rate, paired_gain
+from src.common.evaluate import paired_gain
+from src.survey.repeated_cv import group_rate
 from src.survey.screen_features import TARGETS
 from src.survey.select_features import paths
 from src.survey.select_models import columns_for, make_model, prepare

@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
-from src.common.evaluate import summarize
+from src.common.evaluate import paired_gain, summarize
 from src.common.io import ROOT, load_config, save_results
 from src.common.metrics import auroc, bootstrap_ci
 from src.common.splits import repeated_stratified_grouped
@@ -53,13 +53,6 @@ def area_codes(feats, with_residence):
     if with_residence:
         key = key + " | " + feats.v025.astype(str)
     return pd.factorize(key)[0]
-
-
-def paired_gain(y, score, reference, groups, boot, seed):
-    """AUROC(score) - AUROC(reference) on the same women, CI from a village bootstrap."""
-    packed = np.column_stack([reference, score])
-    return bootstrap_ci(lambda yy, ss: auroc(yy, ss[:, 1]) - auroc(yy, ss[:, 0]), y, packed,
-                        boot["n_resamples"], boot["ci"], groups, seed)
 
 
 class Setup:

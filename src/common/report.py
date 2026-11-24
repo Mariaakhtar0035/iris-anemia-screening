@@ -6,10 +6,10 @@ def fmt(m):
     return f"{m['estimate']:.3f} [{m['lo']:.3f}, {m['hi']:.3f}]"
 
 
-IMAGE_COLUMNS = {"auroc": "AUROC", "pr_auc": "PR-AUC", "sens_at_90_spec": "Sens @ 90% spec"}
+METRIC_COLUMNS = {"auroc": "AUROC", "pr_auc": "PR-AUC", "sens_at_90_spec": "Sens @ 90% spec"}
 
 
-def markdown_table(rows, columns, metrics=IMAGE_COLUMNS):
+def markdown_table(rows, columns, metrics=METRIC_COLUMNS):
     """rows: dicts holding the label columns plus one metric dict per key of `metrics`; a missing metric prints '-'."""
     head = columns + list(metrics.values())
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]

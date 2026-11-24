@@ -25,7 +25,8 @@ from src.common.metrics import brier, calibration_intercept, calibration_slope
 from src.common.report import markdown_table
 from src.common.report import short_commit as _short_commit
 from src.survey.area_check import boot_area
-from src.survey.repeated_cv import CACHE, Setup, paired_gain
+from src.common.evaluate import paired_gain
+from src.survey.repeated_cv import CACHE, Setup
 from src.survey.select_features import OUT
 from src.survey.select_models import columns_for, make_model, prepare
 from src.survey.severity import severity_label

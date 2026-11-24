@@ -20,20 +20,20 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from src.common.evaluate import IMAGE_METRICS, summarize
+from src.common.evaluate import BASE_METRICS, summarize
 from src.common.io import ROOT, load_config, save_results
 from src.common.metrics import brier, recall_at_top_fraction
 from src.common.splits import repeated_stratified_grouped
-from src.common.report import IMAGE_COLUMNS, markdown_table
+from src.common.report import METRIC_COLUMNS, markdown_table
 from src.survey.build_dataset import load
 
 FIGURES = ROOT / "reports" / "figures"
-SURVEY_COLUMNS = {**IMAGE_COLUMNS, "recall_top": "Recall, top 30% tested", "brier": "Brier"}
+SURVEY_COLUMNS = {**METRIC_COLUMNS, "recall_top": "Recall, top 30% tested", "brier": "Brier"}
 
 
 def survey_metrics(cfg, probabilities=True):
     """CLAUDE.md's survey metrics; Brier only for scores that are probabilities (not the ranking rules)."""
-    m = {**IMAGE_METRICS, "recall_top": partial(recall_at_top_fraction, frac=cfg["top_fraction"])}
+    m = {**BASE_METRICS, "recall_top": partial(recall_at_top_fraction, frac=cfg["top_fraction"])}
     return {**m, "brier": brier} if probabilities else m
 
 

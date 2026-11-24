@@ -21,7 +21,8 @@ from src.common.evaluate import summarize
 from src.common.io import ROOT, load_config, save_results
 from src.common.report import markdown_table
 from src.common.report import short_commit as _short_commit
-from src.survey.repeated_cv import CACHE, Setup, area_codes, group_rate, paired_gain
+from src.common.evaluate import paired_gain
+from src.survey.repeated_cv import CACHE, Setup, area_codes, group_rate
 from src.survey.screen_features import TARGETS
 from src.survey.select_features import OUT
 from src.survey.select_models import columns_for, make_model, prepare

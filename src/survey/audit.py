@@ -77,7 +77,7 @@ def main():
                 unseen.setdefault(country, {})[col] = new
                 print(f"{country} {col}: categories absent from {train}'s tested women (share of tested): {new}")
 
-    save_results("stage6_survey_audit", {"countries": facts, "coding_differences": differences,
+    save_results("survey_audit", {"countries": facts, "coding_differences": differences,
                                           "categories_unseen_in_train": unseen}, {"survey": cfg})
 
 

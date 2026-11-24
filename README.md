@@ -356,7 +356,7 @@ These back up the parts above. None of them changes a headline.
 python3.12 -m venv .venv          # Python 3.11 or newer
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q               # 40 tests, no data needed
+python -m pytest -q               # 45 tests, no data needed
 ```
 
 **Data (never committed).** Register with the DHS Program, download the Individual Recode Stata files, and unpack them:
@@ -418,7 +418,7 @@ as Section 3.
 | `src/common/` | metrics with bootstrap CIs, village and random splits, config loading and results saving, report tables |
 | `configs/default.yaml` | seed and bootstrap settings |
 | `configs/survey.yaml`, `feature_selection.yaml`, `countries.yaml` | every other setting, cutoff and pre-registered rule |
-| `tests/` | unit tests for metrics, splits, cleaning rules and labels |
+| `tests/` | unit tests on made-up data: metrics, paired differences, splits, cleaning rules, labels, and that locked-test labels never reach training |
 
 ## 9. Glossary
 
