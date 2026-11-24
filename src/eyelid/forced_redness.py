@@ -16,9 +16,10 @@ STAGE36 = {"result": "stage36_forced_redness", "module": "src.eyelid.forced_redn
                      "each input set"}
 
 
-def constraints(cols, forced):
-    """-1 (P(anemic) can't rise with the number) for the forced redness numbers, 0 (free) for the rest."""
-    return [-1 if c in forced else 0 for c in cols]
+def constraints(cols, forced, rises=()):
+    """-1 (P(anemic) can't rise with the number) for the forced numbers, +1 (can't fall) for `rises`, 0 (free) for
+    the rest."""
+    return [-1 if c in forced else 1 if c in rises else 0 for c in cols]
 
 
 def main():

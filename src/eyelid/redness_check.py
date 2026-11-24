@@ -26,7 +26,8 @@ from src.eyelid.train_color import _short_commit
 CV, LOHO = "5x5 CV", "leave one hospital out"
 LABELS = {"dummy": "dummy", RULE: "rule (minus mean a*)", "logistic_regression": "logistic regression",
           "tabpfn": "TabPFN", "hist_gradient_boosting": "gradient boosting", "mlp": "MLP",
-          "forced_gradient_boosting": "gradient boosting, less red can only mean more anemic"}
+          "forced_gradient_boosting": "gradient boosting, less red can only mean more anemic",
+          "forced_three_cues": "gradient boosting, less red / less saturated / brighter can only mean more anemic"}
 STAGE35 = {"result": "stage35_redness_check", "module": "src.eyelid.redness_check", "config": "redness_check",
            "title": "Stage 35: TabPFN on Ghana with redness only, through every trace check",
            "models": "Logistic regression and TabPFN v2 on each input set"}
@@ -234,8 +235,8 @@ def write_report(path, cfg, jump_cfg, out, stage):
         f"- **Inputs:** only color numbers (no hospital, file name, child ID or photo size). {stage['models']}"
         "; dummy and the untrained rule (minus mean a*) next to them. 5-fold CV x 5 repeats "
         "by photo / child, scores averaged over repeats; the eyelids also leave one hospital out. Bootstrap 95% CIs, "
-        "2000 resamples.\n" + checks_text(cfg, jump_cfg, out) + "\n"
-        "## The number we would report (largest input set with no trace that beats the rule)\n\n"
+        "2000 resamples.\n" + checks_text(cfg, jump_cfg, out) + "\n" + stage.get("answers", lambda c, o: "")(cfg, out)
+        + "## The number we would report (largest input set with no trace that beats the rule)\n\n"
         "| dataset | model | input set | AUROC | change vs rule |\n|---|---|---|---|---|\n" + answers + "\n\n"
         "## No trace we can find? (5x5 CV; " + " / ".join(LABELS[m] for m in cfg["models"]) + ")\n\n"
         "| dataset | rule | " + " | ".join(cfg["input_sets"]) + " |\n|" + "---|" * (2 + len(cfg["input_sets"])) + "\n"

@@ -1,0 +1,42 @@
+# Stage 43: hue and yellow-blue only, and a model forced to read all three paleness cues the pallor way (Ghana).
+# Jaineel 2026-11-23: "try this now: hue and yellow-blue only, and the forced model on all three cues"; go-ahead the
+# same day. Both are next-step ideas from the 2026-11-17 doc ("Is TabPFN Reading Anemia on the Ghana Photos?") that
+# Stages 36-37 left open: Stage 37 ran a wider not-useful set (hue, green, blue, yellow-blue; TabPFN 0.903 vs 0.917 on
+# the paleness numbers), and Stage 36 forced redness only (it matched the rule).
+#
+# Cutoff, one for every set: Ghana eyelids (CP-AnemiC, the 388 photos with no copy), Ghana nails and palms (the 302
+# linked children of Stage 24): children 6-59 months, anemic = Hb < 11.0 g/dL (default.yaml). Ghana only.
+#
+# Models on each input set: logistic regression, gradient boosting (ceiling.yaml, free), TabPFN, and the same gradient
+# boosting forced on the three cues: P(anemic) can't rise as a falls_with number rises (less red, less saturated = more
+# anemic) and can't fall as a rises_with number rises (brighter = more anemic); spreads (std) and the other numbers stay
+# free. On a set with none of the cue numbers (hue_yellow_blue) the forced model is the free one. Next to them: the
+# dummy and the untrained rule (minus mean a*). 5-fold CV x 5 repeats by photo / child; the eyelids also leave one
+# hospital out. Checks as Stages 35-37 (jump test, step at the cutoff, seven test-photo edits).
+#
+# Answers, fixed before running:
+#   1. Hue and yellow-blue: "weird" for a trained model on a dataset if it scores at least its paleness AUROC minus
+#      weird_margin (estimates) and beats the rule (paired CI above 0) (Stage 37's rule). Weird = the score comes from
+#      numbers that are not paleness cues, which fits the folder trace.
+#   2. Forced three-cue model: reportable on a dataset if some input set shows no trace we can find and beats the rule
+#      (paired CI above 0) (Stage 36's rule; the largest such set, last listed first). If it only matches the rule, the
+#      free models' extra is not these three cues read the pallor way.
+datasets: [ghana_eyelid, ghana_nail, ghana_palm]
+cv: {n_splits: 5, n_repeats: 5}
+models: [logistic_regression, hist_gradient_boosting, forced_three_cues, tabpfn]
+falls_with: [a_mean, a_median, R_over_G, S_mean, S_median]   # redness and saturation
+rises_with: [L_mean, L_median, V_mean, V_median]               # brightness
+input_sets:
+  hue_yellow_blue: [H_mean, H_median, H_std, b_mean, b_median, b_std]
+  three_cue_means: [a_mean, S_mean, L_mean]
+  three_cues: [a_mean, a_median, R_over_G, S_mean, S_median, L_mean, L_median, V_mean, V_median]
+  paleness: [a_mean, a_median, a_std, R_over_G, a_minus_b, L_mean, L_median, L_std, V_mean, V_median, V_std, S_mean,
+             S_median, S_std]   # Stage 37's paleness set; the forced model keeps its 5 spread / a-b numbers free
+set_pairs:
+  - [hue_yellow_blue, paleness]
+model_pairs:
+  - [hist_gradient_boosting, forced_three_cues]   # what freedom adds on the same numbers
+weird_margin: 0.05
+window_g_dl: 2.0
+fragile_drop: 0.05
+rule_stable_drop: 0.02
