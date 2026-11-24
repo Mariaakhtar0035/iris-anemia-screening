@@ -370,7 +370,22 @@ python -m pytest -q               # 45 tests, no data needed
 TabPFN (Stage 29 Steps 7, 8a and 10) also needs a `TABPFN_TOKEN` in a `.env` file at the repo root (gitignored) and its
 licence accepted on the Prior Labs website.
 
-**Run in this order** (later scripts read what earlier ones save):
+**The easy way: `make`.** It runs the scripts below in order and skips any step whose results file already exists. It
+never reruns a step just because an earlier file changed, so it can't start hours of work, or score a locked test again,
+by accident. To redo a step, delete its `results/*.json` file.
+
+```bash
+make test        # unit tests
+make stage7      # about 2 minutes        make stage8    # about 1 minute
+make stage29     # several hours           make stage30   # about 1.5 hours
+make all         # everything
+make -n stage30  # show what would run, without running it
+```
+
+The same tests run automatically on GitHub for every push and pull request (`.github/workflows/tests.yml`), without
+TabPFN or PyTorch and never with data. That check also fails if anything under `data/` or `results/` is committed.
+
+**Or by hand,** in this order (later scripts read what earlier ones save):
 
 ```bash
 # Stages 7-8
