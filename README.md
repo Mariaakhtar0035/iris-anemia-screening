@@ -344,6 +344,7 @@ These back up the parts above. None of them changes a headline.
 | Where does the Hb ranking's gain come from? | about half region, half the other questions | [stage29_hb_sources.md](reports/stage29_hb_sources.md) |
 | Is it predicting Hb, or just many questions in a flexible model? | both: predicting Hb beats yes/no for gradient boosting (+0.022 [+0.014, +0.030]), but a TabPFN yes/no classifier matches it; also what the model leans on, and budget curves | [stage29_hb_vs_class.md](reports/stage29_hb_vs_class.md) |
 | Four pre-registered exploratory variants | TabPFN predicting Hb scores 0.628 (cross-validation only); the others don't help | [stage29_exploratory.md](reports/stage29_exploratory.md) |
+| Does a bigger model help on the 6 base questions, or just memorise? (Trisha; each country on its own, any anemia, village split) | it memorises: an unrestricted gradient boosting fits the training women at 0.83-0.87 AUROC but scores lower on new villages than logistic regression: Zimbabwe 0.532 [0.518, 0.545] vs 0.580 [0.566, 0.593], Malawi 0.535 [0.521, 0.548] vs 0.585 [0.572, 0.598], Zambia 0.518 [0.504, 0.533] vs 0.576 [0.561, 0.592]. The dashed "ceiling" in the figure (0.83-0.87) is what memorising every answer combination reaches on the training women. It is not the best score possible on new women | [within_country.png](reports/figures/within_country.png) |
 
 ### 3.8 Stage history
 
@@ -405,7 +406,7 @@ These back up the parts above. None of them changes a headline.
 python3.12 -m venv .venv          # Python 3.11 or newer
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q               # 45 tests, no data needed
+python -m pytest -q               # 49 tests, no data needed
 ```
 
 **Data (never committed).** Register with the DHS Program, download the Individual Recode Stata files, and unpack them:
