@@ -1037,6 +1037,27 @@ people, is weak evidence.
 Run: `python -m src.eyelid.step_power` (~17 min on CPU). Report:
 [`reports/stage42_step_power.md`](reports/stage42_step_power.md).
 
+### 6.27 Hue and yellow-blue only, and a model forced to read all three paleness cues (Stage 43)
+
+Two ideas left open by Sections 6.20-6.21, on the Ghana eyelids (388 photos), nails and palms (302 linked children),
+**Hb < 11.0 g/dL**: (1) hue and yellow-blue alone (6 numbers); (2) gradient boosting forced so less red, less saturated
+or brighter can only mean more anemic. Same models, folds and checks as Section 6.20; answers fixed before running
+(`configs/three_cues.yaml`).
+
+| Site | TabPFN: hue + yellow-blue vs paleness | Forced, three cues | Forced minus rule |
+|---|---|---|---|
+| Eyelids | 0.823 vs 0.917 | 0.636 | -0.014 [-0.038, 0.010] |
+| Nails | 0.598 vs 0.775 | 0.466 | -0.028 [-0.076, 0.022] |
+| Palms | 0.786 vs 0.862 | 0.584 | -0.013 [-0.046, 0.022] |
+
+Hue and yellow-blue are not "weird" for any model on any site: they score 0.03-0.18 below the paleness numbers, so
+Section 6.21's near-match needed green and blue. The forced model matches the rule on every site, while the free model
+on the same 9 numbers gains 0.15-0.20 and carries the trace. Reading the three cues the pallor way gets the rule's
+score, no more.
+
+Run: `python -m src.eyelid.three_cues` (~1 h on CPU). Report:
+[`reports/stage43_three_cues.md`](reports/stage43_three_cues.md).
+
 ## 7. Discussion
 
 **Published numbers are real but not what they seem.** Both published eyelid methods reproduce, but their test sets share photos with training, and on Eyes-Defy the label is almost the same variable as the country. A 98% score there says little about a new patient.
@@ -1237,6 +1258,7 @@ Settings (seeds, cutoffs, hyperparameters) live in `configs/*.yaml`. Every run s
 | The two newest checks on clean data and planted traces (Section 6.24) | done: neither works alone; with the jump test 12 of 24 plants caught |
 | The edit test, the step and Hb inside the anemic group on planted traces (Section 6.25) | done: the step is the one useful check (0 of 9 clean flagged, 17 of 24 caught) |
 | The step at other windows and on fewer people (Section 6.26) | done: never flags clean data; catches 8-17 of 24 by window, under half on 95 people |
+| Hue and yellow-blue only; a model forced to read all three paleness cues (Section 6.27) | done: not weird; the forced model matches the rule on every site |
 
 Next, with more time: (1) collect paired data, an eyelid photo and survey answers from the same women, to test fusion for real; (2) fix the camera gap with a color reference card or per-device calibration, then retest the learned eyelid models across datasets; (3) on the image side, prefer photos taken before the Hb result is known and stored without their label, and run the jump test (Section 6.15) on every new dataset.
 

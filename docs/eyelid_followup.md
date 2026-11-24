@@ -919,3 +919,11 @@ Jaineel approved all three: (a) correct the nail colors, (b) fine-tune VisionFM,
   on 95 Moscow people 46% of what all 250 catch, on 150 65%.
 - **Checks:** 3 new tests (112 pass); smoke run with the fast models on the full CV (gains match Stage 40); run at
   clean commit `46f358e`; at 2 g/dL the flags match Stage 41 on all 33 scores.
+
+### Step 41 (Stage 43): hue and yellow-blue only, and the forced model on all three cues
+- **Why:** both were next steps in the 2026-11-17 doc; Jaineel 2026-11-23 "try this now", go-ahead the same day.
+- **What:** `src/eyelid/three_cues.py`, `configs/three_cues.yaml`; `constraints` in `forced_redness.py` now also takes
+  numbers that can only raise risk (brightness). Ghana eyelids, nails, palms; Stage 35's checks.
+- **Result:** hue + yellow-blue not weird on any site (TabPFN 0.823 vs 0.917 on the eyelids); the forced three-cue
+  model matches the rule on every site (-0.03 to -0.01), 0.15-0.20 below the free model.
+- **Checks:** 1 new test (113 pass); smoke run with the fast models on 5x1 CV; run at clean commit `43099b5`.

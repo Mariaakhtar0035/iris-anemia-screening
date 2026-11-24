@@ -58,6 +58,7 @@ side of the project. The suggestions are recorded, and every step is logged, in
 | Are the numbers that shouldn't carry paleness a fair check elsewhere? (Stage 40) | **On eyelids yes, on nails no** | India and Italy eyelids pass; on Moscow nails hue and blue carry pallor too (TabPFN 0.818 vs 0.822); caught 11 of 24 planted traces, the jump test 10 |
 | Which trace check would we trust most? (Stage 41) | **The step in the score at the cutoff** | no clean score flagged, 17 of 24 planted traces caught (jump test 10); all six checks together flag 7 of 9 clean scores |
 | Does that step hold at other windows and on fewer people? (Stage 42) | **Its flags do, its catches don't** | no clean score flagged at any window from 1 to 3 g/dL; plants caught 8-17 of 24 by window; on 95 Moscow people 46% of what all 250 catch |
+| Hue and yellow-blue only, and a model forced to read all three paleness cues? (doc 2026-11-17, Stage 43) | **Not weird; the forced model matches the rule** | hue + yellow-blue: TabPFN 0.823 vs paleness 0.917 (eyelids); forced on redness, saturation and brightness: 0.636 / 0.466 / 0.584 vs rule 0.650 / 0.493 / 0.597 |
 
 **Checked for shortcuts:** trained on 9 hospitals and scored on the 10th, TabPFN still scores 0.91. Given only image
 size and shape (no color) it scores 0.57. So the 0.92 is color signal, not the hospital or a leak. Stage 30 later showed that part of that color is a trace of
