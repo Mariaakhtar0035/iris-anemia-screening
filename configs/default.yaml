@@ -1,0 +1,9 @@
+# Shared by every survey stage.
+seed: 42
+
+bootstrap:
+  n_resamples: 2000
+  ci: 0.95
+
+# Anemia cutoffs are stated per stage: configs/survey.yaml (Stages 7-8), configs/feature_selection.yaml (Stage 29)
+# and configs/countries.yaml (Stage 30).
