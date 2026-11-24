@@ -246,3 +246,22 @@ def test_ordinal_model_ranks_by_severity():
     X = prepare(pd.DataFrame({"v012": x}))
     p = ordinal_prob(X, level, np.arange(600), np.arange(600, 800), load_config("feature_selection")["models"], 0, 2)
     assert roc_auc_score(level[600:] >= 2, p) > 0.85
+
+
+# Stage 30 helpers
+def test_paths_keep_zimbabwe_names_and_separate_other_countries():
+    from src.survey.select_features import OUT, paths
+    assert paths("zimbabwe")["out"] == OUT and paths("zimbabwe")["results"] == "stage29_inventory"
+    m = paths("malawi")
+    assert m["out"].name == "stage30_malawi.parquet" and "zimbabwe" not in str(m["inventory"])
+
+
+def test_country_model_list_and_labels():
+    from types import SimpleNamespace
+    from src.survey.countries import label, model_list
+    C = SimpleNamespace(base=["v012"], questions=["v012", "v024"], places=["v024", "sdistrict"], extra=["v861"])
+    ids = [m[0] for m in model_list(C)]
+    assert {"place[v024]", "place[sdistrict]", "lr_base_place[sdistrict]", "gbc_all_extra", "hb_all_extra"} <= set(ids)
+    assert "v861" not in model_list(C)[2][1]                 # the main all-questions model leaves the extra out
+    assert label("place[sdistrict]") == "place share, sdistrict (no model)"
+    assert label("lr_base_place[v024]") == "base 6 + v024, logistic regression"

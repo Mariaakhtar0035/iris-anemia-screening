@@ -20,7 +20,7 @@ import pandas as pd
 from src.common.io import ROOT, load_config, save_results
 from src.common.splits import repeated_stratified_grouped
 from src.eyelid.train_color import _short_commit
-from src.survey.select_features import OUT
+from src.survey.select_features import paths
 
 TARGETS = ["anemic", "hb", "hb_cutoff", "cluster", "locked_test"]
 
@@ -104,12 +104,14 @@ def redundant_drops(codes, order, threshold, min_overlap):
     return drops
 
 
-def main():
+def main(country=None):
     base, cfg = load_config("default"), load_config("feature_selection")
+    country = country or cfg["country"]
+    p = paths(country)
     sc, seed, boot = cfg["screening"], base["seed"], base["bootstrap"]
-    data = pd.read_parquet(OUT)
+    data = pd.read_parquet(p["out"])
     data = data[~data.locked_test].reset_index(drop=True)          # building villages only
-    inv = pd.read_csv(ROOT / "reports" / "stage29_inventory.csv").set_index("code")
+    inv = pd.read_csv(p["inventory"]).set_index("code")
     feats = data.drop(columns=TARGETS)
     questions = list(inv.index[inv.decision == "keep"])
     y, hb, groups = data.anemic.to_numpy(), data.hb.to_numpy(), data.cluster.to_numpy()
@@ -139,11 +141,11 @@ def main():
     order = uni.sort_values(["share_empty", "auroc"], ascending=[True, False]).code.tolist()
     drops = redundant_drops(codes, order, sc["redundancy_lambda"], sc["redundancy_min_overlap"])
     uni["step4"] = ["drop: repeats " + drops[c][0] if c in drops else "keep" for c in uni.code]
-    uni.to_csv(ROOT / "reports" / "stage29_univariate.csv", index=False)
+    uni.to_csv(p["univariate"], index=False)
     survivors = uni[uni.step4 == "keep"]
     print(f"step 4: {len(drops)} repeats dropped, {len(survivors)} questions left", flush=True)
 
-    path = save_results("stage29_screening", {
+    path = save_results(p["screen_results"], {
         "n_women": len(y), "n_villages": len(set(groups)), "n_questions": len(questions),
         "univariate": uni.to_dict("records"), "redundant": {c: {"repeats": k, "lambda": v} for c, (k, v) in drops.items()},
         "n_left": len(survivors)}, {"default": base, "feature_selection": cfg})
@@ -183,7 +185,7 @@ def main():
         *[f"| {i + 1} | `{r.code}` | {r.label} | {r.share_empty:.0%} | {fmt(r)} | {gfmt(r)} |"
           for i, r in enumerate(uni.head(30).itertuples())],
         "",
-        "Every question's numbers are in `reports/stage29_univariate.csv`.",
+        f"Every question's numbers are in `reports/{p['univariate'].name}`.",
         "",
         "## Step 4: questions that repeat each other",
         "",
@@ -200,8 +202,9 @@ def main():
         *[f"| `{c}` {inv.label[c]} | `{k}` {inv.label[k]} | {v:.0%} |" for c, (k, v) in drops.items()],
         "",
     ])
-    (ROOT / "reports" / "stage29_screening.md").write_text(text)
+    p["screen_report"].write_text(text)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(sys.argv[1] if len(sys.argv) > 1 else None)
