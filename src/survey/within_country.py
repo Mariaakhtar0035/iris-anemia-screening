@@ -85,8 +85,8 @@ def plot(df, path):
             ax.spines[side].set_visible(False)
         ax.spines["bottom"].set_color(INK_2)
         ax.set_xlabel("AUROC (0.5 = coin flip)", color=INK_2)
-    handles = [plt.Line2D([], [], marker="o", ls="", color=c, label=l)
-               for c, l in [(TEST_COLOR, "test: new villages (95% CI)"), (TRAIN_COLOR, "train: women it studied")]]
+    handles = [plt.Line2D([], [], marker="o", ls="", color=c, label=name)
+               for c, name in [(TEST_COLOR, "test: new villages (95% CI)"), (TRAIN_COLOR, "train: women it studied")]]
     fig.legend(handles=handles, frameon=False, loc="upper right", ncol=2, labelcolor=INK_2, fontsize=9)
     fig.suptitle("Within each country: what models learn vs what carries to new villages", x=0.01, ha="left", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.93))

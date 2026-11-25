@@ -7,9 +7,9 @@ from src.common.metrics import (
     auroc,
     bootstrap_ci,
     brier,
-    pr_auc,
     calibration_intercept,
     calibration_slope,
+    pr_auc,
     recall_at_top_fraction,
     sensitivity_at_specificity,
 )

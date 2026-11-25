@@ -15,11 +15,17 @@ from sklearn.linear_model import LogisticRegression
 from src.common.evaluate import summarize
 from src.common.io import ROOT, load_config, save_results
 from src.common.metrics import brier, calibration_intercept, calibration_slope
-from src.common.splits import repeated_stratified_grouped
 from src.common.report import markdown_table
+from src.common.splits import repeated_stratified_grouped
 from src.survey.build_dataset import load
-from src.survey.train_baselines import (FIGURES, SURVEY_COLUMNS, feature_frame, make_model, oof_pipeline_scores,
-                                        survey_metrics)
+from src.survey.train_baselines import (
+    FIGURES,
+    SURVEY_COLUMNS,
+    feature_frame,
+    make_model,
+    oof_pipeline_scores,
+    survey_metrics,
+)
 
 CALIBRATION = {"cal_slope": calibration_slope, "cal_intercept": calibration_intercept}
 COLUMNS = {**SURVEY_COLUMNS, "cal_slope": "Cal. slope", "cal_intercept": "Cal. intercept"}

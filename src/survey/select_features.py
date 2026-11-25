@@ -110,7 +110,7 @@ def inventory(df, meta, text, cfg):
 def feature_table(df, inv, meta):
     """Kept columns ready for models. Categories become their label text. Numbers stay numbers; their labelled codes
     ("don't know", "on premises", "flagged") are blanked and kept as text in a side column <code>_special."""
-    vlabels, out = meta.variable_value_labels, {}
+    out = {}
     for _, r in inv[inv.decision == "keep"].iterrows():
         c, vl = r.code, {float(k): v for k, v in meta.variable_value_labels.get(r.code, {}).items()}
         x = df[c].astype(float)

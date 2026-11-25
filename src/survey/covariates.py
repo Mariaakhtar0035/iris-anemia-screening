@@ -19,7 +19,7 @@ from src.common.evaluate import paired_gain, summarize
 from src.common.io import ROOT, load_config, save_results
 from src.common.metrics import auroc, bootstrap_ci
 from src.common.report import short_commit
-from src.survey.countries import CACHE, Country, oof
+from src.survey.countries import Country, oof
 from src.survey.train_baselines import survey_metrics
 
 PROBA = {"dummy", "place", "lr_base", "lr_base_place", "gbc_all", "cov_lr", "lr_base_cov", "gbc_all_cov"}

@@ -408,6 +408,8 @@ python -m pytest -q               # 53 tests, no data needed
 | Malawi 2024 | `data/raw/dhs/malawi/` (the `MWIR81DT` folder) |
 | Zambia 2024 | `data/raw/dhs/zambia/` (the `ZMIR81DT` folder) |
 
+See [DATA.md](DATA.md) for what to request and where to put it. See [CONTRIBUTING.md](CONTRIBUTING.md) for the working rules.
+
 TabPFN (Stage 29 Steps 7, 8a and 10) also needs a `TABPFN_TOKEN` in a `.env` file at the repo root (gitignored) and its
 licence accepted on the Prior Labs website.
 

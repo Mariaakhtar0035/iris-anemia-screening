@@ -257,7 +257,7 @@ def main():
         "- **The winner's numbers are optimistic:** it was picked as Step 5's winner using these same building "
         "villages. Base 6 and the region baselines have no such selection.",
         "",
-        f"**Regions (10), Spearman of mean score vs. observed share:** "
+        "**Regions (10), Spearman of mean score vs. observed share:** "
         + ", ".join(f"{label(k)} {v:.2f}" for k, v in regions.items()) + ". With 10 points this is weak evidence.",
         "",
         f"## Locked test, descriptive only ({len(set(lvillage))} villages)",

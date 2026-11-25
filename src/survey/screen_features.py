@@ -19,9 +19,9 @@ Run from the repo root: python -m src.survey.screen_features   (after python -m 
 import numpy as np
 import pandas as pd
 
-from src.common.io import ROOT, load_config, save_results
-from src.common.splits import repeated_stratified_grouped
+from src.common.io import load_config, save_results
 from src.common.report import short_commit as _short_commit
+from src.common.splits import repeated_stratified_grouped
 from src.survey.select_features import paths
 
 TARGETS = ["anemic", "hb", "hb_cutoff", "cluster", "locked_test"]

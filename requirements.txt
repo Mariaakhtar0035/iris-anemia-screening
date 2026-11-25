@@ -11,3 +11,5 @@ pytest==9.1.1
 tabpfn==9.2.0
 torch==2.14.1
 python-dotenv==1.2.4
+ruff==0.17.6
+pre-commit==4.7.0

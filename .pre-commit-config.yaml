@@ -1,0 +1,17 @@
+# Install once with:  pip install pre-commit && pre-commit install
+# Runs before every commit. Both hooks use what is already in your environment (nothing is downloaded at commit time
+# except by the one-time `pre-commit install`).
+repos:
+  - repo: local
+    hooks:
+      - id: no-data-or-results
+        name: no data, results or graphify-out committed
+        entry: bash -c 'test -z "$(git ls-files data results graphify-out)" || (echo "data/results/graphify-out is tracked"; exit 1)'
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: ruff
+        name: ruff (lint)
+        entry: bash -c 'if [ -x .venv/bin/ruff ]; then .venv/bin/ruff check "$@"; else ruff check "$@"; fi' --
+        language: system
+        types: [python]

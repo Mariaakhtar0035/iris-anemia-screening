@@ -63,8 +63,8 @@ def plot(df, path):
             ax.spines[side].set_visible(False)
         ax.spines["bottom"].set_color(INK_2)
         ax.set_xlabel("test AUROC (0.5 = coin flip)", color=INK_2)
-    handles = [plt.Line2D([], [], marker="o", ls="", color=c, label=l)
-               for c, l in [(MODEL_COLOR, "model trained on Zimbabwe"), (RULE_COLOR, "rule (no training)")]]
+    handles = [plt.Line2D([], [], marker="o", ls="", color=c, label=name)
+               for c, name in [(MODEL_COLOR, "model trained on Zimbabwe"), (RULE_COLOR, "rule (no training)")]]
     fig.legend(handles=handles, frameon=False, loc="upper right", ncol=2, labelcolor=INK_2, fontsize=9)
     fig.suptitle("Rules vs models, scored in each country (95% CI)", x=0.01, ha="left", color=INK)
     fig.tight_layout(rect=(0, 0, 1, 0.93))

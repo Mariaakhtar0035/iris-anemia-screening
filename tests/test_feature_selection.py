@@ -197,6 +197,7 @@ def test_noise_ceiling_is_high_when_villages_differ_a_lot():
 
 def test_hb_sources_question_sets():
     from types import SimpleNamespace
+
     from src.survey.hb_sources import question_set
     S = SimpleNamespace(base=["v012", "v213"], questions=["v012", "v024", "v190"])
     assert question_set("base_questions", S) == ["v012", "v213"]
@@ -258,6 +259,7 @@ def test_paths_keep_zimbabwe_names_and_separate_other_countries():
 
 def test_country_model_list_and_labels():
     from types import SimpleNamespace
+
     from src.survey.countries import label, model_list
     C = SimpleNamespace(base=["v012"], questions=["v012", "v024"], places=["v024", "sdistrict"], extra=["v861"])
     ids = [m[0] for m in model_list(C)]

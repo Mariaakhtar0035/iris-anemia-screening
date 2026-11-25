@@ -29,13 +29,12 @@ from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from src.common.evaluate import summarize
 from src.common.io import ROOT, load_config, save_results
 from src.common.metrics import auroc, bootstrap_ci
-from src.common.splits import repeated_stratified_grouped
 from src.common.report import markdown_table
 from src.common.report import short_commit as _short_commit
+from src.common.splits import repeated_stratified_grouped
 from src.survey.screen_features import TARGETS
 from src.survey.select_features import OUT
 from src.survey.train_baselines import SURVEY_COLUMNS, survey_metrics
-
 
 
 def columns_for(questions, data):

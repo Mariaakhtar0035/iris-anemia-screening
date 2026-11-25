@@ -23,8 +23,8 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from src.common.evaluate import BASE_METRICS, summarize
 from src.common.io import ROOT, load_config, save_results
 from src.common.metrics import brier, recall_at_top_fraction
-from src.common.splits import repeated_stratified_grouped
 from src.common.report import METRIC_COLUMNS, markdown_table
+from src.common.splits import repeated_stratified_grouped
 from src.survey.build_dataset import load
 
 FIGURES = ROOT / "reports" / "figures"

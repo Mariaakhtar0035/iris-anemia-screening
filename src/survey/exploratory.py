@@ -19,13 +19,12 @@ from scipy.stats import norm, rankdata
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedGroupKFold
 
-from src.common.evaluate import summarize
+from src.common.evaluate import paired_gain, summarize
 from src.common.io import ROOT, load_config, save_results
-from src.common.metrics import brier, calibration_intercept, calibration_slope
+from src.common.metrics import calibration_intercept, calibration_slope
 from src.common.report import markdown_table
 from src.common.report import short_commit as _short_commit
 from src.survey.area_check import boot_area
-from src.common.evaluate import paired_gain
 from src.survey.repeated_cv import CACHE, Setup
 from src.survey.select_features import OUT
 from src.survey.select_models import columns_for, make_model, prepare
@@ -94,6 +93,7 @@ def tabpfn_hb(S):
     if path.exists():
         return np.load(path)
     from tabpfn import TabPFNRegressor
+
     from src.survey.tabpfn_cv import tabpfn_matrix
     folds_dir = CACHE / "tabpfn_hb_folds"                 # one file per fold, so a stopped run resumes
     folds_dir.mkdir(exist_ok=True)
