@@ -41,7 +41,7 @@ def main():
     base_cfg, cfg, survey = load_config("default"), load_config("feature_selection"), load_config("survey")
     mc, ft, seed, boot = cfg["models"], cfg["final_test"], base_cfg["seed"], base_cfg["bootstrap"]
     data = pd.read_parquet(OUT)
-    uni = pd.read_csv(ROOT / "reports" / "stage29_univariate.csv")
+    uni = pd.read_csv(ROOT / "reports" / "zimbabwe_univariate.csv")
     questions = uni.code[uni.step4 == "keep"].tolist()
     base = mc["base_questions"]
     feats = data.drop(columns=TARGETS)
@@ -121,15 +121,15 @@ def main():
     ax.legend(fontsize=7)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    fig.savefig(FIGURES / "stage29_calibration.png", dpi=150)
+    fig.savefig(FIGURES / "zimbabwe_calibration.png", dpi=150)
 
-    path = save_results("stage29_final_test", {
+    path = save_results("zimbabwe_final_test", {
         "n_women": int(test.sum()), "n_villages": len(set(groups)), "anemic_share": float(y.mean()),
         "winner_questions": winner_q, "rows": rows, "auroc_change_vs_base6": changes, "hb": hb_row},
         {"default": base_cfg, "feature_selection": cfg, "survey": survey})
 
     cols = {**SURVEY_COLUMNS, "cal_slope": "Calibration slope", "cal_intercept": "Calibration intercept"}
-    inv = pd.read_csv(ROOT / "reports" / "stage29_inventory.csv").set_index("code").label
+    inv = pd.read_csv(ROOT / "reports" / "zimbabwe_inventory.csv").set_index("code").label
     f = lambda d: f"{d['estimate']:+.3f} [{d['lo']:+.3f}, {d['hi']:+.3f}]"
     g = lambda d: f"{d['estimate']:.3f} [{d['lo']:.3f}, {d['hi']:.3f}]"
     text = "\n".join([
@@ -163,10 +163,10 @@ def main():
         f"- Applying each woman's cutoff to the estimate: sensitivity {g(hb_row['sens_at_cutoff'])}, specificity "
         f"{g(hb_row['spec_at_cutoff'])}.",
         "",
-        "![Calibration](figures/stage29_calibration.png)",
+        "![Calibration](figures/zimbabwe_calibration.png)",
         "",
     ])
-    (ROOT / "reports" / "stage29_final_test.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_final_test.md").write_text(text)
     print(text)
 
 

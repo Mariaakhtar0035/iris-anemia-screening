@@ -251,9 +251,9 @@ def test_ordinal_model_ranks_by_severity():
 # Stage 30 helpers
 def test_paths_keep_zimbabwe_names_and_separate_other_countries():
     from src.survey.select_features import OUT, paths
-    assert paths("zimbabwe")["out"] == OUT and paths("zimbabwe")["results"] == "stage29_inventory"
+    assert paths("zimbabwe")["out"] == OUT and paths("zimbabwe")["results"] == "zimbabwe_inventory"
     m = paths("malawi")
-    assert m["out"].name == "stage30_malawi.parquet" and "zimbabwe" not in str(m["inventory"])
+    assert m["out"].name == "malawi_clean.parquet" and "zimbabwe" not in str(m["inventory"])
 
 
 def test_country_model_list_and_labels():

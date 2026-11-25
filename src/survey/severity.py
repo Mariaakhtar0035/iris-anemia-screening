@@ -110,7 +110,7 @@ def main():
               "gain_vs_base6": paired_gain(ly, s, locked["lr_base"], lg, boot, seed),
               "gain_vs_region": paired_gain(ly, s, locked["region"], lg, boot, seed)} for k, s in locked.items()]
 
-    path = save_results("stage29_severity", {"n_cases": int(y_full.sum()), "share": float(y_full.mean()),
+    path = save_results("zimbabwe_severity", {"n_cases": int(y_full.sum()), "share": float(y_full.mean()),
                                              "cv": rows, "locked_test": lrows},
                         {"default": S.base_cfg, "feature_selection": cfg, "survey": survey})
     gains = lambda rs: markdown_table([{"model": r["model"], "a": r["gain_vs_base6"], "b": r["gain_vs_region"]}
@@ -149,7 +149,7 @@ def main():
         gains(lrows),
         "",
     ])
-    (ROOT / "reports" / "stage29_severity.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_severity.md").write_text(text)
     print(text)
 
 

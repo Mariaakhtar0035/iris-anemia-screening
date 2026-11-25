@@ -161,8 +161,8 @@ def main():
     ffeats, fg = full.drop(columns=TARGETS), full.cluster.to_numpy()[te]
     Xb, Xa = prepare(ffeats[columns_for(S.base, ffeats)]), prepare(ffeats[columns_for(S.questions, ffeats)])
     hb_hat = make_model("hgb_regressor", Xa, S.mc, seed).fit(Xa.iloc[tr], full.hb.to_numpy()[tr]).predict(Xa.iloc[te])
-    step6 = json.loads((ROOT / "results" / "stage29_final_test.json").read_text())["results"]["rows"]
-    step9 = json.loads((ROOT / "results" / "stage29_severity.json").read_text())["results"]["locked_test"]
+    step6 = json.loads((ROOT / "results" / "zimbabwe_final_test.json").read_text())["results"]["rows"]
+    step9 = json.loads((ROOT / "results" / "zimbabwe_severity.json").read_text())["results"]["locked_test"]
     locked_rows = []
     for target, yy, cut, done in (("any anemia", full.anemic.to_numpy(), full.hb_cutoff.to_numpy()[te], step6),
                                   ("moderate or severe", sev_full, st["hb_cutoff_g_dl"], step9)):
@@ -212,7 +212,7 @@ def main():
         fig.savefig(FIGURES / f"stage29_budget_{'any' if target == 'any anemia' else 'modsev'}.png", dpi=150)
         plt.close(fig)
 
-    path = save_results("stage29_hb_vs_class", {
+    path = save_results("zimbabwe_hb_vs_class", {
         "compare": compare, "budget_cv": budget_rows, "budget_locked": locked_rows,
         "groups": groups, "importance": {k: v.to_dict() for k, v in imp_tables.items()}},
         {"default": S.base_cfg, "feature_selection": cfg, "survey": survey})
@@ -262,14 +262,14 @@ def main():
         "",
         markdown_table(locked_rows, ["target", "model"], bcols),
         "",
-        "![Budget curve, any anemia](figures/stage29_budget_any.png) "
-        "![Budget curve, moderate or severe](figures/stage29_budget_modsev.png)",
+        "![Budget curve, any anemia](figures/zimbabwe_budget_any.png) "
+        "![Budget curve, moderate or severe](figures/zimbabwe_budget_modsev.png)",
         "",
         "Each figure plots the cross-validation scores; the dashed line is random testing. The numbers behind the "
         "curves are in the tables above.",
         "",
     ])
-    (ROOT / "reports" / "stage29_hb_vs_class.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_hb_vs_class.md").write_text(text)
     print(text)
 
 

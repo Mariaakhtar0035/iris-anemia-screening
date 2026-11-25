@@ -114,6 +114,6 @@ Locked test, descriptive (79 villages): only models already scored there (Steps 
 | moderate or severe | all questions, Hb regressor ranking | 0.248 [0.171, 0.325] | 0.416 [0.346, 0.512] | 0.528 [0.444, 0.618] | 0.744 [0.667, 0.810] | 0.888 [0.829, 0.934] |
 | moderate or severe | all questions, gradient boosting classifier | 0.192 [0.127, 0.256] | 0.336 [0.252, 0.400] | 0.472 [0.400, 0.548] | 0.704 [0.617, 0.786] | 0.872 [0.816, 0.934] |
 
-![Budget curve, any anemia](figures/stage29_budget_any.png) ![Budget curve, moderate or severe](figures/stage29_budget_modsev.png)
+![Budget curve, any anemia](figures/zimbabwe_budget_any.png) ![Budget curve, moderate or severe](figures/zimbabwe_budget_modsev.png)
 
 Each figure plots the cross-validation scores; the dashed line is random testing. The numbers behind the curves are in the tables above.

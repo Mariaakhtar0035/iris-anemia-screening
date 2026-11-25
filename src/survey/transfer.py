@@ -99,7 +99,7 @@ def main():
     np.atleast_1d(axes)[0].legend(fontsize=8)
     fig.suptitle(f"Calibration: trained on {train_name}, scored on each country")
     fig.tight_layout()
-    fig.savefig(FIGURES / "survey_transfer_calibration.png", dpi=150)
+    fig.savefig(FIGURES / "zimbabwe_transfer_calibration.png", dpi=150)
 
     rc = cfg["recalibration"]
     recal_lines = [f"| {key} | {r['prevalence']:.1%} | {r['mean_risk_before']['mean']:.1%} | {r['mean_risk_after']['mean']:.1%} | "
@@ -121,11 +121,11 @@ def main():
         "change, because recalibration keeps the order.\n\n"
         "| model / country | prevalence | mean predicted risk before | after | Brier before | Brier after | intercept before -> after | slope before -> after |\n"
         "|---|---|---|---|---|---|---|---|\n" + "\n".join(recal_lines)
-        + "\n\n![Transfer calibration](figures/survey_transfer_calibration.png)\n"
+        + "\n\n![Transfer calibration](figures/zimbabwe_transfer_calibration.png)\n"
     )
-    (ROOT / "reports" / "stage8_transfer.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_transfer.md").write_text(text)
     print(text)
-    save_results("stage8_survey_transfer", {"rows": rows, "recalibration": recal}, {"default": base, "survey": cfg})
+    save_results("zimbabwe_transfer", {"rows": rows, "recalibration": recal}, {"default": base, "survey": cfg})
 
 
 if __name__ == "__main__":

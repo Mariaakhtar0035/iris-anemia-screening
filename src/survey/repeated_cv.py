@@ -14,7 +14,7 @@ TabPFN 3.5 on base 6, top 10 and all.
 Amended TabPFN rule (configs/feature_selection.yaml `review`, written before Step 7's output was opened): the locked
 test is scored again only if a TabPFN set beats base 6 logistic regression by >= tabpfn_min_gain with a 95% CI above 0.
 
-Each model's out-of-fold scores are cached in data/processed/stage29_oof/ so a rerun skips finished models.
+Each model's out-of-fold scores are cached in data/processed/zimbabwe_oof/ so a rerun skips finished models.
 Run from the repo root: python -m src.survey.repeated_cv   (after Steps 1-7)
 """
 import json
@@ -35,7 +35,7 @@ from src.survey.select_models import columns_for, importance_ranking, make_model
 from src.survey.tabpfn_cv import fit_tabpfn, tabpfn_matrix
 from src.survey.train_baselines import SURVEY_COLUMNS, survey_metrics
 
-CACHE = ROOT / "data" / "processed" / "stage29_oof"
+CACHE = ROOT / "data" / "processed" / "zimbabwe_oof"
 
 
 def group_rate(codes, y, train, test, smoothing):
@@ -63,7 +63,7 @@ class Setup:
         self.mc, self.rc, self.seed = self.cfg["models"], self.cfg["review"], seed
         data = pd.read_parquet(OUT)
         data = data[~data.locked_test].reset_index(drop=True)
-        uni = pd.read_csv(ROOT / "reports" / "stage29_univariate.csv")
+        uni = pd.read_csv(ROOT / "reports" / "zimbabwe_univariate.csv")
         self.questions = uni.code[uni.step4 == "keep"].tolist()
         self.base = self.mc["base_questions"]
         self.feats = data.drop(columns=TARGETS)
@@ -160,14 +160,14 @@ def main():
     if passing:
         best = max(passing, key=lambda k: passing[k]["gain_vs_base6"]["estimate"])
         # Step 7 (old rule) already scored TabPFN on all questions on the locked test; never look a third time.
-        step7 = json.loads((ROOT / "results" / "stage29_tabpfn.json").read_text())["results"]["locked_test"]
+        step7 = json.loads((ROOT / "results" / "zimbabwe_tabpfn.json").read_text())["results"]["locked_test"]
         if best == "tabpfn__all" and step7 and step7["questions"].startswith("all"):
             locked, reused = {**step7, "model": f"{MODELS[best][0]} (Step 7's second look, reused)"}, True
         else:
             locked = score_tabpfn_locked(best, S, boot, survey)
     print(f"TabPFN sets passing the amended rule: {list(passing) or 'none'}", flush=True)
 
-    path = save_results("stage29_repeated_cv", {
+    path = save_results("zimbabwe_repeated_cv", {
         "n_women": len(S.y), "n_folds": len(S.folds), "rows": rows,
         "tabpfn_vs_same_questions_lr": same_q, "tabpfn_rule_passed": list(passing), "tabpfn_locked_test": locked,
         "tabpfn_locked_reused_from_step7": reused},
@@ -221,7 +221,7 @@ def main():
         *(["## Locked test, second look (TabPFN)", "", markdown_table([locked], ["model"], SURVEY_COLUMNS), ""]
           if locked else []),
     ])
-    (ROOT / "reports" / "stage29_repeated_cv.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_repeated_cv.md").write_text(text)
     print(text)
 
 

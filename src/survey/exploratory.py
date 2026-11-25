@@ -217,7 +217,7 @@ def main():
         add("any anemia", "E. TabPFN Hb ranking", S.cutoff - tp, rank_metrics, "hb", "Hb ranking")
         add("moderate or severe", "E. TabPFN Hb ranking", st["hb_cutoff_g_dl"] - tp, rank_metrics, "hb", "Hb ranking")
 
-    path = save_results("stage29_exploratory", {"rows": rows, "verdicts": verdicts, "village_D": village},
+    path = save_results("zimbabwe_exploratory", {"rows": rows, "verdicts": verdicts, "village_D": village},
                         {"default": S.base_cfg, "feature_selection": cfg, "survey": survey})
     cols = {"auroc": "AUROC", "pr_auc": "PR-AUC", "recall_top": "Recall, top 30%", "brier": "Brier",
             "cal_slope": "Calibration slope", "cal_intercept": "Calibration intercept"}
@@ -272,7 +272,7 @@ def main():
         "Step 8e's results).",
         "",
     ])
-    (ROOT / "reports" / "stage29_exploratory.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_exploratory.md").write_text(text)
     print(text)
 
 

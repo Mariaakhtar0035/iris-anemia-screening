@@ -142,7 +142,7 @@ def locked_scores(seed):
     hb, cutoff = full.hb.to_numpy(), full.hb_cutoff.to_numpy()
     test = full.locked_test.to_numpy()
     tr, te = np.flatnonzero(~test), np.flatnonzero(test)
-    uni = pd.read_csv(ROOT / "reports" / "stage29_univariate.csv")
+    uni = pd.read_csv(ROOT / "reports" / "zimbabwe_univariate.csv")
     questions = uni.code[uni.step4 == "keep"].tolist()
     base = mc["base_questions"]
     X_all = prepare(feats[columns_for(questions, feats)])
@@ -179,7 +179,7 @@ def main():
     # Locked test, descriptive: confirm the refit reproduces Step 6, then the same statistics.
     lscores, ly, lvillage, lregion = locked_scores(seed)
     step6 = {r["model"]: r["auroc"]["estimate"] for r in
-             json.loads((ROOT / "results" / "stage29_final_test.json").read_text())["results"]["rows"]}
+             json.loads((ROOT / "results" / "zimbabwe_final_test.json").read_text())["results"]["rows"]}
     ind = {k: summarize(ly, s, boot["n_resamples"], boot["ci"], seed, lvillage,
                         survey_metrics(survey, not k.startswith("hb"))) for k, s in lscores.items()}
     for k, label in (("lr__base", "base 6 questions"), ("lr__top_10", "winner: top 10 by importance")):
@@ -189,7 +189,7 @@ def main():
                        reference="region")
     l_ceiling = noise_ceiling(ly, lvillage, lregion, rc["split_half_draws"], seed)
 
-    path = save_results("stage29_area_check", {"cv": {"area": area, "regions": regions, "ceiling": ceiling},
+    path = save_results("zimbabwe_area_check", {"cv": {"area": area, "regions": regions, "ceiling": ceiling},
                                                "locked_descriptive": {"area": l_area, "ceiling": l_ceiling,
                                                                       "individual": ind}},
                         {"default": base_cfg, "feature_selection": cfg, "survey": survey})
@@ -275,7 +275,7 @@ def main():
         markdown_table([{"model": label(k), **v} for k, v in ind.items()], ["model"], SURVEY_COLUMNS),
         "",
     ])
-    (ROOT / "reports" / "stage29_area_check.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_area_check.md").write_text(text)
     print(text)
 
 

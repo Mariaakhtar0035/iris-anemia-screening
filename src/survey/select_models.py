@@ -209,7 +209,7 @@ def main():
     mc, seed, boot = cfg["models"], base_cfg["seed"], base_cfg["bootstrap"]
     data = pd.read_parquet(OUT)
     data = data[~data.locked_test].reset_index(drop=True)          # building villages only
-    uni = pd.read_csv(ROOT / "reports" / "stage29_univariate.csv")
+    uni = pd.read_csv(ROOT / "reports" / "zimbabwe_univariate.csv")
     questions = uni.code[uni.step4 == "keep"].tolist()
     base = mc["base_questions"]
     sections_q = {}
@@ -257,7 +257,7 @@ def main():
 
     hb = hb_rows(feats, hb, cutoff, y, groups, folds, {"base 6": base, f"all {len(questions)}": questions},
                  mc, seed, boot)
-    path = save_results("stage29_models", {"n_women": len(y), "rows": rows, "hb_rows": hb,
+    path = save_results("zimbabwe_models", {"n_women": len(y), "rows": rows, "hb_rows": hb,
                                            "selections": selections,
                                            "winner": {"method": winner["method"], "model": winner["model"]},
                                            "sections": sections_q},
@@ -305,7 +305,7 @@ def main():
         markdown_table(hb, ["questions", "model"], hb_cols),
         "",
     ])
-    (ROOT / "reports" / "stage29_models.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_models.md").write_text(text)
     print(text)
 
 

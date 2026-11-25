@@ -1,9 +1,9 @@
 # Stage 29: how we cleaned the Zimbabwe survey data
 
 This page explains how we went from the raw DHS file to the questions the models use. It covers what we started with,
-what we removed and why, and how blank answers are handled. The numbers come from `results/stage29_inventory.json` and
-`results/stage29_screening.json`. The full column-by-column list is in
-[stage29_inventory.csv](stage29_inventory.csv): every column, its label, how blank it is, and whether it was kept or why
+what we removed and why, and how blank answers are handled. The numbers come from `results/zimbabwe_inventory.json` and
+`results/zimbabwe_screening.json`. The full column-by-column list is in
+[zimbabwe_inventory.csv](zimbabwe_inventory.csv): every column, its label, how blank it is, and whether it was kept or why
 it was dropped.
 
 ## What we started with

@@ -1,6 +1,6 @@
 # Stage 30 for the mentors: random vs village split, and each country on its own
 
-Full tables with every model and CI: [stage30_countries.md](stage30_countries.md). AUROC: 0.5 = coin flip, 1.0 = perfect.
+Full tables with every model and CI: [three_country_comparison.md](three_country_comparison.md). AUROC: 0.5 = coin flip, 1.0 = perfect.
 
 ## Why we did it
 
@@ -80,7 +80,7 @@ Every CI includes zero. Transfer isn't failing. The questions are weak predictor
   Zimbabwe.
 - Gradient boosting is a little overconfident.
 
-![Calibration on the Malawi and Zambia locked tests](figures/stage30_calibration.png)
+![Calibration on the Malawi and Zambia locked tests](figures/three_country_calibration.png)
 
 ## What it means
 

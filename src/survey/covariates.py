@@ -97,7 +97,7 @@ def main():
     out = {s["country"]: run_country(s, base_cfg, fs, cc) for s in settings}
     for r in out.values():
         r.pop("cfg")
-    path = save_results("stage31_covariates", {"countries": out},
+    path = save_results("covariates", {"countries": out},
                         {"default": base_cfg, "feature_selection": fs, "countries": cc, "covariates": cv})
     write_report(path, out, settings)
 
@@ -159,7 +159,7 @@ def write_report(path, out, settings):
                       "", "**Each covariate on its own** (AUROC with the raw value as the score; below 0.5 means higher "
                       "values go with less anemia)", "", "| covariate | AUROC |", "|---|---|",
                       *[f"| `{x['covariate']}` | {c(x['auroc'])} |" for x in r["single"] if x["target"] == target], ""]
-    (ROOT / "reports" / "stage31_covariates.md").write_text("\n".join(lines))
+    (ROOT / "reports" / "covariates.md").write_text("\n".join(lines))
 
 
 if __name__ == "__main__":

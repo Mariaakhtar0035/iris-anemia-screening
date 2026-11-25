@@ -65,7 +65,7 @@ def main():
     data = pd.read_parquet(OUT)
     full = data
     data = data[~data.locked_test].reset_index(drop=True)          # building villages only
-    uni = pd.read_csv(ROOT / "reports" / "stage29_univariate.csv")
+    uni = pd.read_csv(ROOT / "reports" / "zimbabwe_univariate.csv")
     questions = uni.code[uni.step4 == "keep"].tolist()
     base = mc["base_questions"]
     feats = data.drop(columns=TARGETS)
@@ -104,7 +104,7 @@ def main():
         print(f"{label(s)}: TabPFN {rows[-1]['auroc']['estimate']:.3f} vs LR {rows[-2]['auroc']['estimate']:.3f}",
               flush=True)
 
-    step5 = json.loads((ROOT / "results" / "stage29_models.json").read_text())["results"]["rows"]
+    step5 = json.loads((ROOT / "results" / "zimbabwe_models.json").read_text())["results"]["rows"]
     step5_best = max(step5, key=lambda r: r["auroc"]["estimate"])
     tab_rows = [r for r in rows if r["model"] == "TabPFN 3.5"]
     tab_best = max(tab_rows, key=lambda r: r["auroc"]["estimate"])
@@ -128,7 +128,7 @@ def main():
         locked = {"questions": tab_best["questions"], "model": "TabPFN 3.5 (second look)",
                   **summarize(fy[test], p, boot["n_resamples"], boot["ci"], seed, full.cluster.to_numpy()[test], metrics)}
 
-    path = save_results("stage29_tabpfn", {
+    path = save_results("zimbabwe_tabpfn", {
         "n_women": len(y), "rows": rows, "auroc_change_vs_lr": changes, "step5_best": {
             "method": step5_best["method"], "model": step5_best["model"], "auroc": step5_best["auroc"]},
         "gain_over_step5_best": gain, "locked_test_scored": second_look, "locked_test": locked},
@@ -163,7 +163,7 @@ def main():
         *(["## Locked test, second look", "", markdown_table([locked], ["questions", "model"], SURVEY_COLUMNS), ""]
           if locked else []),
     ])
-    (ROOT / "reports" / "stage29_tabpfn.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_tabpfn.md").write_text(text)
     print(text)
 
 

@@ -20,24 +20,24 @@ from sklearn.model_selection import StratifiedGroupKFold
 from src.common.io import ROOT, load_config, save_results
 from src.common.report import short_commit as _short_commit
 
-OUT = ROOT / "data" / "processed" / "stage29_zimbabwe.parquet"
+OUT = ROOT / "data" / "processed" / "zimbabwe_clean.parquet"
 REPEAT = re.compile(r"^(.+)_(\d+)$")
 
 
 def paths(country):
     """Where each country's cleaning outputs go. Zimbabwe keeps its Stage 29 names; others are Stage 30."""
     if country == "zimbabwe":
-        return {"out": OUT, "inventory": ROOT / "reports" / "stage29_inventory.csv",
-                "report": ROOT / "reports" / "stage29_feature_selection.md", "results": "stage29_inventory",
-                "univariate": ROOT / "reports" / "stage29_univariate.csv",
-                "screen_report": ROOT / "reports" / "stage29_screening.md", "screen_results": "stage29_screening",
+        return {"out": OUT, "inventory": ROOT / "reports" / "zimbabwe_inventory.csv",
+                "report": ROOT / "reports" / "zimbabwe_feature_selection.md", "results": "zimbabwe_inventory",
+                "univariate": ROOT / "reports" / "zimbabwe_univariate.csv",
+                "screen_report": ROOT / "reports" / "zimbabwe_screening.md", "screen_results": "zimbabwe_screening",
                 "title": "Stage 29: feature selection from scratch (Zimbabwe 2015)"}
-    return {"out": ROOT / "data" / "processed" / f"stage30_{country}.parquet",
-            "inventory": ROOT / "reports" / f"stage30_{country}_inventory.csv",
-            "report": ROOT / "reports" / f"stage30_{country}_cleaning.md", "results": f"stage30_{country}_inventory",
-            "univariate": ROOT / "reports" / f"stage30_{country}_univariate.csv",
-            "screen_report": ROOT / "reports" / f"stage30_{country}_screening.md",
-            "screen_results": f"stage30_{country}_screening",
+    return {"out": ROOT / "data" / "processed" / f"{country}_clean.parquet",
+            "inventory": ROOT / "reports" / f"{country}_inventory.csv",
+            "report": ROOT / "reports" / f"{country}_cleaning.md", "results": f"{country}_inventory",
+            "univariate": ROOT / "reports" / f"{country}_univariate.csv",
+            "screen_report": ROOT / "reports" / f"{country}_screening.md",
+            "screen_results": f"{country}_screening",
             "title": f"Stage 30: cleaning the {country.title()} survey with the Stage 29 rules"}
 
 
@@ -202,7 +202,7 @@ def main(country=None):
         "## Steps 1-2: from every column to the usable ones",
         "",
         f"The file has **{df.shape[1]} columns**. Each was kept or dropped for the first reason that applies, in this "
-        "order. The full list with labels is in `reports/stage29_inventory.csv`.",
+        "order. The full list with labels is in `reports/zimbabwe_inventory.csv`.",
         "",
         "| reason | columns | what it means |",
         "|---|---|---|",

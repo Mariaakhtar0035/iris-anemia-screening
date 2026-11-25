@@ -2,8 +2,8 @@
 
 This page explains exactly how feature selection was done. It covers what the computer was given, the three methods it
 used, how we kept the scores honest, and what each method picked. The cleaning that came before (4,944 columns down to
-482 questions) is in [stage29_data_cleaning.md](stage29_data_cleaning.md). Every number is from the saved results:
-`results/stage29_models.json`, `results/stage29_final_test.json` and `results/stage29_repeated_cv.json`.
+482 questions) is in [zimbabwe_data_cleaning.md](zimbabwe_data_cleaning.md). Every number is from the saved results:
+`results/zimbabwe_models.json`, `results/zimbabwe_final_test.json` and `results/zimbabwe_repeated_cv.json`.
 
 ## What the computer started with
 
@@ -210,4 +210,4 @@ Settings are in `configs/feature_selection.yaml`, under `models`:
 - the section patterns;
 - the winner tolerance (0.005).
 
-Full results are in [stage29_models.md](stage29_models.md).
+Full results are in [zimbabwe_models.md](zimbabwe_models.md).

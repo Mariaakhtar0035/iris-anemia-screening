@@ -24,4 +24,4 @@ Platt scaling fit on 200 random women from the target country, evaluated on all 
 | hist_gradient_boosting/malawi | 26.1% | 30.0% | 26.1% | 0.1985 | 0.1938 [0.1918, 0.2001] | -0.76 -> -0.03 | 0.32 -> 0.96 |
 | hist_gradient_boosting/zambia | 31.1% | 29.2% | 30.7% | 0.2161 | 0.2153 [0.2133, 0.2191] | -0.43 -> -0.53 | 0.40 -> 0.54 |
 
-![Transfer calibration](figures/survey_transfer_calibration.png)
+![Transfer calibration](figures/zimbabwe_transfer_calibration.png)

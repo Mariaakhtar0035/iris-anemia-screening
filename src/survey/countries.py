@@ -35,9 +35,9 @@ from src.survey.screen_features import TARGETS
 from src.survey.select_features import paths
 from src.survey.select_models import columns_for, make_model, prepare
 from src.survey.train_baselines import SURVEY_COLUMNS, feature_frame, survey_metrics
-from src.survey.train_baselines import make_model as stage7_model
+from src.survey.train_baselines import make_model as six_question_model
 
-CACHE = ROOT / "data" / "processed" / "stage30_oof"
+CACHE = ROOT / "data" / "processed" / "three_country_oof"
 PROBA = {"dummy", "place", "lr_base", "lr_base_place", "gbc_all", "gbc_all_extra"}
 
 
@@ -140,7 +140,7 @@ def locked_scores(C, models, target, sm):
     return out
 
 
-def stage7_table(country, survey):
+def six_question_table(country, survey):
     """Base 6 with the Stage 7/8 coding, the same women in the same order as the Stage 29/30 table."""
     raw, labels = read_raw(country, survey)
     df = clean(raw, labels, survey, country)
@@ -155,18 +155,18 @@ def transfer_scores(zim, home, target, cc, survey, seed):
     lab = lambda d: (d.anemic if target == "any anemia" else (d.hb_adjusted < cc["severity_cutoff_g_dl"])
                      ).astype(int).to_numpy()
     yz, yc = lab(dz), lab(dc)
-    fit = lambda X, y, mask: stage7_model("logistic_regression", survey, seed).fit(X[mask], y[mask])
+    fit = lambda X, y, mask: six_question_model("logistic_regression", survey, seed).fit(X[mask], y[mask])
     return yc[lc], fit(Xc, yc, ~lc).predict_proba(Xc[lc])[:, 1], fit(Xz, yz, ~lz).predict_proba(Xc[lc])[:, 1]
 
 
 def transfer(countries, survey, cc, seed, boot):
     """Base 6 (Stage 7 coding) trained on Zimbabwe's building women vs. at home, on each country's locked test."""
-    zim = stage7_table("zimbabwe", survey)
+    zim = six_question_table("zimbabwe", survey)
     rows = []
     for c in countries:
         if c == "zimbabwe":
             continue
-        home = stage7_table(c, survey)
+        home = six_question_table(c, survey)
         groups = home[1].cluster.to_numpy()[home[2]]
         for target in ("any anemia", "moderate or severe"):
             y_locked, s_home, s_tr = transfer_scores(zim, home, target, cc, survey, seed)
@@ -189,10 +189,10 @@ def calibration_figure(cc, fs, survey, seed):
 
     countries = [c for c in cc["countries"] if c != "zimbabwe"]
     targets = ("any anemia", "moderate or severe")
-    zim = stage7_table("zimbabwe", survey)
+    zim = six_question_table("zimbabwe", survey)
     fig, axes = plt.subplots(len(targets), len(countries), figsize=(4.2 * len(countries), 4.0 * len(targets)))
     for j, name in enumerate(countries):
-        C, home = Country(name, cc, fs, seed), stage7_table(name, survey)
+        C, home = Country(name, cc, fs, seed), six_question_table(name, survey)
         tr, te = np.flatnonzero(~C.locked), np.flatnonzero(C.locked)
         for i, target in enumerate(targets):
             y = C.all_y[target]
@@ -218,7 +218,7 @@ def calibration_figure(cc, fs, survey, seed):
             ax.legend(fontsize=6.5, loc="upper left")
             ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    out = ROOT / "reports" / "figures" / "stage30_calibration.png"
+    out = ROOT / "reports" / "figures" / "three_country_calibration.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150)
     print(f"-> {out.relative_to(ROOT)}", flush=True)
@@ -274,7 +274,7 @@ def main():
                 print(f"  {target}: locked test scored", flush=True)
 
     tr_rows = transfer(cc["countries"], survey, cc, seed, boot)
-    path = save_results("stage30_countries", {"info": info, "cv": cv_rows, "random_minus_village": split_gaps,
+    path = save_results("three_country_comparison", {"info": info, "cv": cv_rows, "random_minus_village": split_gaps,
                                               "locked": locked_rows, "transfer": tr_rows},
                         {"default": base_cfg, "feature_selection": fs, "countries": cc, "survey": survey})
     write_report(path, info, cv_rows, split_gaps, locked_rows, tr_rows, cc, boot)
@@ -362,8 +362,8 @@ def write_report(path, info, cv_rows, split_gaps, locked_rows, tr_rows, cc, boot
               "Does a predicted chance of 30% mean about 30% of those women have it? Points on the dashed line are "
               f"right; {load_config('survey')['calibration_bins']} equal-sized groups of women per line. The Hb ranking "
               "gives a score, not a probability, so it has no curve. Brier scores are in the locked-test tables above.",
-              "", "![Calibration on the locked tests](figures/stage30_calibration.png)", ""]
-    (ROOT / "reports" / "stage30_countries.md").write_text("\n".join(lines))
+              "", "![Calibration on the locked tests](figures/three_country_calibration.png)", ""]
+    (ROOT / "reports" / "three_country_comparison.md").write_text("\n".join(lines))
 
 
 if __name__ == "__main__":

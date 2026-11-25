@@ -37,10 +37,10 @@ def main():
 
     # Steps 1-2 with no emptiness limit, on the same women in the same order as the saved table.
     raw, meta, text = read_tested(ROOT / survey["countries"][cfg["country"]], cfg)
-    saved = pd.read_parquet(ROOT / "data" / "processed" / "stage29_zimbabwe.parquet")
+    saved = pd.read_parquet(ROOT / "data" / "processed" / "zimbabwe_clean.parquet")
     assert (raw[cfg["cluster"]].astype(int).to_numpy() == saved.cluster.to_numpy()).all()
     loose = inventory(raw, meta, text, {**cfg, "max_share_empty": cfg["review"]["sensitivity_max_share_empty"]})
-    strict = pd.read_csv(ROOT / "reports" / "stage29_inventory.csv").set_index("code")
+    strict = pd.read_csv(ROOT / "reports" / "zimbabwe_inventory.csv").set_index("code")
     added = [c for c in loose.code[loose.decision == "keep"] if strict.reason.get(c) == "mostly empty"]
     feats_all = feature_table(raw, loose[loose.code.isin(set(added) | set(strict.index[strict.decision == "keep"]))],
                               meta)
@@ -85,7 +85,7 @@ def main():
         "hb_mae_change": ci(lambda a, b: float(np.mean(np.abs(a - b[:, 1])) - np.mean(np.abs(a - b[:, 0]))), S.hb,
                             pair(hb["strict"], hb["loose"])),
     }
-    path = save_results("stage29_blank_sensitivity", res, {"default": S.base_cfg, "feature_selection": cfg})
+    path = save_results("zimbabwe_blank_sensitivity", res, {"default": S.base_cfg, "feature_selection": cfg})
 
     c = lambda d: f"{d['estimate']:.3f} [{d['lo']:.3f}, {d['hi']:.3f}]"
     g = lambda d: f"{d['estimate']:+.3f} [{d['lo']:+.3f}, {d['hi']:+.3f}]"
@@ -119,7 +119,7 @@ def main():
         *[f"| `{r['code']}` | {r['label']} | {r['share_empty']:.0%} | {r['auroc_alone']:.3f} |" for r in top],
         "",
     ])
-    (ROOT / "reports" / "stage29_blank_sensitivity.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_blank_sensitivity.md").write_text(text)
     print(text)
 
 

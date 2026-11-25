@@ -209,4 +209,4 @@ Base 6 logistic regression with the Stage 7/8 coding, trained on Zimbabwe's buil
 
 Does a predicted chance of 30% mean about 30% of those women have it? Points on the dashed line are right; 10 equal-sized groups of women per line. The Hb ranking gives a score, not a probability, so it has no curve. Brier scores are in the locked-test tables above.
 
-![Calibration on the locked tests](figures/stage30_calibration.png)
+![Calibration on the locked tests](figures/three_country_calibration.png)

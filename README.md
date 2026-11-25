@@ -128,8 +128,8 @@ apply".
 - **One older pipeline remains.** Sections 3.2 and 3.5a (Stages 7-8) came first and use a simpler pipeline that builds only
   the 6 basic questions (`src/survey/build_dataset.py`). Everything else uses the from-scratch cleaning above. The 6
   questions score about the same either way.
-- Reports: [stage29_data_cleaning.md](reports/stage29_data_cleaning.md) (plain language),
-  [stage30_malawi_cleaning.md](reports/stage30_malawi_cleaning.md), [stage30_zambia_cleaning.md](reports/stage30_zambia_cleaning.md).
+- Reports: [zimbabwe_data_cleaning.md](reports/zimbabwe_data_cleaning.md) (plain language),
+  [malawi_cleaning.md](reports/malawi_cleaning.md), [zambia_cleaning.md](reports/zambia_cleaning.md).
 
 ### 3.2 How far do six routine questions get?
 
@@ -144,12 +144,12 @@ Zimbabwe, 9,265 women, 5 x 5 cross-validation by village.
 | **Logistic regression** | **0.580 [0.566, 0.593]** | 0.323 [0.307, 0.341] | **0.379 [0.363, 0.394]** | 0.196 [0.190, 0.201] |
 | Gradient boosting | 0.570 [0.556, 0.583] | 0.320 [0.303, 0.338] | 0.358 [0.341, 0.375] | 0.197 [0.192, 0.203] |
 
-![Recall vs testing budget](reports/figures/survey_budget.png)
+![Recall vs testing budget](reports/figures/six_question_budget.png)
 
 - A **weak but real** signal: testing the 30% ranked highest finds 38% of anemic women instead of 29%.
 - Pregnant women are more often anemic (32% vs 27%) but are only 6% of women, so testing them first barely helps.
 - Survey weights change nothing.
-- Report: [stage7_survey.md](reports/stage7_survey.md).
+- Report: [six_question_baseline.md](reports/six_question_baseline.md).
 
 ### 3.3 Can more questions, or better models, do better?
 
@@ -184,10 +184,10 @@ falls. Random testing needs 90 tests per 100 women to catch 90% of cases.
   - village averages;
   - combining the Hb ranking with TabPFN;
   - predicting Hb with its uncertainty.
-- Reports: [stage29_feature_selection_methods.md](reports/stage29_feature_selection_methods.md) (plain language),
-  [stage29_summary.md](reports/stage29_summary.md) (every step).
+- Reports: [zimbabwe_feature_selection_methods.md](reports/zimbabwe_feature_selection_methods.md) (plain language),
+  [zimbabwe_summary.md](reports/zimbabwe_summary.md) (every step).
 
-![Calibration, Zimbabwe locked test](reports/figures/stage29_calibration.png)
+![Calibration, Zimbabwe locked test](reports/figures/zimbabwe_calibration.png)
 
 ### 3.4 Is it better for the sickest women?
 
@@ -223,7 +223,7 @@ refit. Settings were written in `configs/countries.yaml` before running.
   That is an easier question, so it is not the headline.
 - The < 12 point (0.640 in Zimbabwe) is above the 0.617 for any anemia because here pregnant women with Hb 11-12
   also count as cases, and pregnancy is easy to predict from the survey.
-- Reports: [stage29_severity.md](reports/stage29_severity.md), [stage30_countries.md](reports/stage30_countries.md),
+- Reports: [zimbabwe_severity.md](reports/zimbabwe_severity.md), [three_country_comparison.md](reports/three_country_comparison.md),
   [severity_curve.md](reports/severity_curve.md).
 
 ### 3.5 Does it work in other countries?
@@ -238,13 +238,13 @@ Base 6 logistic regression fit on all of Zimbabwe 2015 and applied **unchanged**
 | Malawi | 26.1% | 0.568 [0.555, 0.581] | 0.351 [0.335, 0.367] | 0.192 | 0.90 [0.74, 1.07] | -0.24 [-0.40, -0.08] |
 | Zambia | 31.1% | 0.565 [0.549, 0.580] | 0.349 [0.331, 0.365] | 0.212 | 1.00 [0.78, 1.22] | 0.09 [-0.11, 0.29] |
 
-![Transfer calibration](reports/figures/survey_transfer_calibration.png)
+![Transfer calibration](reports/figures/zimbabwe_transfer_calibration.png)
 
 - The model keeps most of its small signal across countries and 9 years, and stays reasonably calibrated.
 - It overestimates Malawi's anemia by about 3 points (29.0% predicted vs 26.1%).
   - Recalibrating on 200 local women fixes that average (26.2%).
   - But with a signal this weak the fitted slope is noisy, so the Brier score doesn't improve.
-- Report: [stage8_transfer.md](reports/stage8_transfer.md).
+- Report: [zimbabwe_transfer.md](reports/zimbabwe_transfer.md).
 
 #### b) Each country trained on its own
 
@@ -284,13 +284,13 @@ Zimbabwe-trained AUROC:
 **Training at home doesn't help.** Transfer is limited by weak questions, not by Zimbabwe's model failing to fit other
 countries.
 
-![Calibration on the Malawi and Zambia locked tests](reports/figures/stage30_calibration.png)
+![Calibration on the Malawi and Zambia locked tests](reports/figures/three_country_calibration.png)
 
 - **Calibration:** logistic regression stays close to the diagonal in both countries and for both targets, whether
   trained at home or on Zimbabwe. Gradient boosting is a little too extreme: it predicts too low at the bottom and too
   high at the top.
-- Reports: [stage30_countries.md](reports/stage30_countries.md) (every table),
-  [stage30_mentor_summary.md](reports/stage30_mentor_summary.md) (plain language).
+- Reports: [three_country_comparison.md](reports/three_country_comparison.md) (every table),
+  [three_country_summary.md](reports/three_country_summary.md) (plain language).
 
 #### d) Do simple rules travel as well as the model?
 
@@ -330,7 +330,7 @@ from villages already surveyed. Best model (Hb ranking), 5 x 5 cross-validation,
   are for the models on all questions in Zambia.
 - **The village split is not what holds the scores down.** The model sees each woman's own answers, not her village, so
   having her neighbours in training gives it little to use.
-- Report: [stage30_countries.md](reports/stage30_countries.md).
+- Report: [three_country_comparison.md](reports/three_country_comparison.md).
 
 ### 3.7 Supporting checks and exploratory variants
 
@@ -338,29 +338,18 @@ These back up the parts above. None of them changes a headline.
 
 | Check | Answer | Report |
 |---|---|---|
-| Does TabPFN, a pretrained model for tables, do better? | it matches the Hb ranking: 0.617 in cross-validation, 0.607 [0.577, 0.634] on the locked test | [stage29_tabpfn.md](reports/stage29_tabpfn.md) |
-| Does the model rank villages, or only repeat region? | it ranks villages: Spearman 0.42 vs 0.30 for region | [stage29_area_check.md](reports/stage29_area_check.md) |
-| Did the 70%-blank rule throw away signal? | no: at most +0.005 | [stage29_blank_sensitivity.md](reports/stage29_blank_sensitivity.md) |
-| Where does the Hb ranking's gain come from? | about half region, half the other questions | [stage29_hb_sources.md](reports/stage29_hb_sources.md) |
-| Is it predicting Hb, or just many questions in a flexible model? | both: predicting Hb beats yes/no for gradient boosting (+0.022 [+0.014, +0.030]), but a TabPFN yes/no classifier matches it; also what the model leans on, and budget curves | [stage29_hb_vs_class.md](reports/stage29_hb_vs_class.md) |
-| Four pre-registered exploratory variants | TabPFN predicting Hb scores 0.628 (cross-validation only); the others don't help | [stage29_exploratory.md](reports/stage29_exploratory.md) |
+| Does TabPFN, a pretrained model for tables, do better? | it matches the Hb ranking: 0.617 in cross-validation, 0.607 [0.577, 0.634] on the locked test | [zimbabwe_tabpfn.md](reports/zimbabwe_tabpfn.md) |
+| Does the model rank villages, or only repeat region? | it ranks villages: Spearman 0.42 vs 0.30 for region | [zimbabwe_area_check.md](reports/zimbabwe_area_check.md) |
+| Did the 70%-blank rule throw away signal? | no: at most +0.005 | [zimbabwe_blank_sensitivity.md](reports/zimbabwe_blank_sensitivity.md) |
+| Where does the Hb ranking's gain come from? | about half region, half the other questions | [zimbabwe_hb_sources.md](reports/zimbabwe_hb_sources.md) |
+| Is it predicting Hb, or just many questions in a flexible model? | both: predicting Hb beats yes/no for gradient boosting (+0.022 [+0.014, +0.030]), but a TabPFN yes/no classifier matches it; also what the model leans on, and budget curves | [zimbabwe_hb_vs_class.md](reports/zimbabwe_hb_vs_class.md) |
+| Four pre-registered exploratory variants | TabPFN predicting Hb scores 0.628 (cross-validation only); the others don't help | [zimbabwe_exploratory.md](reports/zimbabwe_exploratory.md) |
 | Does a bigger model help on the 6 base questions, or just memorise? (Trisha; each country on its own, any anemia, village split) | it memorises: an unrestricted gradient boosting fits the training women at 0.83-0.87 AUROC but scores lower on new villages than logistic regression: Zimbabwe 0.532 [0.518, 0.545] vs 0.580 [0.566, 0.593], Malawi 0.535 [0.521, 0.548] vs 0.585 [0.572, 0.598], Zambia 0.518 [0.504, 0.533] vs 0.576 [0.561, 0.592]. The dashed "ceiling" in the figure (0.83-0.87) is what memorising every answer combination reaches on the training women. It is not the best score possible on new women | [within_country.png](reports/figures/within_country.png) |
-| Do village map data (malaria, bed nets, rainfall, travel time, night lights) add to the questions? (Stage 31, Zimbabwe, cross-validation only; six covariates chosen before running) | barely. Base 6 gains +0.011 [+0.001, +0.022] for any anemia; on top of all questions they add nothing (Hb ranking +0.000 [-0.003, +0.003]; moderate or severe -0.001 [-0.006, +0.004]). Region adds more than all six: base 6 + covariates scores 0.015 [0.004, 0.025] below base 6 + region. More malaria went with *less* anemia (AUROC 0.448 [0.428, 0.467]), most likely geography rather than a malaria effect; Zimbabwe has little malaria (median 1.7% of children 2-10). The real test is Malawi and Zambia | [stage31_covariates.md](reports/stage31_covariates.md) |
+| Do village map data (malaria, bed nets, rainfall, travel time, night lights) add to the questions? (covariates, all three countries, cross-validation only; the same six covariates chosen before running, 2020 values for Malawi and Zambia) | barely. Of 12 pre-registered gains in AUROC only one excludes zero: Zimbabwe base 6, any anemia, +0.011 [+0.001, +0.022]. Malawi: base 6 +0.001 [-0.004, +0.005], all questions +0.001 [-0.002, +0.003]. Zambia: base 6 +0.006 [-0.002, +0.015], all questions +0.003 [-0.001, +0.008]. Place still beats covariates: Malawi district alone is 0.064 [0.042, 0.086] above them for any anemia. Where malaria is common it points the expected way (prevalence alone, any anemia: Malawi 0.525 [0.508, 0.543], Zambia 0.528 [0.509, 0.548]), but weakly; in Zimbabwe more malaria went with *less* anemia (0.448 [0.428, 0.467]), most likely geography | [covariates.md](reports/covariates.md) |
 
 ### 3.8 Stage history
 
-| Stage | Date | What it did | Now in |
-|---|---|---|---|
-| 7 | 2026-10-14 | 6 basic questions in Zimbabwe | 3.2 |
-| 8 | 2026-10-14 | the Zimbabwe model unchanged in Malawi and Zambia | 3.5a |
-| 29, Steps 1-4 | 2026-11-16 | Zimbabwe cleaning from every column; locked test | 3.1 |
-| 29, Steps 5-6, 8a | 2026-11-16/17 | selection methods, locked test, repeated cross-validation | 3.3 |
-| 29, Step 9 | 2026-11-16/17 | moderate or severe target | 3.4 |
-| 29, Steps 7, 8b-8e, 10 | 2026-11-16/17 | TabPFN, reviewer checks, exploratory variants | 3.7 |
-| Trisha | 2026-10-26/27 | data funnel; within-country overfit test; rules vs models across countries | 1, 3.5d, 3.7 |
-| 30 | 2026-11-23/24 | Malawi and Zambia cleaning; each country on its own; random vs village split; calibration | 3.1, 3.4, 3.5b-c, 3.6 |
-| severity curve | 2026-11-24 | AUROC against stricter and stricter Hb cutoffs (mentor request) | 3.4 |
-| 31 | 2026-11-24 | village geospatial covariates (malaria, bed nets, rainfall, travel time, night lights), Zimbabwe | 3.7 |
+Moved to [CHANGELOG.md](CHANGELOG.md), together with the old-name to new-name table.
 
 ## 4. What it means
 
@@ -408,7 +397,7 @@ These back up the parts above. None of them changes a headline.
 python3.12 -m venv .venv          # Python 3.11 or newer
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q               # 52 tests, no data needed
+python -m pytest -q               # 53 tests, no data needed
 ```
 
 **Data (never committed).** Register with the DHS Program, download the Individual Recode Stata files, and unpack them:
@@ -428,10 +417,10 @@ by accident. To redo a step, delete its `results/*.json` file.
 
 ```bash
 make test        # unit tests
-make stage7      # about 2 minutes        make stage8    # about 1 minute
-make stage29     # several hours           make stage30   # about 1.5 hours
+make baseline      # about 2 minutes        make transfer    # about 1 minute
+make zimbabwe     # several hours           make countries   # about 1.5 hours
 make all         # everything
-make -n stage30  # show what would run, without running it
+make -n countries  # show what would run, without running it
 ```
 
 The same tests run automatically on GitHub for every push and pull request (`.github/workflows/tests.yml`), without
@@ -452,7 +441,7 @@ python -m src.survey.screen_features       # Steps 3-4: single-question screen, 
 python -m src.survey.select_models         # Step 5
 python -m src.survey.final_test            # Step 6: locked test (already used; never score new models on it)
 python -m src.survey.tabpfn_cv             # Step 7 (TabPFN)
-python -m src.survey.repeated_cv           # Step 8a: several hours, cached in data/processed/stage29_oof/
+python -m src.survey.repeated_cv           # Step 8a: several hours, cached in data/processed/zimbabwe_oof/
 python -m src.survey.severity              # Step 9
 python -m src.survey.area_check            # Step 8b
 python -m src.survey.blank_sensitivity     # Step 8c
@@ -463,10 +452,10 @@ python -m src.survey.exploratory           # Step 10 (exploratory, cross-validat
 # Stage 30 (each country on its own)
 python -m src.survey.select_features malawi && python -m src.survey.screen_features malawi
 python -m src.survey.select_features zambia && python -m src.survey.screen_features zambia
-python -m src.survey.countries             # about 1.5 hours, cached in data/processed/stage30_oof/
+python -m src.survey.countries             # about 1.5 hours, cached in data/processed/three_country_oof/
 python -m src.survey.countries calibration # only the calibration figure, a few minutes
 
-# Stage 31 (village covariates, Zimbabwe; needs data/raw/dhs/zimbabwe/ZWGC72FL/ZWGC72FL.csv)
+# Stage 31 (village covariates, three countries; needs ZWGC72FL, MWGC81FL and ZMGC81FL in data/raw/dhs/<country>/)
 python -m src.survey.covariates            # reads Stage 30's saved predictions; a few minutes
 ```
 
@@ -485,7 +474,7 @@ as Section 3.
 | `src/survey/select_features.py`, `screen_features.py` | Stages 29-30: cleaning, locked split, repeat rule (any country) |
 | `src/survey/select_models.py` to `exploratory.py` | Stage 29 steps (each file's first lines say which step, and its role) |
 | `src/survey/countries.py` | Stage 30 |
-| `src/survey/covariates.py` | Stage 31: village geospatial covariates |
+| `src/survey/covariates.py` | Stage 31: village geospatial covariates, three countries |
 | `src/common/` | metrics with bootstrap CIs, village and random splits, config loading and results saving, report tables |
 | `configs/default.yaml` | seed and bootstrap settings |
 | `configs/survey.yaml`, `feature_selection.yaml`, `countries.yaml`, `covariates.yaml` | every other setting, cutoff and pre-registered rule |
@@ -517,10 +506,8 @@ as Section 3.
 
 These need files we don't have yet:
 
-1. **Map data per village for Malawi and Zambia.** Zimbabwe is done (Stage 31: almost no gain, see 3.7), but it has
-   little malaria. The DHS geospatial covariate files for Malawi and Zambia 2024 would test malaria where it is common.
-2. **A new, untouched test.** An older Zimbabwe DHS wave, since Zimbabwe's locked test is spent.
-3. **Paired data.** An eyelid photo and survey answers from the same women, to test the two-step screen for real.
+1. **A new, untouched test.** An older Zimbabwe DHS wave, since Zimbabwe's locked test is spent.
+2. **Paired data.** An eyelid photo and survey answers from the same women, to test the two-step screen for real.
 
 ## References
 

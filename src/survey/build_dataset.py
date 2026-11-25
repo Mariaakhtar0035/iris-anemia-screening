@@ -40,7 +40,7 @@ def clean(raw, labels, cfg, country):
 
 
 def load(country):
-    return pd.read_parquet(OUT / f"{country}.parquet")
+    return pd.read_parquet(OUT / f"{country}_clean.parquet")
 
 
 def main():
@@ -49,7 +49,7 @@ def main():
     for country in cfg["countries"]:
         raw, labels = read_raw(country, cfg)
         df = clean(raw, labels, cfg, country)
-        df.to_parquet(OUT / f"{country}.parquet", index=False)
+        df.to_parquet(OUT / f"{country}_clean.parquet", index=False)
         print(f"{country}: {len(df)} women with an Hb result (of {len(raw)}), {df.anemic.mean():.1%} anemic "
               f"-> {(OUT / f'{country}.parquet').relative_to(ROOT)}")
 

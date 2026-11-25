@@ -94,7 +94,7 @@ def plots(y, lr, scores, cfg):
     ax.legend(fontsize=8)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    fig.savefig(FIGURES / "survey_calibration.png", dpi=150)
+    fig.savefig(FIGURES / "six_question_calibration.png", dpi=150)
 
     budgets = cfg["budget_curve"]
     fig, ax = plt.subplots(figsize=(6, 4))
@@ -107,7 +107,7 @@ def plots(y, lr, scores, cfg):
     ax.legend(fontsize=8)
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    fig.savefig(FIGURES / "survey_budget.png", dpi=150)
+    fig.savefig(FIGURES / "six_question_budget.png", dpi=150)
 
 
 def main():
@@ -145,11 +145,11 @@ def main():
         "resample whole clusters. `weights = survey` fits with the DHS sample weights; metrics are unweighted. Rules rank "
         "women and have no probability, so no Brier score.\n\n"
         f"{table}\n\n"
-        "![Calibration](figures/survey_calibration.png) ![Recall vs testing budget](figures/survey_budget.png)\n"
+        "![Calibration](figures/six_question_calibration.png) ![Recall vs testing budget](figures/six_question_budget.png)\n"
     )
-    (ROOT / "reports" / "stage7_survey.md").write_text(text)
+    (ROOT / "reports" / "six_question_baseline.md").write_text(text)
     print(text)
-    save_results("stage7_survey_baselines", {"n": len(y), "anemic_share": float(y.mean()), "rows": rows},
+    save_results("six_question_baseline", {"n": len(y), "anemic_share": float(y.mean()), "rows": rows},
                  {"default": base, "survey": cfg})
 
 

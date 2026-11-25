@@ -132,7 +132,7 @@ def main():
 
     # 2. Which questions.
     imp = importance(S, hc)
-    inv = pd.read_csv(ROOT / "reports" / "stage29_inventory.csv").set_index("code").label
+    inv = pd.read_csv(ROOT / "reports" / "zimbabwe_inventory.csv").set_index("code").label
     order = imp.mean().sort_values(ascending=False)
     top = [{"code": c, "label": inv.get(c, ""), "mae_rise": float(order[c]), "sd": float(imp[c].std()),
             "in_base": c in S.base, "folds_in_top": int((imp.rank(axis=1, ascending=False)[c] <= hc["importance_top"]).sum())}
@@ -158,8 +158,8 @@ def main():
 
     # The locked refits must reproduce the AUROCs already reported in Steps 6 and 9 (frozen models).
     import json
-    step6 = json.loads((ROOT / "results" / "stage29_final_test.json").read_text())["results"]["rows"]
-    step9 = json.loads((ROOT / "results" / "stage29_severity.json").read_text())["results"]["locked_test"]
+    step6 = json.loads((ROOT / "results" / "zimbabwe_final_test.json").read_text())["results"]["rows"]
+    step9 = json.loads((ROOT / "results" / "zimbabwe_severity.json").read_text())["results"]["locked_test"]
     known = {("any anemia", names["lr_base"]): next(r for r in step6 if r["model"] == "base 6 questions"),
              ("any anemia", names["hb_all"]): next(r for r in step6 if r["model"].startswith("Hb ranking")),
              ("moderate or severe", names["lr_base"]): next(r for r in step9 if r["model"].startswith("base 6")),
@@ -169,7 +169,7 @@ def main():
         if (r["target"], r["model"]) in known:
             assert abs(r["auroc_check"] - known[(r["target"], r["model"])]["auroc"]["estimate"]) < 1e-9, r["model"]
 
-    path = save_results("stage29_hb_sources", {
+    path = save_results("zimbabwe_hb_sources", {
         "question_sets": {k: len(q) for k, q in sets.items()}, "any_anemia": any_rows, "any_gains": any_gains,
         "moderate_or_severe": sev_rows, "severe_gains": sev_gains, "village": village, "importance_top": top,
         "importance_folds": imp.to_dict(), "locked_clinic": locked_rows},
@@ -244,7 +244,7 @@ def main():
                                                           "precision_at_90": "Share of tested who have it"}),
         "",
     ])
-    (ROOT / "reports" / "stage29_hb_sources.md").write_text(text)
+    (ROOT / "reports" / "zimbabwe_hb_sources.md").write_text(text)
     print(text)
 
 

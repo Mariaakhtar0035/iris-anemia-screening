@@ -3,26 +3,26 @@
 # again, by accident. To redo a step, delete its results file (or run its script directly).
 #
 #   make test        unit tests (no data needed)
-#   make stage7      Stage 7  (README 3.2)
-#   make stage8      Stage 8  (README 3.5a)
-#   make stage29     Stage 29 (README 3.1, 3.3, 3.4, 3.7); Step 8a takes several hours, Step 7 needs TABPFN_TOKEN
-#   make stage30     Stage 30 (README 3.1, 3.4-3.6); about 1.5 hours
+#   make baseline      Stage 7  (README 3.2)
+#   make transfer      Stage 8  (README 3.5a)
+#   make zimbabwe     Stage 29 (README 3.1, 3.3, 3.4, 3.7); Step 8a takes several hours, Step 7 needs TABPFN_TOKEN
+#   make countries     Stage 30 (README 3.1, 3.4-3.6); about 1.5 hours
 #   make severity    severity curve from the saved Stage 30 predictions (README 3.4); a few minutes
 #   make trisha      Trisha's checks: data funnel, within-country overfit test, rules vs models (README 1, 3.5d, 3.7)
-#   make stage31     village covariates, Zimbabwe (needs ZWGC72FL in data/raw); reads Stage 30 predictions
+#   make covariates     village covariates, Zimbabwe (needs ZWGC72FL in data/raw); reads Stage 30 predictions
 #   make all         everything above
-#   make -n stage30  show what would run, without running it
+#   make -n countries  show what would run, without running it
 
 PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
 RUN = $(PYTHON) -m src.survey
 R = results
 
-.PHONY: all test stage7 stage8 stage29 stage30 severity trisha stage31 help
+.PHONY: all test baseline transfer zimbabwe countries severity trisha covariates help
 
 help:
 	@sed -n "5,14p" Makefile
 
-all: stage7 stage8 stage29 stage30 severity trisha stage31
+all: baseline transfer zimbabwe countries severity trisha covariates
 
 test:
 	$(PYTHON) -m pytest -q
@@ -32,55 +32,55 @@ data/processed/zimbabwe.parquet:
 	$(RUN).build_dataset
 $(R)/survey_audit.json:
 	$(RUN).audit
-$(R)/stage7_survey_baselines.json: | data/processed/zimbabwe.parquet
+$(R)/six_question_baseline.json: | data/processed/zimbabwe.parquet
 	$(RUN).train_baselines
-$(R)/stage8_survey_transfer.json: | data/processed/zimbabwe.parquet
+$(R)/zimbabwe_transfer.json: | data/processed/zimbabwe.parquet
 	$(RUN).transfer
 
-stage7: $(R)/survey_audit.json $(R)/stage7_survey_baselines.json
-stage8: $(R)/stage8_survey_transfer.json
+baseline: $(R)/survey_audit.json $(R)/six_question_baseline.json
+transfer: $(R)/zimbabwe_transfer.json
 
 # Stage 29: Zimbabwe, every question (order: later steps read what earlier ones save)
-$(R)/stage29_inventory.json:
+$(R)/zimbabwe_inventory.json:
 	$(RUN).select_features
-$(R)/stage29_screening.json: | $(R)/stage29_inventory.json
+$(R)/zimbabwe_screening.json: | $(R)/zimbabwe_inventory.json
 	$(RUN).screen_features
-$(R)/stage29_models.json: | $(R)/stage29_screening.json
+$(R)/zimbabwe_models.json: | $(R)/zimbabwe_screening.json
 	$(RUN).select_models
-$(R)/stage29_final_test.json: | $(R)/stage29_models.json
+$(R)/zimbabwe_final_test.json: | $(R)/zimbabwe_models.json
 	$(RUN).final_test
-$(R)/stage29_tabpfn.json: | $(R)/stage29_final_test.json
+$(R)/zimbabwe_tabpfn.json: | $(R)/zimbabwe_final_test.json
 	$(RUN).tabpfn_cv
-$(R)/stage29_repeated_cv.json: | $(R)/stage29_tabpfn.json
+$(R)/zimbabwe_repeated_cv.json: | $(R)/zimbabwe_tabpfn.json
 	$(RUN).repeated_cv
-$(R)/stage29_severity.json: | $(R)/stage29_repeated_cv.json
+$(R)/zimbabwe_severity.json: | $(R)/zimbabwe_repeated_cv.json
 	$(RUN).severity
-$(R)/stage29_area_check.json: | $(R)/stage29_repeated_cv.json $(R)/stage29_final_test.json
+$(R)/zimbabwe_area_check.json: | $(R)/zimbabwe_repeated_cv.json $(R)/zimbabwe_final_test.json
 	$(RUN).area_check
-$(R)/stage29_blank_sensitivity.json: | $(R)/stage29_repeated_cv.json
+$(R)/zimbabwe_blank_sensitivity.json: | $(R)/zimbabwe_repeated_cv.json
 	$(RUN).blank_sensitivity
-$(R)/stage29_hb_sources.json: | $(R)/stage29_severity.json $(R)/stage29_final_test.json
+$(R)/zimbabwe_hb_sources.json: | $(R)/zimbabwe_severity.json $(R)/zimbabwe_final_test.json
 	$(RUN).hb_sources
-$(R)/stage29_hb_vs_class.json: | $(R)/stage29_severity.json $(R)/stage29_final_test.json
+$(R)/zimbabwe_hb_vs_class.json: | $(R)/zimbabwe_severity.json $(R)/zimbabwe_final_test.json
 	$(RUN).hb_vs_class
-$(R)/stage29_exploratory.json: | $(R)/stage29_hb_vs_class.json
+$(R)/zimbabwe_exploratory.json: | $(R)/zimbabwe_hb_vs_class.json
 	$(RUN).exploratory
 
-stage29: $(R)/stage29_severity.json $(R)/stage29_area_check.json $(R)/stage29_blank_sensitivity.json \
-         $(R)/stage29_hb_sources.json $(R)/stage29_hb_vs_class.json $(R)/stage29_exploratory.json
+zimbabwe: $(R)/zimbabwe_severity.json $(R)/zimbabwe_area_check.json $(R)/zimbabwe_blank_sensitivity.json \
+         $(R)/zimbabwe_hb_sources.json $(R)/zimbabwe_hb_vs_class.json $(R)/zimbabwe_exploratory.json
 
 # Stage 30: Malawi and Zambia cleaned with the Stage 29 rules, then every country on its own
-$(R)/stage30_%_inventory.json:
+$(R)/%_inventory.json:
 	$(RUN).select_features $*
-$(R)/stage30_%_screening.json: | $(R)/stage30_%_inventory.json
+$(R)/%_screening.json: | $(R)/%_inventory.json
 	$(RUN).screen_features $*
-$(R)/stage30_countries.json: | $(R)/stage29_screening.json $(R)/stage30_malawi_screening.json \
-                               $(R)/stage30_zambia_screening.json
+$(R)/three_country_comparison.json: | $(R)/zimbabwe_screening.json $(R)/malawi_screening.json \
+                               $(R)/zambia_screening.json
 	$(RUN).countries
 
-stage30: $(R)/stage30_countries.json
+countries: $(R)/three_country_comparison.json
 
-$(R)/severity_curve.json: | $(R)/stage30_countries.json
+$(R)/severity_curve.json: | $(R)/three_country_comparison.json
 	$(RUN).severity_curve
 
 severity: $(R)/severity_curve.json
@@ -96,7 +96,7 @@ $(R)/rules_transfer.json: | data/processed/zimbabwe.parquet
 trisha: $(R)/funnel.csv $(R)/within_country.json $(R)/rules_transfer.json
 
 # Stage 31: village geospatial covariates (Zimbabwe)
-$(R)/stage31_covariates.json: | $(R)/stage30_countries.json
+$(R)/covariates.json: | $(R)/three_country_comparison.json
 	$(RUN).covariates
 
-stage31: $(R)/stage31_covariates.json
+covariates: $(R)/covariates.json

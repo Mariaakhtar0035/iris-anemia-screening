@@ -1,7 +1,7 @@
 # Stage 29: survey feature selection on Zimbabwe, and the review follow-ups
 
 This stage uses only the Zimbabwe 2015 DHS, with no transfer to other countries. Every number comes from a saved run.
-Each run's results, config and git commit are in `results/stage29_*.json`. Each number has a 95% bootstrap CI from
+Each run's results, config and git commit are in `results/zimbabwe_*.json`. Each number has a 95% bootstrap CI from
 2,000 resamples of whole villages. The detailed reports are linked at each step.
 
 ## Definitions
@@ -29,19 +29,19 @@ Each run's results, config and git commit are in `results/stage29_*.json`. Each 
 
 | step | what | report |
 |---|---|---|
-| 1-2 | 4,944 columns cut to 552 usable questions, with a written reason for every column dropped: blood test, not asked, bookkeeping, older-child copies, text, unit-coded, constant, or > 70% blank | [feature_selection](stage29_feature_selection.md) |
-| 3 | Each question on its own: 219 of 552 beat chance. The best scored 0.563 AUROC, and none reached 0.60 | [screening](stage29_screening.md) |
-| 4 | 70 repeats dropped (one-way Goodman-Kruskal lambda >= 0.95), leaving 482 | [screening](stage29_screening.md) |
-| 5 | Models and three selection methods (L1, top-k by importance, forward by DHS section), 5-fold village CV | [models](stage29_models.md) |
-| 6 | Locked test scored once: base 6, the CV winner (top 10), and the Hb ranking | [final_test](stage29_final_test.md) |
-| 7 | TabPFN 3.5 on the same folds | [tabpfn](stage29_tabpfn.md) |
-| 8a | 5 x 5 repeated village CV, with no-model region baselines | [repeated_cv](stage29_repeated_cv.md) |
-| 8b | Ranking villages against region, with a noise ceiling | [area_check](stage29_area_check.md) |
-| 8c | Rerun with no limit on blank answers | [blank_sensitivity](stage29_blank_sensitivity.md) |
-| 8d | Where the Hb ranking's gain comes from, and the clinic number | [hb_sources](stage29_hb_sources.md) |
-| 8e | Hb regression vs. classification, grouped importance, budget curve | [hb_vs_class](stage29_hb_vs_class.md) |
-| 9 | Moderate or severe target (pre-registered) | [severity](stage29_severity.md) |
-| 10 | Five exploratory variants (pre-registered, CV only) | [exploratory](stage29_exploratory.md) |
+| 1-2 | 4,944 columns cut to 552 usable questions, with a written reason for every column dropped: blood test, not asked, bookkeeping, older-child copies, text, unit-coded, constant, or > 70% blank | [feature_selection](zimbabwe_feature_selection.md) |
+| 3 | Each question on its own: 219 of 552 beat chance. The best scored 0.563 AUROC, and none reached 0.60 | [screening](zimbabwe_screening.md) |
+| 4 | 70 repeats dropped (one-way Goodman-Kruskal lambda >= 0.95), leaving 482 | [screening](zimbabwe_screening.md) |
+| 5 | Models and three selection methods (L1, top-k by importance, forward by DHS section), 5-fold village CV | [models](zimbabwe_models.md) |
+| 6 | Locked test scored once: base 6, the CV winner (top 10), and the Hb ranking | [final_test](zimbabwe_final_test.md) |
+| 7 | TabPFN 3.5 on the same folds | [tabpfn](zimbabwe_tabpfn.md) |
+| 8a | 5 x 5 repeated village CV, with no-model region baselines | [repeated_cv](zimbabwe_repeated_cv.md) |
+| 8b | Ranking villages against region, with a noise ceiling | [area_check](zimbabwe_area_check.md) |
+| 8c | Rerun with no limit on blank answers | [blank_sensitivity](zimbabwe_blank_sensitivity.md) |
+| 8d | Where the Hb ranking's gain comes from, and the clinic number | [hb_sources](zimbabwe_hb_sources.md) |
+| 8e | Hb regression vs. classification, grouped importance, budget curve | [hb_vs_class](zimbabwe_hb_vs_class.md) |
+| 9 | Moderate or severe target (pre-registered) | [severity](zimbabwe_severity.md) |
+| 10 | Five exploratory variants (pre-registered, CV only) | [exploratory](zimbabwe_exploratory.md) |
 
 ## Results
 
@@ -190,7 +190,7 @@ Locked-test values (descriptive), for moderate or severe with the Hb ranking:
 |---|---|---|---|---|---|
 | cases found | 25% [17, 33] | 42% [35, 51] | 53% [44, 62] | 74% [67, 81] | 89% [83, 93] |
 
-Every value is in [hb_vs_class](stage29_hb_vs_class.md), with figures for both targets.
+Every value is in [hb_vs_class](zimbabwe_hb_vs_class.md), with figures for both targets.
 
 **This is a weak individual screen.** At small budgets it finds about twice the random share of badly anemic women: 38%
 of cases when testing 20%. But to catch 90% of cases, it saves only about 6-8 tests per 100 women for any anemia, and
@@ -284,7 +284,7 @@ python -m src.survey.screen_features     # Steps 3-4
 python -m src.survey.select_models       # Step 5
 python -m src.survey.final_test          # Step 6
 python -m src.survey.tabpfn_cv           # Step 7 (needs TABPFN_TOKEN in .env)
-python -m src.survey.repeated_cv         # Step 8a (several hours; cached in data/processed/stage29_oof/)
+python -m src.survey.repeated_cv         # Step 8a (several hours; cached in data/processed/zimbabwe_oof/)
 python -m src.survey.area_check          # Step 8b
 python -m src.survey.blank_sensitivity   # Step 8c
 python -m src.survey.severity            # Step 9
