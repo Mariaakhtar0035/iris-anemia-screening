@@ -1,4 +1,4 @@
-# Stage 30, written 2026-11-23 before running (mentor follow-up, 2026-11-23 meeting):
+# Stage 30, written 2026-11-23 before running:
 #   Part A: random split vs village split (Zimbabwe building villages; the Stage 29 locked test is not touched).
 #   Part B: each country trained and tested on its own (Malawi 2024, Zambia 2024), plus Zimbabwe -> country transfer.
 # File paths come from survey.yaml; cleaning rules, model settings and the repeat rule from feature_selection.yaml.
@@ -41,7 +41,7 @@ transfer_model: lr_base_stage7
 excluded_from_main: [v861]
 extra_with: [v861]
 
-# Severity curve (mentor request, 2026-11-23 meeting), written 2026-11-24 BEFORE it was run: how well the Hb ranking
+# Severity curve, written 2026-11-24 BEFORE it was run: how well the Hb ranking
 # (all questions, Stage 30 village-split out-of-fold predictions on the building villages, averaged over the 5 repeats)
 # separates women below each Hb cutoff. One cutoff for every woman, pregnant or not, on adjusted Hb (v456 / 10).
 # Main comparison: women below the cutoff vs everyone else (mild cases included). Second comparison: women below the

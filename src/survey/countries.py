@@ -1,4 +1,4 @@
-"""Stage 30: random vs village split, and each country trained and tested on its own (mentor follow-up).
+"""Stage 30: random vs village split, and each country trained and tested on its own.
 
 Role: main result, Stage 30 (random vs village split; each country on its own; transfer).
 

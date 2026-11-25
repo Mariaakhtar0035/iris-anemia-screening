@@ -1,4 +1,4 @@
-"""Severity curve: does the survey model pick out women better as their anemia gets more severe? (mentor request)
+"""Severity curve: does the survey model pick out women better as their anemia gets more severe?
 
 Role: supporting figure for README 3.4. Uses saved predictions only; no model is fit.
 

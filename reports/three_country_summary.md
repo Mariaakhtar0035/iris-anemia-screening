@@ -1,10 +1,10 @@
-# Stage 30 for the mentors: random vs village split, and each country on its own
+# Three countries: random vs village split, and each country on its own
 
 Full tables with every model and CI: [three_country_comparison.md](three_country_comparison.md). AUROC: 0.5 = coin flip, 1.0 = perfect.
 
 ## Why we did it
 
-At the 2026-11-23 meeting the mentors suggested two things:
+We checked two things:
 
 1. Report a random split next to our village split, in case the village split was too harsh.
 2. Train and test each country on its own, instead of only training on Zimbabwe and transferring.

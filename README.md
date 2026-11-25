@@ -12,7 +12,7 @@ anyone.*
 > | Does that model work unchanged in Malawi and Zambia, surveyed 9 years later? | yes, with little loss: **0.57** and 0.57, calibration stays close |
 > | Can choosing from all ~500 questions do better? | a little. Every method stops at about **0.60-0.63**; the best (predicting the Hb number with gradient boosting) scores **0.614** [0.585, 0.643] on Zimbabwe's locked test |
 > | Is it better at moderate or severe anemia (Hb < 10.0 g/dL)? | somewhat: **0.684** [0.639, 0.726] on Zimbabwe's locked test |
-> | Is our village split too harsh? (mentor question) | **no.** Holding out women at random instead of whole villages changes AUROC by at most +0.017, in all three countries |
+> | Is our village split too harsh? | **no.** Holding out women at random instead of whole villages changes AUROC by at most +0.017, in all three countries |
 > | Does each country, trained on its own data, do better? | no: Zimbabwe 0.62, Malawi 0.63, Zambia 0.61 (cross-validation, best model). Base 6 trained on Zimbabwe does as well on Malawi's and Zambia's locked tests as base 6 trained at home |
 > | What would it save a clinic? | little. To still catch 90% of anemic women it saves **8** [2, 11] blood tests per 100 women (17 [11, 28] for moderate or severe) |
 >
@@ -57,8 +57,8 @@ model on the Zimbabwe DHS.
   - This equals Zimbabwe 2015's `v457` codes 1-2. It does **not** equal Malawi's and Zambia's 2024 `v457` 1-2. Those
     use WHO 2011 (< 11.0 g/dL, or < 10.0 if pregnant).
   - We chose one rule for all three countries on 2026-11-23, before running, so the countries are comparable.
-- Cutoffs are set in `configs/survey.yaml` (Stages 7-8), `configs/feature_selection.yaml` (Stage 29) and
-  `configs/countries.yaml` (Stage 30).
+- Cutoffs are set in `configs/survey.yaml` (six-question pipeline), `configs/feature_selection.yaml` (Zimbabwe analysis) and
+  `configs/countries.yaml` (three-country analysis).
 
 ### What the audit found (`src/survey/audit.py`)
 
@@ -74,11 +74,11 @@ model on the Zimbabwe DHS.
 ## 2. How we kept the numbers honest
 
 - **Split by village.** Neighbours are alike, so whole villages (DHS clusters, `v001`) go to one side of every split.
-  Stage 30 also reports a random split over women, as the mentors asked.
-- **A locked test, used once.** In Stages 29-30, 20% of each country's villages were set aside before anything else
+  The three-country analysis also reports a random split over women.
+- **A locked test, used once.** In the Zimbabwe and three-country analyses, 20% of each country's villages were set aside before anything else
   and scored once at the end.
-  - Zimbabwe's locked test was used in Stage 29 and is now spent.
-  - Malawi's and Zambia's were used once, in Stage 30.
+  - Zimbabwe's locked test was used in the Zimbabwe analysis and is now spent.
+  - Malawi's and Zambia's were used once, in the three-country analysis.
 - **Choices written down first.** Every new model, target and success rule was written into the config before it was
   run ("pre-registration"), and every variant is reported, whether it helped or not.
 - **Baselines next to every model:**
@@ -96,8 +96,9 @@ model on the Zimbabwe DHS.
 
 ## 3. Results
 
-The results are ordered by the question each part answers. The project ran in numbered stages (7, 8, 29, 30; the
-missing numbers were the eyelid work). [3.8](#38-stage-history) maps each stage to the part where it now appears.
+The results are ordered by the question each part answers. The work was first done in numbered stages (7, 8, 29, 30,
+31; the missing numbers were the eyelid work); [CHANGELOG.md](CHANGELOG.md) maps each stage to the part where it now
+appears.
 
 ### 3.1 Data and cleaning: what we kept
 
@@ -125,7 +126,7 @@ apply".
 
 - **Did the 70%-blank rule throw away anything useful?** No. Putting back every mostly-blank question changed AUROC by
   at most +0.005 [+0.000, +0.009].
-- **One older pipeline remains.** Sections 3.2 and 3.5a (Stages 7-8) came first and use a simpler pipeline that builds only
+- **One older pipeline remains.** Sections 3.2 and 3.5a (the six-question pipeline) came first and use a simpler pipeline that builds only
   the 6 basic questions (`src/survey/build_dataset.py`). Everything else uses the from-scratch cleaning above. The 6
   questions score about the same either way.
 - Reports: [zimbabwe_data_cleaning.md](reports/zimbabwe_data_cleaning.md) (plain language),
@@ -204,7 +205,7 @@ before any model was run on it.
 - **The same in the other countries** (cross-validation, Hb ranking): Zimbabwe 0.666, Malawi 0.677, Zambia 0.665.
 - On Malawi's and Zambia's locked tests it scores 0.60-0.66, with wide CIs (about 100 cases each).
 
-**The severity curve** (mentor request): the same Hb-ranking predictions, scored against stricter and stricter Hb
+**The severity curve**: the same Hb-ranking predictions, scored against stricter and stricter Hb
 cutoffs. One cutoff for every woman, pregnant or not; cross-validated, building villages, village split; no model
 refit. Settings were written in `configs/countries.yaml` before running.
 
@@ -347,9 +348,10 @@ These back up the parts above. None of them changes a headline.
 | Does a bigger model help on the 6 base questions, or just memorise? (Trisha; each country on its own, any anemia, village split) | it memorises: an unrestricted gradient boosting fits the training women at 0.83-0.87 AUROC but scores lower on new villages than logistic regression: Zimbabwe 0.532 [0.518, 0.545] vs 0.580 [0.566, 0.593], Malawi 0.535 [0.521, 0.548] vs 0.585 [0.572, 0.598], Zambia 0.518 [0.504, 0.533] vs 0.576 [0.561, 0.592]. The dashed "ceiling" in the figure (0.83-0.87) is what memorising every answer combination reaches on the training women. It is not the best score possible on new women | [within_country.png](reports/figures/within_country.png) |
 | Do village map data (malaria, bed nets, rainfall, travel time, night lights) add to the questions? (covariates, all three countries, cross-validation only; the same six covariates chosen before running, 2020 values for Malawi and Zambia) | barely. Of 12 pre-registered gains in AUROC only one excludes zero: Zimbabwe base 6, any anemia, +0.011 [+0.001, +0.022]. Malawi: base 6 +0.001 [-0.004, +0.005], all questions +0.001 [-0.002, +0.003]. Zambia: base 6 +0.006 [-0.002, +0.015], all questions +0.003 [-0.001, +0.008]. Place still beats covariates: Malawi district alone is 0.064 [0.042, 0.086] above them for any anemia. Where malaria is common it points the expected way (prevalence alone, any anemia: Malawi 0.525 [0.508, 0.543], Zambia 0.528 [0.509, 0.548]), but weakly; in Zimbabwe more malaria went with *less* anemia (0.448 [0.428, 0.467]), most likely geography | [covariates.md](reports/covariates.md) |
 
-### 3.8 Stage history
+### 3.8 History
 
-Moved to [CHANGELOG.md](CHANGELOG.md), together with the old-name to new-name table.
+What was done when, and the old stage numbers ("Stage 29" and so on) with their old file names, are in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## 4. What it means
 
@@ -410,7 +412,7 @@ python -m pytest -q               # 53 tests, no data needed
 
 See [DATA.md](DATA.md) for what to request and where to put it. See [CONTRIBUTING.md](CONTRIBUTING.md) for the working rules.
 
-TabPFN (Stage 29 Steps 7, 8a and 10) also needs a `TABPFN_TOKEN` in a `.env` file at the repo root (gitignored) and its
+TabPFN (used in the Zimbabwe analysis: `tabpfn_cv`, `repeated_cv`, `exploratory`) also needs a `TABPFN_TOKEN` in a `.env` file at the repo root (gitignored) and its
 licence accepted on the Prior Labs website.
 
 **The easy way: `make`.** It runs the scripts below in order and skips any step whose results file already exists. It
@@ -431,34 +433,34 @@ TabPFN or PyTorch and never with data. That check also fails if anything under `
 **Or by hand,** in this order (later scripts read what earlier ones save):
 
 ```bash
-# Stages 7-8
+# Six-question pipeline
 python -m src.survey.build_dataset         # DHS -> data/processed/{country}.parquet
 python -m src.survey.audit                 # coding checks
-python -m src.survey.train_baselines       # Stage 7, ~2 min
-python -m src.survey.transfer              # Stage 8, ~2 min
+python -m src.survey.train_baselines       # baselines, ~2 min
+python -m src.survey.transfer              # transfer to Malawi and Zambia, ~2 min
 
-# Stage 29 (Zimbabwe)
-python -m src.survey.select_features       # Steps 1-2: cleaning and the locked village split
-python -m src.survey.screen_features       # Steps 3-4: single-question screen, repeat rule
-python -m src.survey.select_models         # Step 5
-python -m src.survey.final_test            # Step 6: locked test (already used; never score new models on it)
-python -m src.survey.tabpfn_cv             # Step 7 (TabPFN)
-python -m src.survey.repeated_cv           # Step 8a: several hours, cached in data/processed/zimbabwe_oof/
-python -m src.survey.severity              # Step 9
-python -m src.survey.area_check            # Step 8b
-python -m src.survey.blank_sensitivity     # Step 8c
-python -m src.survey.hb_sources            # Step 8d
-python -m src.survey.hb_vs_class           # Step 8e
-python -m src.survey.exploratory           # Step 10 (exploratory, cross-validation only)
+# Zimbabwe analysis (in this order)
+python -m src.survey.select_features       # cleaning and the locked village split
+python -m src.survey.screen_features       # single-question screen, repeat rule
+python -m src.survey.select_models         # model comparison
+python -m src.survey.final_test            # locked test (already used; never score new models on it)
+python -m src.survey.tabpfn_cv             # TabPFN
+python -m src.survey.repeated_cv           # repeated cross-validation: several hours, cached in data/processed/zimbabwe_oof/
+python -m src.survey.severity              # moderate or severe target
+python -m src.survey.area_check            # does it rank villages beyond region?
+python -m src.survey.blank_sensitivity     # the 70%-blank rule check
+python -m src.survey.hb_sources            # where the Hb ranking gain comes from
+python -m src.survey.hb_vs_class           # Hb ranking vs classifier
+python -m src.survey.exploratory           # exploratory variants (cross-validation only)
 
-# Stage 30 (each country on its own)
+# Three-country analysis (each country on its own)
 python -m src.survey.select_features malawi && python -m src.survey.screen_features malawi
 python -m src.survey.select_features zambia && python -m src.survey.screen_features zambia
 python -m src.survey.countries             # about 1.5 hours, cached in data/processed/three_country_oof/
 python -m src.survey.countries calibration # only the calibration figure, a few minutes
 
-# Stage 31 (village covariates, three countries; needs ZWGC72FL, MWGC81FL and ZMGC81FL in data/raw/dhs/<country>/)
-python -m src.survey.covariates            # reads Stage 30's saved predictions; a few minutes
+# Covariates analysis (village map data, three countries; needs ZWGC72FL, MWGC81FL and ZMGC81FL in data/raw/dhs/<country>/)
+python -m src.survey.covariates            # reads the three-country saved predictions; a few minutes
 ```
 
 Every script writes `results/<name>.json` (metrics, config, git commit) and a report in `reports/`.
@@ -471,12 +473,12 @@ as Section 3.
 | File | What it does |
 |---|---|
 | `src/survey/__init__.py` | the run order and the role of every script |
-| `src/survey/build_dataset.py`, `audit.py` | Stages 7-8: verified variables → one clean table per country; coding checks |
-| `src/survey/train_baselines.py`, `transfer.py` | Stage 7 baselines; Stage 8 transfer and recalibration |
-| `src/survey/select_features.py`, `screen_features.py` | Stages 29-30: cleaning, locked split, repeat rule (any country) |
-| `src/survey/select_models.py` to `exploratory.py` | Stage 29 steps (each file's first lines say which step, and its role) |
-| `src/survey/countries.py` | Stage 30 |
-| `src/survey/covariates.py` | Stage 31: village geospatial covariates, three countries |
+| `src/survey/build_dataset.py`, `audit.py` | six-question pipeline: verified variables → one clean table per country; coding checks |
+| `src/survey/train_baselines.py`, `transfer.py` | six-question baselines; transfer and recalibration |
+| `src/survey/select_features.py`, `screen_features.py` | Zimbabwe and three-country analyses: cleaning, locked split, repeat rule (any country) |
+| `src/survey/select_models.py` to `exploratory.py` | Zimbabwe analysis (each file's first lines say what it does and its role) |
+| `src/survey/countries.py` | three-country analysis |
+| `src/survey/covariates.py` | covariates analysis: village map data, three countries |
 | `src/common/` | metrics with bootstrap CIs, village and random splits, config loading and results saving, report tables |
 | `configs/default.yaml` | seed and bootstrap settings |
 | `configs/survey.yaml`, `feature_selection.yaml`, `countries.yaml`, `covariates.yaml` | every other setting, cutoff and pre-registered rule |
