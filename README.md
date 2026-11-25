@@ -345,6 +345,7 @@ These back up the parts above. None of them changes a headline.
 | Is it predicting Hb, or just many questions in a flexible model? | both: predicting Hb beats yes/no for gradient boosting (+0.022 [+0.014, +0.030]), but a TabPFN yes/no classifier matches it; also what the model leans on, and budget curves | [stage29_hb_vs_class.md](reports/stage29_hb_vs_class.md) |
 | Four pre-registered exploratory variants | TabPFN predicting Hb scores 0.628 (cross-validation only); the others don't help | [stage29_exploratory.md](reports/stage29_exploratory.md) |
 | Does a bigger model help on the 6 base questions, or just memorise? (Trisha; each country on its own, any anemia, village split) | it memorises: an unrestricted gradient boosting fits the training women at 0.83-0.87 AUROC but scores lower on new villages than logistic regression: Zimbabwe 0.532 [0.518, 0.545] vs 0.580 [0.566, 0.593], Malawi 0.535 [0.521, 0.548] vs 0.585 [0.572, 0.598], Zambia 0.518 [0.504, 0.533] vs 0.576 [0.561, 0.592]. The dashed "ceiling" in the figure (0.83-0.87) is what memorising every answer combination reaches on the training women. It is not the best score possible on new women | [within_country.png](reports/figures/within_country.png) |
+| Do village map data (malaria, bed nets, rainfall, travel time, night lights) add to the questions? (Stage 31, Zimbabwe, cross-validation only; six covariates chosen before running) | barely. Base 6 gains +0.011 [+0.001, +0.022] for any anemia; on top of all questions they add nothing (Hb ranking +0.000 [-0.003, +0.003]; moderate or severe -0.001 [-0.006, +0.004]). Region adds more than all six: base 6 + covariates scores 0.015 [0.004, 0.025] below base 6 + region. More malaria went with *less* anemia (AUROC 0.448 [0.428, 0.467]), most likely geography rather than a malaria effect; Zimbabwe has little malaria (median 1.7% of children 2-10). The real test is Malawi and Zambia | [stage31_covariates.md](reports/stage31_covariates.md) |
 
 ### 3.8 Stage history
 
@@ -359,6 +360,7 @@ These back up the parts above. None of them changes a headline.
 | Trisha | 2026-10-26/27 | data funnel; within-country overfit test; rules vs models across countries | 1, 3.5d, 3.7 |
 | 30 | 2026-11-23/24 | Malawi and Zambia cleaning; each country on its own; random vs village split; calibration | 3.1, 3.4, 3.5b-c, 3.6 |
 | severity curve | 2026-11-24 | AUROC against stricter and stricter Hb cutoffs (mentor request) | 3.4 |
+| 31 | 2026-11-24 | village geospatial covariates (malaria, bed nets, rainfall, travel time, night lights), Zimbabwe | 3.7 |
 
 ## 4. What it means
 
@@ -406,7 +408,7 @@ These back up the parts above. None of them changes a headline.
 python3.12 -m venv .venv          # Python 3.11 or newer
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m pytest -q               # 49 tests, no data needed
+python -m pytest -q               # 52 tests, no data needed
 ```
 
 **Data (never committed).** Register with the DHS Program, download the Individual Recode Stata files, and unpack them:
@@ -463,6 +465,9 @@ python -m src.survey.select_features malawi && python -m src.survey.screen_featu
 python -m src.survey.select_features zambia && python -m src.survey.screen_features zambia
 python -m src.survey.countries             # about 1.5 hours, cached in data/processed/stage30_oof/
 python -m src.survey.countries calibration # only the calibration figure, a few minutes
+
+# Stage 31 (village covariates, Zimbabwe; needs data/raw/dhs/zimbabwe/ZWGC72FL/ZWGC72FL.csv)
+python -m src.survey.covariates            # reads Stage 30's saved predictions; a few minutes
 ```
 
 Every script writes `results/<name>.json` (metrics, config, git commit) and a report in `reports/`.
@@ -480,9 +485,10 @@ as Section 3.
 | `src/survey/select_features.py`, `screen_features.py` | Stages 29-30: cleaning, locked split, repeat rule (any country) |
 | `src/survey/select_models.py` to `exploratory.py` | Stage 29 steps (each file's first lines say which step, and its role) |
 | `src/survey/countries.py` | Stage 30 |
+| `src/survey/covariates.py` | Stage 31: village geospatial covariates |
 | `src/common/` | metrics with bootstrap CIs, village and random splits, config loading and results saving, report tables |
 | `configs/default.yaml` | seed and bootstrap settings |
-| `configs/survey.yaml`, `feature_selection.yaml`, `countries.yaml` | every other setting, cutoff and pre-registered rule |
+| `configs/survey.yaml`, `feature_selection.yaml`, `countries.yaml`, `covariates.yaml` | every other setting, cutoff and pre-registered rule |
 | `tests/` | unit tests on made-up data: metrics, paired differences, splits, cleaning rules, labels, and that locked-test labels never reach training |
 
 ## 9. Glossary
@@ -511,7 +517,8 @@ as Section 3.
 
 These need files we don't have yet:
 
-1. **Map data per village.** Malaria, rainfall and altitude, from the DHS geospatial covariates and GPS files.
+1. **Map data per village for Malawi and Zambia.** Zimbabwe is done (Stage 31: almost no gain, see 3.7), but it has
+   little malaria. The DHS geospatial covariate files for Malawi and Zambia 2024 would test malaria where it is common.
 2. **A new, untouched test.** An older Zimbabwe DHS wave, since Zimbabwe's locked test is spent.
 3. **Paired data.** An eyelid photo and survey answers from the same women, to test the two-step screen for real.
 

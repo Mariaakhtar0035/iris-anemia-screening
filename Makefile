@@ -9,6 +9,7 @@
 #   make stage30     Stage 30 (README 3.1, 3.4-3.6); about 1.5 hours
 #   make severity    severity curve from the saved Stage 30 predictions (README 3.4); a few minutes
 #   make trisha      Trisha's checks: data funnel, within-country overfit test, rules vs models (README 1, 3.5d, 3.7)
+#   make stage31     village covariates, Zimbabwe (needs ZWGC72FL in data/raw); reads Stage 30 predictions
 #   make all         everything above
 #   make -n stage30  show what would run, without running it
 
@@ -16,12 +17,12 @@ PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python)
 RUN = $(PYTHON) -m src.survey
 R = results
 
-.PHONY: all test stage7 stage8 stage29 stage30 severity trisha help
+.PHONY: all test stage7 stage8 stage29 stage30 severity trisha stage31 help
 
 help:
-	@sed -n "5,13p" Makefile
+	@sed -n "5,14p" Makefile
 
-all: stage7 stage8 stage29 stage30 severity trisha
+all: stage7 stage8 stage29 stage30 severity trisha stage31
 
 test:
 	$(PYTHON) -m pytest -q
@@ -93,3 +94,9 @@ $(R)/rules_transfer.json: | data/processed/zimbabwe.parquet
 	$(RUN).rules_transfer
 
 trisha: $(R)/funnel.csv $(R)/within_country.json $(R)/rules_transfer.json
+
+# Stage 31: village geospatial covariates (Zimbabwe)
+$(R)/stage31_covariates.json: | $(R)/stage30_countries.json
+	$(RUN).covariates
+
+stage31: $(R)/stage31_covariates.json

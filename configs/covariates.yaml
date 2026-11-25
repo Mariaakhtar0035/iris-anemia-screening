@@ -1,0 +1,58 @@
+# Stage 31, written 2026-11-24 BEFORE anything was run: do village-level geospatial covariates add to the survey
+# questions? Zimbabwe only for now; Malawi and Zambia once their covariate files are in data/raw.
+#
+# Source: DHS Geospatial Covariates file ZWGC72FL (Zimbabwe 2015, built from the GPS file ZWGE72FL), 400 rows, one per
+# village. Column names below were checked in the file. Each value is a mean (or sum) over a 2 km (urban) or 10 km
+# (rural) circle around the village's displaced GPS point (manual: Mayala et al. 2018, The DHS Program Geospatial
+# Covariate Datasets Manual, 2nd ed.). Missing is coded -9999 (one village, 298, in the three Malaria Atlas columns).
+# Settings shared with Stage 30 (folds, model settings, targets) come from countries.yaml and feature_selection.yaml.
+country: zimbabwe
+file: data/raw/dhs/zimbabwe/ZWGC72FL/ZWGC72FL.csv
+join_column: DHSCLUST        # equals v001 (our `cluster`)
+missing_code: -9999
+
+# Six covariates chosen before running, from the survey year (2015) where the file has several years:
+covariates:
+  - Malaria_Prevalence_2015  # P. falciparum parasite rate in children 2-10 (Malaria Atlas Project)
+  - Malaria_Incidence_2015   # clinical P. falciparum cases per person per year (Malaria Atlas Project)
+  - ITN_Coverage_2015        # share sleeping under an insecticide-treated net (Malaria Atlas Project)
+  - Rainfall_2015            # mm per year (CHIRPS)
+  - Travel_Times_2015        # minutes to the nearest city (Malaria Atlas Project accessibility map)
+  - Nightlights_Composite    # 2015 VIIRS night-time light, a proxy for electrification and wealth
+
+# Village split only (Stage 30 folds, 5 x 5, building villages). The locked test is spent and is not touched.
+split: village
+
+# Models, both targets (any anemia; moderate or severe = Hb < 10.0 g/dL for everyone). The first six are Stage 30's
+# and are read from its saved predictions; the last four are new.
+#   dummy; place share by region (rule baseline); base 6 LR; base 6 + region LR; all questions GBC; Hb ranking;
+#   covariates alone LR; base 6 + covariates LR; all questions + covariates GBC; Hb ranking + covariates.
+# Comparisons (change in AUROC, village bootstrap, 2000 resamples), fixed in advance:
+comparisons:
+  - [lr_base_cov, lr_base]
+  - [gbc_all_cov, gbc_all]
+  - [hb_all_cov, hb_all]
+  - [cov_lr, "place[v024]"]
+  - [lr_base_cov, "lr_base_place[v024]"]
+
+# ---------------------------------------------------------------------------------------------------------------
+# Added 2026-11-24 BEFORE running Malawi and Zambia. The Zimbabwe block above is unchanged.
+# Files: MWGC81FL (Malawi 2024, 793 villages) and ZMGC81FL (Zambia 2024, 545 villages), checked column by column.
+# The latest year in both files is 2020 (survey 2024), so the 2020 columns are used; Travel_Times has no year.
+# Missing is a blank cell here (no -9999). Blank for Malawi: Nightlights_Composite in 18 villages (118-139, Northern
+# region, 258 women); for Zambia: Malaria_Incidence_2020 in villages 57 and 346 (26 women). The models handle blanks.
+# Same six covariates, models, split and pre-registered comparisons as Zimbabwe. Malawi's region has only 3 values, so
+# two extra comparisons use district (sdistrict), whose Stage 30 predictions are already saved.
+more_countries:
+  malawi:
+    file: data/raw/dhs/malawi/MWGC81FL/MWGC81FL.csv
+    covariates: [Malaria_Prevalence_2020, Malaria_Incidence_2020, ITN_Coverage_2020, Rainfall_2020, Travel_Times,
+                 Nightlights_Composite]
+    extra_place: sdistrict
+    extra_comparisons:
+      - [cov_lr, "place[sdistrict]"]
+      - [lr_base_cov, "lr_base_place[sdistrict]"]
+  zambia:
+    file: data/raw/dhs/zambia/ZMGC81FL/ZMGC81FL.csv
+    covariates: [Malaria_Prevalence_2020, Malaria_Incidence_2020, ITN_Coverage_2020, Rainfall_2020, Travel_Times,
+                 Nightlights_Composite]

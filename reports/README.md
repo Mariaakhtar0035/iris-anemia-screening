@@ -1,7 +1,7 @@
 # Survey reports: reading order
 
 The reports are grouped by the question they answer, in the same order as Section 3 of the
-[main README](../README.md). File names still carry the stage in which each report was written (7, 8, 29, 30). The
+[main README](../README.md). File names still carry the stage in which each report was written (7, 8, 29, 30, 31). The
 [stage history](../README.md#38-stage-history) maps stages to sections.
 
 Every report is written by the script named at its top, and every number in it comes from that script's
@@ -50,7 +50,6 @@ question's strength on its own). They hold labels and summary statistics only.
 | Report | What it answers |
 |---|---|
 | [stage29_severity.md](stage29_severity.md) | Step 9: moderate or severe anemia in Zimbabwe, pre-registered |
-
 | [severity_curve.md](severity_curve.md) | how well the model picks out women below stricter and stricter Hb cutoffs, three countries |
 
 The other countries' moderate-or-severe results are in [stage30_countries.md](stage30_countries.md).
@@ -73,3 +72,4 @@ The other countries' moderate-or-severe results are in [stage30_countries.md](st
 | 8d | [stage29_hb_sources.md](stage29_hb_sources.md) | where the Hb ranking's gain comes from; tests saved per 100 women |
 | 8e | [stage29_hb_vs_class.md](stage29_hb_vs_class.md) | predicting Hb vs. yes/no; what the model leans on; budget curves |
 | 10 | [stage29_exploratory.md](stage29_exploratory.md) | four pre-registered exploratory variants (none is a headline) |
+| 31 | [stage31_covariates.md](stage31_covariates.md) | do village covariates (malaria, bed nets, rainfall, travel time, night lights) add anything? Zimbabwe |

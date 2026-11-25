@@ -25,4 +25,7 @@ Stage 29, Zimbabwe feature selection from scratch:
 Stage 30, each country on its own:
   select_features malawi, screen_features malawi, select_features zambia, screen_features zambia    data
   countries          result
+
+Stage 31, village geospatial covariates (Zimbabwe; needs data/raw/dhs/zimbabwe/ZWGC72FL/ZWGC72FL.csv):
+  covariates         result (cross-validation only; reads Stage 30's saved predictions)
 """
