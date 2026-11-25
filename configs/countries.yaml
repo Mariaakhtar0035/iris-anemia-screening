@@ -1,0 +1,55 @@
+# Stage 30, written 2026-11-23 before running:
+#   Part A: random split vs village split (Zimbabwe building villages; the Stage 29 locked test is not touched).
+#   Part B: each country trained and tested on its own (Malawi 2024, Zambia 2024), plus Zimbabwe -> country transfer.
+# File paths come from survey.yaml; cleaning rules, model settings and the repeat rule from feature_selection.yaml.
+countries: [zimbabwe, malawi, zambia]
+
+# Targets. Any anemia = DHS v457 1-3 in all three files; checked to equal adjusted Hb (v456) < 12.0 g/dL, or < 11.0
+# when pregnant (v213 = 1), for every tested woman in all three. Moderate or severe = adjusted Hb < 10.0 g/dL for
+# EVERY woman in all three countries (chosen 2026-11-23 so the countries are comparable). This equals Zimbabwe 2015's
+# v457 1-2 but NOT Malawi/Zambia 2024's v457 1-2, which use WHO 2011 (< 11.0, or < 10.0 if pregnant; checked: matches
+# 100%). Severity counts with the common rule are reported per country.
+severity_cutoff_g_dl: 10.0
+
+# Place variables (checked in each file's labels). v024 = region/province: Zimbabwe 10, Zambia 10, Malawi 3. Malawi
+# also has sdistrict (district, 33 labelled codes), used as a second, finer place variable for Malawi only.
+place: {zimbabwe: [v024], malawi: [v024, sdistrict], zambia: [v024]}
+
+# Malawi and Zambia: the same Stage 29 Steps 1-2 and Step 4 rules; 20% of villages locked away first (same method and
+# seed), scored once at the end. No feature selection: fixed models only (Stage 29's selection winner did not hold up).
+locked_test_n_splits: 5
+
+cv_splits: 5
+cv_repeats: 5
+splits: [village, random]       # village = StratifiedGroupKFold by v001; random = StratifiedKFold over women
+
+# Fixed models, each for both targets:
+#   dummy; place share (no model); base 6 logistic regression; base 6 + place logistic regression;
+#   gradient boosting classifier on all questions; Hb ranking (gradient boosting regressor on all questions,
+#   score = cutoff - predicted Hb). Settings from feature_selection.yaml `models`.
+models: [dummy, place, lr_base, lr_base_place, gbc_all, hb_all]
+
+# Transfer (any anemia and moderate or severe): base 6 logistic regression with the Stage 7/8 coding
+# (src/survey/build_dataset.py), trained on Zimbabwe's 7,416 building women, scored on each country's locked test;
+# next to the same model trained on that country's own building women.
+transfer_model: lr_base_stage7
+
+# HIV self-report (decided 2026-11-23, before any model was run): Malawi and Zambia 2024 ask "result of HIV test"
+# (v861, the woman's own report of her last test); Zimbabwe 2015 does not. It is left out of every main model so the
+# countries use the same kind of information, and put back in one extra row per country (gradient boosting
+# classifier and Hb ranking on all questions + v861) to show what a known HIV status adds.
+excluded_from_main: [v861]
+extra_with: [v861]
+
+# Severity curve, written 2026-11-24 BEFORE it was run: how well the Hb ranking
+# (all questions, Stage 30 village-split out-of-fold predictions on the building villages, averaged over the 5 repeats)
+# separates women below each Hb cutoff. One cutoff for every woman, pregnant or not, on adjusted Hb (v456 / 10).
+# Main comparison: women below the cutoff vs everyone else (mild cases included). Second comparison: women below the
+# cutoff vs women not anemic at all (Hb >= control_g_dl), dropping those in between; easier, so labelled separately.
+# A point is drawn only with at least min_cases cases in that country. No locked test is used.
+severity_curve:
+  cutoffs_g_dl: [12.0, 11.0, 10.0, 9.0, 8.0, 7.0]
+  control_g_dl: 12.0
+  min_cases: 30
+  split: village
+  model: hb_all

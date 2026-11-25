@@ -1,0 +1,32 @@
+# Runs the unit tests on every push and pull request. The tests use made-up data only; no DHS data is ever needed
+# (or available) here. TabPFN and PyTorch are skipped: no test uses them, and together they are about 1 GB.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies (without TabPFN and PyTorch)
+        run: |
+          grep -vE '^(tabpfn|torch)==' requirements.txt > /tmp/requirements-ci.txt
+          pip install -r /tmp/requirements-ci.txt
+      - name: Lint
+        run: |
+          pip install ruff
+          ruff check .
+      - name: Run tests
+        run: python -m pytest -q
+      - name: No data or results committed
+        run: test -z "$(git ls-files data results graphify-out)"
